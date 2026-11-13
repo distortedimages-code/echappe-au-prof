@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Échappe au prof ! · Notre-Dame de Sion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#140b26;--bg:#22163f;--panel:#2f2156;--panel2:#3b2b6b;--yel:#ffd23f;--pink:#ff4f8b;--cyan:#2ce8d5;--green:#63c74d;--red:#ff4a5a;--paper:#fff6e6}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--paper);font-family:'VT323',ui-monospace,monospace;font-size:21px;touch-action:none;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
+#app{position:fixed;inset:0;overflow:hidden}
+canvas#game{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;display:block}
+#touch{position:absolute;inset:0}
+.px{font-family:'Press Start 2P',ui-monospace,monospace}
+.hidden{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+/* ---------- écrans ---------- */
+.screen{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:18px 14px 40px;
+ background:radial-gradient(circle at 20% 10%,#3a2870 0,transparent 45%),radial-gradient(circle at 90% 90%,#5a1f5e 0,transparent 40%),var(--bg);z-index:20}
+.screen::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1px);background-size:14px 14px}
+.wrap{position:relative;max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:14px;align-items:stretch}
+.center{align-items:center;text-align:center}
+.btn{font-family:'Press Start 2P',monospace;font-size:13px;line-height:1.4;padding:14px 16px;border:3px solid var(--ink);background:var(--yel);color:var(--ink);
+ box-shadow:0 5px 0 var(--ink),inset -4px -4px 0 rgba(0,0,0,.18),inset 3px 3px 0 rgba(255,255,255,.35);border-radius:6px;text-transform:uppercase;transition:transform .05s}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--ink),inset -4px -4px 0 rgba(0,0,0,.18)}
+.btn.big{font-size:18px;padding:18px}
+.btn.pink{background:var(--pink);color:#fff}
+.btn.cyan{background:var(--cyan)}
+.btn.green{background:var(--green)}
+.btn.ghost{background:var(--panel2);color:var(--paper)}
+.btn:disabled{opacity:.45}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.panel{background:var(--panel);border:3px solid var(--ink);border-radius:8px;box-shadow:0 5px 0 var(--ink);padding:14px}
+h1,h2,h3{margin:0}
+h2.px{font-size:15px;color:var(--yel);text-shadow:3px 3px 0 var(--ink);line-height:1.5}
+.logo{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:12px}
+.logo .l1,.logo .l2{font-family:'Press Start 2P',monospace;display:block;line-height:1.1}
+.logo .l1{font-size:34px;color:var(--yel);text-shadow:4px 4px 0 var(--pink),8px 8px 0 var(--ink);animation:wob 2.4s ease-in-out infinite}
+.logo .l2{font-size:26px;color:#fff;text-shadow:4px 4px 0 var(--cyan),8px 8px 0 var(--ink);animation:wob 2.4s ease-in-out infinite .3s}
+@keyframes wob{0%,100%{transform:rotate(-2deg) translateY(0)}50%{transform:rotate(2deg) translateY(-4px)}}
+.sub{font-size:24px;color:var(--cyan);letter-spacing:1px}
+#titleCv{width:100%;max-width:440px;image-rendering:pixelated;border:3px solid var(--ink);border-radius:8px;box-shadow:0 5px 0 var(--ink);background:#c2b9a8}
+.toggles{display:flex;gap:10px;justify-content:center}
+.tog{font-size:22px;width:56px;height:52px;border:3px solid var(--ink);border-radius:8px;background:var(--panel2);box-shadow:0 4px 0 var(--ink)}
+.tog.off{opacity:.4;filter:grayscale(1)}
+.tiny{font-size:18px;opacity:.75;line-height:1.15}
+.howto{text-align:left;font-size:20px;line-height:1.2}
+.howto b{color:var(--yel)}
+/* ---------- persos ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.card{background:var(--panel);border:3px solid var(--ink);border-radius:8px;box-shadow:0 5px 0 var(--ink);padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
+.card.sel{background:#4a3a8a;outline:3px solid var(--yel)}
+.card canvas{image-rendering:pixelated;width:80px;height:120px}
+.card .nm{font-family:'Press Start 2P',ui-monospace,monospace;font-size:11px;color:var(--yel);text-align:center;word-break:break-word}
+.card .mini{display:flex;gap:6px}
+.card .mini button{border:2px solid var(--ink);background:var(--panel2);border-radius:6px;font-size:18px;padding:3px 8px}
+.card.add{justify-content:center;min-height:180px;border-style:dashed;font-family:'Press Start 2P',ui-monospace,monospace;font-size:12px;color:var(--cyan);text-align:center}
+/* ---------- créateur ---------- */
+.creator-top{display:flex;gap:12px;align-items:center}
+#cPrev{image-rendering:pixelated;width:132px;height:204px;background:repeating-conic-gradient(#d9caa8 0 25%,#cbbb98 0 50%) 0 0/24px 24px;border:3px solid var(--ink);border-radius:8px;flex:none}
+.creator-top .side{flex:1;display:flex;flex-direction:column;gap:8px}
+label.lbl{font-family:'Press Start 2P',ui-monospace,monospace;font-size:10px;color:var(--cyan)}
+input.name{font-family:'Press Start 2P',ui-monospace,monospace;font-size:14px;padding:12px;border:3px solid var(--ink);border-radius:6px;background:var(--paper);color:var(--ink);width:100%;user-select:text;-webkit-user-select:text;touch-action:manipulation}
+.opt{display:flex;align-items:center;gap:8px;background:var(--panel);border:3px solid var(--ink);border-radius:8px;padding:6px 8px;box-shadow:0 3px 0 var(--ink)}
+.opt .ol{flex:0 0 108px;font-size:19px;line-height:1;color:#cfc6ef}
+.opt .ov{flex:1;text-align:center;font-family:'Press Start 2P',ui-monospace,monospace;font-size:10px;line-height:1.4;display:flex;align-items:center;justify-content:center;gap:8px;min-height:30px}
+.opt .sw{width:22px;height:22px;border:3px solid var(--ink);border-radius:4px;flex:none}
+.opt button{width:44px;height:40px;border:3px solid var(--ink);border-radius:6px;background:var(--yel);color:var(--ink);font-family:'Press Start 2P',ui-monospace,monospace;font-size:14px;box-shadow:0 3px 0 var(--ink);flex:none}
+.opt button:active{transform:translateY(2px);box-shadow:none}
+.sticky{position:sticky;bottom:-40px;padding:10px 0 14px;background:linear-gradient(transparent,var(--bg) 30%);z-index:2}
+/* ---------- niveaux ---------- */
+.who{display:flex;align-items:center;gap:12px}
+.who canvas{image-rendering:pixelated;width:48px;height:72px}
+.lvl{display:flex;gap:12px;align-items:center;text-align:left;padding:10px 12px;background:var(--panel);border:3px solid var(--ink);border-radius:10px;box-shadow:0 5px 0 var(--ink)}
+.lvl:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink)}
+.lvl canvas{image-rendering:pixelated;width:56px;height:84px;flex:none;background:rgba(0,0,0,.2);border-radius:6px}
+.lvl .ln{font-family:'Press Start 2P',ui-monospace,monospace;font-size:10px;color:var(--pink)}
+.lvl .lt{font-family:'Press Start 2P',ui-monospace,monospace;font-size:13px;color:var(--yel);line-height:1.4;margin:4px 0}
+.lvl .lp{font-size:19px;line-height:1.05}
+.lvl .st{font-size:20px;letter-spacing:2px;color:var(--yel)}
+.lvl.lock{filter:grayscale(1) brightness(.6)}
+/* ---------- intro / résultats ---------- */
+.overlay{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(10,5,24,.72);overflow-y:auto;touch-action:pan-y}
+.overlay .panel{max-width:460px;width:100%;display:flex;flex-direction:column;gap:12px;max-height:100%;overflow-y:auto}
+.prof{display:flex;gap:12px;align-items:center}
+.prof canvas{image-rendering:pixelated;width:72px;height:108px;flex:none;background:rgba(0,0,0,.25);border-radius:8px}
+.quote{background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:10px;padding:8px 10px;font-size:21px;line-height:1.05;position:relative}
+.quote::before{content:"";position:absolute;left:-12px;top:18px;border:6px solid transparent;border-right-color:var(--ink);border-width:6px 9px}
+ul.hints{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+ul.hints li{background:rgba(255,255,255,.06);border-radius:6px;padding:5px 8px;line-height:1.05}
+.tips{font-size:19px;line-height:1.1;color:#cfc6ef}
+.bigtitle{font-family:'Press Start 2P',ui-monospace,monospace;font-size:20px;text-align:center;line-height:1.4;text-shadow:3px 3px 0 var(--ink)}
+.stars{font-size:40px;text-align:center;letter-spacing:6px}
+.stars .off{opacity:.25;filter:grayscale(1)}
+.stats{display:flex;justify-content:center;gap:16px;font-size:22px}
+/* ---------- HUD ---------- */
+#hud{position:absolute;inset:0;pointer-events:none;z-index:10}
+#hud button{pointer-events:auto}
+.hudTop{position:absolute;left:8px;right:8px;top:8px;display:flex;gap:8px;align-items:flex-start}
+.hbtn{width:46px;height:46px;border:3px solid var(--ink);border-radius:8px;background:var(--panel2);font-family:'Press Start 2P',ui-monospace,monospace;font-size:12px;box-shadow:0 3px 0 var(--ink);flex:none}
+.hudInfo{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
+#hRoom{font-family:'Press Start 2P',ui-monospace,monospace;font-size:9px;background:rgba(20,11,38,.78);border:2px solid var(--ink);border-radius:6px;padding:5px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{font-family:'Press Start 2P',ui-monospace,monospace;font-size:9px;padding:5px 7px;border-radius:6px;border:2px solid var(--ink);background:#3e8948;align-self:flex-start;white-space:nowrap}
+.chip.warn{background:#c98a14}.chip.alarm{background:#d82b3c;animation:blink .4s steps(2) infinite}.chip.cool{background:#3d6fd0}
+@keyframes blink{50%{filter:brightness(1.5)}}
+.hudRight{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.hudRight>div{font-family:'Press Start 2P',ui-monospace,monospace;font-size:10px;background:rgba(20,11,38,.78);border:2px solid var(--ink);border-radius:6px;padding:5px 7px}
+#hHeart{font-size:14px!important;transition:transform .08s}
+#hEffects{position:absolute;top:100px;right:8px;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+#hEffects div{font-family:'Press Start 2P',ui-monospace,monospace;font-size:9px;background:rgba(20,11,38,.85);border:2px solid var(--cyan);border-radius:6px;padding:4px 6px}
+#hHidden{position:absolute;top:100px;left:50%;transform:translateX(-50%);font-family:'Press Start 2P',ui-monospace,monospace;font-size:10px;background:rgba(20,11,38,.85);border:2px solid var(--green);border-radius:8px;padding:6px 10px;white-space:nowrap}
+.hudBottom{position:absolute;left:8px;right:8px;bottom:calc(10px + env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:8px}
+#inv{display:flex;gap:6px;flex:none}
+.slot{width:54px;height:54px;border:3px solid var(--ink);border-radius:8px;background:rgba(47,33,86,.9);box-shadow:0 3px 0 var(--ink);padding:0;display:flex;align-items:center;justify-content:center;position:relative}
+.slot.empty{background:rgba(47,33,86,.45);border-style:dashed}
+.slot canvas{width:42px;height:42px;image-rendering:pixelated}
+.slot span{position:absolute;bottom:-2px;left:0;right:0;font-family:'Press Start 2P',ui-monospace,monospace;font-size:6px;color:var(--yel);text-shadow:1px 1px 0 var(--ink)}
+#acts{flex:1;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.act{min-width:120px;max-width:200px;border:3px solid var(--ink);border-radius:12px;background:var(--yel);color:var(--ink);box-shadow:0 5px 0 var(--ink);padding:8px 10px;text-align:center;font-family:'Press Start 2P',ui-monospace,monospace;font-size:10px;line-height:1.35;position:relative;overflow:hidden}
+.act .ai{font-size:22px;display:block;line-height:1}
+.act .as{display:block;font-family:'VT323',ui-monospace,monospace;font-size:17px;line-height:1;margin-top:2px;opacity:.85}
+.act.small{background:var(--cyan);min-width:110px}
+.act:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink)}
+.act .pg{position:absolute;left:0;bottom:0;height:6px;background:var(--green)}
+#toast{position:absolute;left:50%;top:104px;transform:translateX(-50%);width:min(92%,440px);background:rgba(20,11,38,.92);border:3px solid var(--yel);border-radius:10px;padding:8px 12px;font-size:21px;line-height:1.05;text-align:center;box-shadow:0 4px 0 var(--ink);animation:pop .2s}
+#banner{position:absolute;left:50%;top:60px;transform:translateX(-50%);width:min(94%,460px);background:#e0249a;color:#fff;border:3px solid var(--ink);border-radius:10px;padding:8px 12px;font-size:21px;line-height:1.05;text-align:center;box-shadow:0 4px 0 var(--ink);animation:pop .2s}
+@keyframes pop{from{transform:translateX(-50%) scale(.7);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+#hint{position:absolute;left:50%;bottom:220px;transform:translateX(-50%);font-family:'Press Start 2P',ui-monospace,monospace;font-size:10px;background:rgba(20,11,38,.85);border:2px solid var(--yel);border-radius:8px;padding:8px 10px;white-space:nowrap;animation:wob 1.6s ease-in-out infinite;transition:opacity .5s}
+#joy{position:absolute;width:0;height:0;z-index:9;pointer-events:none}
+#joyRing{position:absolute;left:-58px;top:-58px;width:116px;height:116px;border-radius:50%;border:3px solid rgba(255,255,255,.55);background:radial-gradient(circle,rgba(99,199,77,.25) 0 36px,rgba(255,74,90,.18) 37px 58px)}
+#joyRing::after{content:"";position:absolute;inset:18px;border-radius:50%;border:2px dashed rgba(255,255,255,.35)}
+#joyKnob{position:absolute;left:-24px;top:-24px;width:48px;height:48px;border-radius:50%;background:var(--yel);border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink)}
+#joyLbl{position:absolute;left:-40px;top:62px;width:80px;text-align:center;font-family:'Press Start 2P',ui-monospace,monospace;font-size:8px;text-shadow:1px 1px 0 var(--ink)}
+
+/* ---------- animations « juice » ---------- */
+.logo i{display:inline-block;font-style:normal;animation:letter 1.6s ease-in-out infinite}
+@keyframes letter{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-7px) rotate(-6deg)}50%{transform:translateY(0) rotate(0)}75%{transform:translateY(3px) rotate(4deg)}}
+.logo .l1,.logo .l2{animation:none}
+.screen:not(.hidden) .wrap{animation:scrIn .35s cubic-bezier(.2,1.6,.4,1)}
+@keyframes scrIn{from{transform:translateY(30px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+.overlay:not(.hidden) .panel{animation:panIn .4s cubic-bezier(.2,1.7,.4,1)}
+@keyframes panIn{from{transform:scale(.5) rotate(-4deg);opacity:0}to{transform:none;opacity:1}}
+.lvl{animation:cardIn .45s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes cardIn{from{transform:translateX(-40px) rotate(-3deg);opacity:0}to{transform:none;opacity:1}}
+.btn:active{transform:translateY(4px) scale(1.04,.92)}
+.btn.big{animation:breathe 2.2s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04,.97)}}
+.btn.big:active{animation:none}
+.act{animation:actIn .3s cubic-bezier(.2,1.8,.4,1)}
+@keyframes actIn{from{transform:scale(.4) rotate(-8deg)}to{transform:none}}
+.act .ai{animation:bob 1.2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.slot.bump{animation:slotBump .4s cubic-bezier(.2,2,.4,1)}
+@keyframes slotBump{0%{transform:scale(1)}40%{transform:scale(1.35) rotate(8deg);background:#ffd23f}100%{transform:none}}
+.chip.alarm{animation:blink .4s steps(2) infinite,shake .25s linear infinite}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px) rotate(-2deg)}75%{transform:translateX(2px) rotate(2deg)}}
+#toast{animation:toastIn .35s cubic-bezier(.2,1.7,.4,1)}
+@keyframes toastIn{from{transform:translateX(-50%) translateY(-20px) scale(.6);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+.card{transition:transform .1s}.card:active{transform:scale(.95) rotate(-2deg)}
+.card canvas{animation:bob 1.6s ease-in-out infinite}
+#cPrev{animation:none}
+.stars span{display:inline-block;animation:starIn .5s cubic-bezier(.2,2,.4,1) both}
+.stars span:nth-child(2){animation-delay:.15s}.stars span:nth-child(3){animation-delay:.3s}
+@keyframes starIn{from{transform:scale(0) rotate(-180deg)}to{transform:none}}
+
+/* ---------- mode à deux ---------- */
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.role{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px;border:3px solid var(--ink);border-radius:10px;background:var(--panel);box-shadow:0 4px 0 var(--ink)}
+.role canvas{width:60px;height:102px;image-rendering:pixelated}
+.role b{font-family:'Press Start 2P',ui-monospace,monospace;font-size:11px;color:var(--yel)}
+.role span{font-size:18px;line-height:1;opacity:.85}
+.role.sel{background:#4a3a8a;outline:3px solid var(--yel)}
+.lvlpick{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.lvlpick button{border:3px solid var(--ink);border-radius:8px;background:var(--panel);padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;box-shadow:0 3px 0 var(--ink)}
+.lvlpick b{font-family:'Press Start 2P',ui-monospace,monospace;font-size:14px;color:var(--yel)}
+.lvlpick span{font-size:13px;line-height:1;text-align:center}
+.lvlpick button.sel{background:#4a3a8a;outline:3px solid var(--yel)}
+.bigcode{display:flex;gap:8px}
+.bigcode i{font-style:normal;font-family:'Press Start 2P',ui-monospace,monospace;font-size:34px;color:var(--ink);background:var(--yel);border:3px solid var(--ink);border-radius:8px;padding:10px 8px;box-shadow:0 5px 0 var(--ink);animation:letter 1.6s ease-in-out infinite}
+.bigcode i:nth-child(2){animation-delay:.1s}.bigcode i:nth-child(3){animation-delay:.2s}.bigcode i:nth-child(4){animation-delay:.3s}
+input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;text-transform:uppercase}
+.spin{font-size:36px;animation:spin 1.2s linear infinite;display:inline-block;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (min-width:700px){ .act{font-size:11px} #hRoom,.chip{font-size:10px} }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+  <div id="touch"></div>
+  <div id="joy" class="hidden"><div id="joyRing"></div><div id="joyKnob"></div><div id="joyLbl">chut…</div></div>
+  <div id="hud" class="hidden">
+    <div class="hudTop">
+      <button id="bPause" class="hbtn" aria-label="Pause">❚❚</button>
+      <div class="hudInfo"><div id="hRoom">📍</div><div id="hStatus" class="chip">Calme</div></div>
+      <div class="hudRight"><div id="hTime">0:00</div><div id="hLocks">🔒×3</div><div id="hHeart">🤍</div></div>
+    </div>
+    <div id="hEffects"></div>
+    <div id="hHidden" class="hidden"></div>
+    <div id="toast" class="hidden"></div>
+    <div id="banner" class="hidden"></div>
+    <div id="hint">Glisse ton doigt pour bouger</div>
+    <div class="hudBottom">
+      <div id="inv"></div>
+      <div id="acts"><button id="act2" class="act small hidden"></button><button id="act1" class="act hidden"></button></div>
+    </div>
+  </div>
+
+  <!-- Accueil -->
+  <div id="sTitle" class="screen">
+    <div class="wrap center">
+      <div class="logo"><span class="l1">ÉCHAPPE</span><span class="l2">AU PROF !</span></div>
+      <div class="sub">Collège Notre-Dame de Sion</div>
+      <canvas id="titleCv" width="176" height="56"></canvas>
+      <button class="btn big" id="bPlay">▶ Jouer</button>
+      <button class="btn pink" id="bMulti">👥 À deux en ligne</button>
+      <button class="btn cyan" id="bChars">👕 Mes personnages</button>
+      <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
+      <div class="panel howto">
+        <b>Le but :</b> échapper au prof et trouver <b>une des 3 sorties secrètes</b> de chaque niveau.<br>
+        👆 Glisse ton doigt : <b>un peu</b> = marcher sans bruit, <b>à fond</b> = courir (ça s’entend !).<br>
+        🙈 Cache-toi sous les bureaux, dans les armoires, derrière les portes…<br>
+        👣 Les <b>traces orange</b> et les « CLAC ! » te montrent où le prof fait du bruit.<br>
+        🔒 Ferme des portes à clé : le prof devra aller chercher ses clés !<br>
+        ✨ Ramasse les objets magiques des contes (gâteau, lampe, pomme…).
+      </div>
+      <div class="tiny">Musique 🎵 · Bruitages 🔊 · Voix des profs 🗣️ · Effet télé 📺 (tape pour couper)</div>
+    </div>
+  </div>
+
+  <!-- Mode à deux -->
+  <div id="sMulti" class="screen hidden">
+    <div class="wrap">
+      <h2 class="px">👥 À deux en ligne</h2>
+      <div id="mBody" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
+  </div>
+
+  <!-- Liste des personnages -->
+  <div id="sChars" class="screen hidden">
+    <div class="wrap">
+      <h2 class="px">👕 Mes personnages</h2>
+      <div class="tiny">Tape sur un perso pour le choisir.</div>
+      <div id="charGrid" class="grid"></div>
+      <div class="row"><button class="btn ghost" id="bCharsBack">◀ Retour</button><button class="btn green" id="bCharsGo">Jouer ▶</button></div>
+    </div>
+  </div>
+
+  <!-- Créateur -->
+  <div id="sCreator" class="screen hidden">
+    <div class="wrap">
+      <h2 class="px" id="crTitle">✏️ Crée ton perso</h2>
+      <div class="creator-top">
+        <canvas id="cPrev" width="22" height="34"></canvas>
+        <div class="side">
+          <label class="lbl" for="cName">Prénom</label>
+          <input id="cName" class="name" maxlength="12" placeholder="Ton prénom" autocomplete="off">
+          <button class="btn pink" id="cRand">🎲 Au hasard</button>
+          <div class="row"><button class="btn ghost" id="cTurn" style="font-size:11px">↻ Tourner</button></div>
+        </div>
+      </div>
+      <div id="cOpts" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div class="sticky row"><button class="btn ghost" id="cCancel">✖ Annuler</button><button class="btn green" id="cSave">✔ Valider</button></div>
+    </div>
+  </div>
+
+  <!-- Niveaux -->
+  <div id="sLevels" class="screen hidden">
+    <div class="wrap">
+      <div class="panel who"><canvas id="whoCv" width="20" height="34"></canvas><div style="flex:1"><div class="tiny">Tu joues avec</div><div class="px" id="whoName" style="font-size:13px;color:var(--yel)"></div></div><button class="btn ghost" id="bWho" style="font-size:10px;padding:10px">Changer</button></div>
+      <h2 class="px">🏫 Choisis ton niveau</h2>
+      <div id="lvlList" style="display:flex;flex-direction:column;gap:12px"></div>
+      <button class="btn ghost" id="bLvlBack">◀ Accueil</button>
+    </div>
+  </div>
+
+  <!-- Intro de niveau -->
+  <div id="sIntro" class="overlay hidden">
+    <div class="panel">
+      <div class="px" id="inNum" style="font-size:10px;color:var(--pink)"></div>
+      <h2 class="px" id="inTitle"></h2>
+      <div class="prof"><canvas id="inProf" width="20" height="34"></canvas><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div><b class="px" id="inName" style="font-size:11px;color:var(--cyan)"></b><div class="tiny" id="inRole"></div></div><div class="quote" id="inQuote"></div></div></div>
+      <div id="inMission"><b style="color:var(--yel)">Ta mission :</b> trouver <b>UNE</b> des 3 sorties secrètes.</div>
+      <ul class="hints" id="inHints"></ul>
+      <div class="tips" id="inTips"></div>
+      <button class="btn big green" id="bGo">C’est parti !</button>
+    </div>
+  </div>
+
+  <!-- Pause -->
+  <div id="sPause" class="overlay hidden">
+    <div class="panel">
+      <div class="bigtitle" style="color:var(--yel)">PAUSE</div>
+      <button class="btn green" id="pResume">▶ Reprendre</button>
+      <button class="btn" id="pRestart">↻ Recommencer</button>
+      <button class="btn ghost" id="pLevels">🏫 Niveaux</button>
+      <div class="toggles"><button class="tog" data-k="music">🎵</button><button class="tog" data-k="sfx">🔊</button><button class="tog" data-k="voice">🗣️</button><button class="tog" data-k="crt">📺</button></div>
+      <div class="tips">👣 traces orange = pas du prof · 🔊 bulle en pointillés = tu l’entends sans le voir · cône jaune = ce que le prof voit.</div>
+    </div>
+  </div>
+
+  <!-- Résultat -->
+  <div id="sResult" class="overlay hidden">
+    <div class="panel" id="resPanel"></div>
+  </div>
+</div>
+<script>
+/*__JS__*/
+</script>
+</body>
+</html>

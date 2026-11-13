@@ -1,0 +1,333 @@
+// ================= MODE À DEUX (pair-à-pair, PeerJS) =================
+const PAGES_URL = 'https://distortedimages-code.github.io/echappe-au-prof/';
+const Net = {
+  peer: null, conn: null, role: null, isHost: false, code: '', connected: false, closing: false,
+  ready: { me: false, them: false }, lastRecv: 0, sendT: 0, kidsT: 0, seenT: 0, them: { name: '', cfg: null }, level: 0, timeLeft: 180, setup: null, joinTimer: null,
+  available() { return typeof RTCPeerConnection !== 'undefined' && (location.protocol === 'file:' || /github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname)); },
+  loadLib() {
+    return new Promise((res, rej) => {
+      if (window.Peer) return res();
+      const add = (src, ok, ko) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = ko; document.head.appendChild(s); };
+      add('peerjs.min.js', () => res(), () => add('https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js', () => res(), () => rej(new Error('lib'))));
+    });
+  },
+  opts() {
+    const q = new URLSearchParams(location.search), o = { debug: 0 };
+    if (q.get('peerhost')) { o.host = q.get('peerhost'); o.port = +q.get('peerport') || 9000; o.path = q.get('peerpath') || '/'; o.secure = false; o.config = { iceServers: [] }; }
+    return o;
+  },
+  idFor(code) { return 'echappe-au-prof-v1-' + code.toLowerCase(); },
+  newCode() { const A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 4; i++) s += A[Math.floor(Math.random() * A.length)]; return s; },
+  errText(e) {
+    const t = e && e.type;
+    if (t === 'peer-unavailable') return 'Code introuvable : vérifie les 4 lettres (et que l’autre joueur attend bien).';
+    if (t === 'network' || t === 'server-error' || t === 'socket-error' || t === 'socket-closed') return 'Pas de connexion au service de mise en relation. Vérifie internet et réessaie.';
+    if (t === 'browser-incompatible') return 'Ce navigateur ne permet pas le jeu à deux.';
+    return 'Oups, la connexion a échoué (' + (t || 'inconnu') + ').';
+  },
+  async host(role, level) {
+    try { await this.loadLib(); } catch (e) { Multi.error('Impossible de charger le module réseau.'); return; }
+    this.close(true); this.closing = false; this.isHost = true; this.role = role; this.level = level; this.ready = { me: false, them: false };
+    this.tryHost(0);
+  },
+  tryHost(n) {
+    this.code = this.newCode();
+    const p = new Peer(this.idFor(this.code), this.opts()); this.peer = p;
+    p.on('open', () => Multi.waiting(this.code));
+    p.on('connection', c => { if (this.conn && this.conn.open) { c.on('open', () => { c.send({ t: 'full' }); setTimeout(() => c.close(), 300); }); return; } this.bind(c); });
+    p.on('error', e => { if (e.type === 'unavailable-id' && n < 6) { p.destroy(); this.tryHost(n + 1); } else if (!this.connected) Multi.error(this.errText(e)); });
+    p.on('disconnected', () => { if (!this.closing) try { p.reconnect(); } catch (e) { } });
+  },
+  async join(code) {
+    try { await this.loadLib(); } catch (e) { Multi.error('Impossible de charger le module réseau.'); return; }
+    this.close(true); this.closing = false; this.isHost = false; this.code = code; this.ready = { me: false, them: false };
+    const p = new Peer(undefined, this.opts()); this.peer = p;
+    p.on('open', () => {
+      const c = p.connect(this.idFor(code), { reliable: true, serialization: 'json' }); this.bind(c);
+      this.joinTimer = setTimeout(() => { if (!this.connected) Multi.error('Impossible de rejoindre… Vérifiez que vous êtes connectés à internet (le même Wi-Fi, c’est encore mieux).'); }, 15000);
+    });
+    p.on('error', e => { if (!this.connected) Multi.error(this.errText(e)); });
+  },
+  bind(c) {
+    this.conn = c;
+    c.on('open', () => {
+      this.connected = true; clearTimeout(this.joinTimer); this.lastRecv = performance.now();
+      const me = UI.cfg(); this.send({ t: 'hello', name: me ? me.name : 'Joueur', cfg: me || randomChar('Élève') });
+      Multi.status('Connecté ! Préparation de la partie…');
+    });
+    c.on('data', d => { this.lastRecv = performance.now(); try { this.recv(d); } catch (e) { console.error(e); } });
+    c.on('close', () => this.lost());
+    c.on('error', () => this.lost());
+  },
+  send(o) { if (this.conn && this.conn.open) try { this.conn.send(o); } catch (e) { } },
+  close(silent) {
+    this.closing = true;
+    if (this.conn) { try { if (!silent) this.conn.send({ t: 'bye' }); } catch (e) { } try { this.conn.close(); } catch (e) { } }
+    if (this.peer) { try { this.peer.destroy(); } catch (e) { } }
+    this.conn = null; this.peer = null; this.connected = false; clearTimeout(this.joinTimer);
+  },
+  lost() {
+    if (this.closing) return;
+    this.close(true); G.net = null;
+    if (['play', 'intro', 'escape', 'caught', 'timeup', 'result', 'paused'].includes(G.mode) || $('sMulti').classList.contains('hidden') === false) {
+      G.mode = 'menu'; Multi.open(); Multi.error('La connexion avec l’autre joueur a été perdue 😢');
+    }
+  },
+  // ---------- déroulement ----------
+  studentCfg() { return this.role === 'student' ? UI.cfg() : this.them.cfg; },
+  newRound(swap, level) {
+    if (!this.isHost) { this.send({ t: 'rematch', swap: !!swap, lvl: level }); return; }
+    if (swap) this.role = this.role === 'student' ? 'teacher' : 'student';
+    if (level != null) this.level = clamp(level, 0, LEVELS.length - 1);
+    const scfg = this.studentCfg() || randomChar('Élève');
+    startLevel(this.level, scfg);
+    this.setup = {
+      t: 'setup', lvl: this.level, hostRole: this.role, time: 180,
+      items: G.items.map(i => ({ id: i.id, x: i.x, y: i.y, kind: i.kind })),
+      secrets: G.L.exits.map(e => e.secret || null),
+      kids: G.kids.map(k => ({ cfg: k.cfg, beh: k.beh, x: k.x, y: k.y })), ball: G.ball ? [G.ball.from, G.ball.to] : null,
+      student: scfg
+    };
+    this.send(this.setup);
+    this.enter(this.setup);
+  },
+  enter(setup) {
+    this.timeLeft = setup.time; this.ready = { me: false, them: false };
+    G.net = { role: this.role };
+    const T = G.T; T.hasKeys = !!T.prof.hasKeys; T.netLocal = this.role === 'teacher'; G.alarmT = 0;
+    Multi.intro();
+  },
+  setReady() {
+    this.ready.me = true; this.send({ t: 'ready' });
+    $('bGo').textContent = '⏳ On attend l’autre…'; $('bGo').disabled = true;
+    this.maybeGo();
+  },
+  maybeGo() { if (this.isHost && this.ready.me && this.ready.them) { this.send({ t: 'go' }); this.start(); } },
+  start() {
+    G.mode = 'play'; UI.show('play'); FX.iris = { mode: 'in', t: 0, dur: 0.75 }; AU.play('sneak');
+    UI.hudSig = null; UI.invSig = null; $('bGo').disabled = false;
+    const T = G.T; T.state = 'count'; T.st = 3.3; T.countN = 0;
+    $('hint').classList.add('hidden');
+  },
+  // ---------- réception ----------
+  recv(d) {
+    const P = G.P, T = G.T, L = G.L;
+    switch (d.t) {
+      case 'full': Multi.error('Cette partie est déjà complète.'); this.close(true); break;
+      case 'hello':
+        this.them = { name: d.name || 'Joueur', cfg: d.cfg };
+        if (this.isHost) this.newRound(false);
+        break;
+      case 'setup':
+        this.role = d.hostRole === 'student' ? 'teacher' : 'student'; this.level = d.lvl; this.setup = d;
+        startLevel(d.lvl, d.student, d); this.enter(d);
+        break;
+      case 'ready': this.ready.them = true; this.maybeGo(); break;
+      case 'go': this.start(); break;
+      case 'rematch': if (this.isHost) this.newRound(d.swap, d.lvl); break;
+      case 'bye': this.closing = true; this.close(true); G.net = null; G.mode = 'menu'; Multi.open(); Multi.error('L’autre joueur a quitté la partie.'); break;
+    }
+    if (!G.net || !G.P) return;
+    switch (d.t) {
+      case 's': if (this.role === 'teacher') P.net = d; break;
+      case 'T': if (this.role === 'student') T.net = d; break;
+      case 'k': if (!this.isHost) { d.a.forEach((a, i) => { const k = G.kids[i]; if (k) k.net = a; }); if (G.ball && d.b) { G.ball.from = d.b[0]; G.ball.to = d.b[1]; G.ball.t = d.b[2]; } } break;
+      case 'lock': { const dr = G.doors[d.i]; if (dr) { dr.locked = !!d.l; dr.byPlayer = !!d.l; if (dr.locked) { dr.target = 0; dr.closeT = 0; } const V0 = viewerA(), dd = dist(dr.x * 16, dr.y * 16, V0.x, V0.y) / 16; if (dd < 16) { AU.sfx('lock', clamp(1 - dd / 16, 0.2, 1)); cue(dr.x * 16 + 8, dr.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true }); } } break; }
+      case 'item': G.items = G.items.filter(i => i.id !== d.id); break;
+      case 'apple': G.apples.push({ id: d.id, x: d.x, y: d.y, eaten: false }); break;
+      case 'eat': { const a = G.apples.find(a => a.id === d.id); if (a) { a.eaten = true; G.apples = G.apples.filter(b => b !== a); } AU.sfx('crunch', 0.6); break; }
+      case 'slow': G.slowT = d.d; FX.flash = 0.6; FX.flashCol = '140,190,255'; AU.sfx('slow'); toast('⏱️ La montre du Lapin blanc ! Tu avances au ralenti…', 2.2); break;
+      case 'pouf': puff(d.x, d.y - 6, 16, '#c8b0ff'); AU.sfx('pouf', 0.6); if (dist(d.x, d.y, T.x, T.y) < 12 * 16) cue(d.x, d.y - 20, 'word', 'POUF !', { col: '#c8b0ff', pop: true }); break;
+      case 'noise': if (this.role === 'teacher') { const dd = dist(T.x, T.y, d.x, d.y) / 16; if (dd < d.r * 1.8 && !G.pVis) cue(d.x, d.y - 8, 'word', d.w || '?!', { col: '#ffb347', pop: true, life: 1.2 }); } break;
+      case 'tcheck': { const s = L.hides[d.i]; if (s) { s.shake = 1; const dd = dist(T.x, T.y, P.x, P.y) / 16; AU.sfx('search', clamp(1 - dd / 14, 0, 0.8)); if (!G.tVis && dd < 14) cue(s.x * 16 + 8, s.y * 16, 'word', 'frrr…', { col: '#ffd0a0', life: 1 }); T.state = 'check'; T.checkT = 1; } break; }
+      case 'keys': T.hasKeys = true; if (dist(T.x, T.y, P.x, P.y) < 16 * 16 && !G.tVis) cue(T.x, T.y - 24, 'word', 'cling cling', { col: '#ffd23f', life: 1 }); AU.sfx('keys', 0.5); break;
+      case 'say': T.bubble = { text: d.text, t: 0, dur: Math.max(2, d.text.length * 0.075) }; { const dd = dist(T.x, T.y, P.x, P.y) / 16; if (dd < 20) AU.say(d.text, T.prof, clamp(1.25 - dd / 15, 0.15, 1)); } break;
+      case 'spot':
+        G.spotted++; FX.spotted(); setMark(T, '!', 1.3); T.flashT = 0.18; hop(T, 90); G.shake = 0.25; AU.sfx('spot');
+        if (T.prof.whistle) { AU.sfx('whistle', 0.8); cue(T.x, T.y - 26, 'word', 'PRIIIT !', { col: '#9fe0ff', life: 1 }); }
+        G.alarmT = 3; AU.play('chase'); break;
+      case 'seen': G.alarmT = Math.max(G.alarmT || 0, 2.5); break;
+      case 'caught': caught(d.r, true); break;
+      case 'escape': { const ex = L.exits[d.e]; if (ex) escape(ex, d.x, d.y, true); break; }
+      case 'end': timeUp(); break;
+    }
+  },
+  // ---------- envoi régulier ----------
+  tick(dt) {
+    this.sendT -= dt;
+    if (this.sendT <= 0) {
+      this.sendT = 0.05;
+      const P = G.P, T = G.T;
+      if (this.role === 'student') this.send({ t: 's', x: +P.x.toFixed(1), y: +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0 });
+      else this.send({ t: 'T', x: +T.x.toFixed(1), y: +T.y.toFixed(1), a: +T.ang.toFixed(2), f: T.face, m: T.moving ? 1 : 0, r: T.running ? 1 : 0, st: T.state, k: T.hasKeys ? 1 : 0 });
+    }
+    if (this.isHost && G.kids.length) {
+      this.kidsT -= dt;
+      if (this.kidsT <= 0) { this.kidsT = 0.1; this.send({ t: 'k', a: G.kids.map(k => [Math.round(k.x), Math.round(k.y), k.face, k.moving ? 1 : 0, k.runK ? 1 : 0]), b: G.ball ? [G.ball.from, G.ball.to, +G.ball.t.toFixed(2)] : null }); }
+    }
+    const lag = (performance.now() - this.lastRecv) / 1000;
+    if (lag > 4 && G.mode === 'play') { if (!this.lagShown) { this.lagShown = true; UI.banner('📶 Connexion lente… on attend l’autre joueur'); } } else this.lagShown = false;
+  },
+  smooth(A, dt) {
+    const s = A.net; if (!s) return;
+    const k = Math.min(1, dt * 15), ox = A.x, oy = A.y;
+    if (Math.hypot(s.x - A.x, s.y - A.y) > 64) { A.x = s.x; A.y = s.y; } else { A.x += (s.x - A.x) * k; A.y += (s.y - A.y) * k; }
+    const moved = Math.hypot(A.x - ox, A.y - oy); A.dist = (A.dist || 0) + moved;
+    A.vx = (A.x - ox) / Math.max(dt, 1e-3); A.vy = (A.y - oy) / Math.max(dt, 1e-3);
+    A.moving = !!s.m || moved > 0.15; A.running = !!s.r; A.face = s.f;
+  }
+};
+const viewerA = () => (G.net && G.net.role === 'teacher') ? G.T : G.P;
+// pas entendus d'un personnage distant
+function stepCues(A, visible, dt, hearR) {
+  if (!A.moving) return;
+  A.stcT = (A.stcT || 0) - dt;
+  if (A.stcT > 0) return;
+  A.stcT = A.running ? 0.27 : 0.44; A.stSide = (A.stSide || 0) ^ 1;
+  const V0 = viewerA(), d = dist(A.x, A.y, V0.x, V0.y) / 16, hr = A.running ? 16 : hearR;
+  if (d < hr) {
+    AU.sfx('tstep', clamp(1 - d / hr, 0, 1) * 0.9);
+    if (!visible) cue(A.x, A.y, 'step', null, { ang: Math.hypot(A.vx || 0, A.vy || 0) > 1 ? Math.atan2(A.vy, A.vx) : (A.ang || 0), side: A.stSide, big: A.running, life: 1.6 });
+  }
+}
+function countdownStep(T, dt) {
+  T.st -= dt; T.moving = false;
+  const n = 3 - Math.ceil(T.st - 0.3);
+  if (n > T.countN && n <= 3) { T.countN = n; FX.cntN = n; FX.cntA = 0; T.bubble = { text: n + (n < 3 ? '…' : ' !'), t: 0, dur: 0.9 }; AU.sfx(n < 3 ? 'count' : 'go'); }
+  if (T.st <= 0) { FX.goA = 0; return false; }
+  return true;
+}
+function solidT(x, y) {
+  const k = G.m.get(x, y);
+  if (k === K.DOOR) return doorAt(x, y).locked;
+  return KP[k].solid === 1;
+}
+// ---------- la maîtresse jouée par un humain ----------
+function updateTeacherLocal(dt) {
+  const T = G.T, P = G.P, inp = Input.get();
+  T.vx = 0; T.vy = 0;
+  if (T.bubble) { T.bubble.t += dt; if (T.bubble.t > T.bubble.dur) T.bubble = null; }
+  if (T.markT > 0) T.markT -= dt;
+  if (T.state === 'count') { if (!countdownStep(T, dt)) { T.state = 'free'; toast('À toi de jouer : attrape ' + (P.cfg.name || 'l’élève') + ' !', 2); } return; }
+  if (T.sleepT > 0) {
+    T.sleepT -= dt; T.state = 'sleep'; T.moving = false; T.running = false; T.zT = (T.zT || 0) - dt;
+    if (T.zT <= 0) { T.zT = 0.9; cue(T.x + 6, T.y - 28, 'zzz', 'Z', { life: 1.4 }); AU.sfx('snore', 0.6); }
+    if (T.sleepT <= 0) { T.state = 'free'; toast('Hein ?! Tu te réveilles !', 1.6); }
+    return;
+  }
+  if (T.busy) {
+    const b = T.busy; T.moving = false; T.running = false;
+    if (inp.mag > 0.35) { T.busy = null; T.state = 'free'; return; }
+    b.t += dt; if (b.t >= b.dur) { T.busy = null; T.state = 'free'; b.done(); }
+    return;
+  }
+  if (inp.mag > 0.08) {
+    const run = inp.mag > 0.62, nx = inp.x / inp.mag, ny = inp.y / inp.mag;
+    let sp = (run ? 4.0 : 2.1) * 16; if (G.slowT > 0) sp *= 0.5;
+    const ox = T.x, oy = T.y; moveA(T, nx * sp * dt, ny * sp * dt, solidT, 5, 6);
+    const moved = Math.hypot(T.x - ox, T.y - oy); T.dist = (T.dist || 0) + moved;
+    T.vx = (T.x - ox) / dt; T.vy = (T.y - oy) / dt; T.moving = moved > 0.05; T.running = run && T.moving;
+    T.ang = Math.atan2(ny, nx); T.face = faceFromAng(T.ang); T.state = T.running ? 'chase' : 'free';
+    if (T.moving) { T.stepT = (T.stepT || 0) - dt; if (T.stepT <= 0) { T.stepT = T.running ? 0.28 : 0.45; AU.sfx('tstep', 0.25); } }
+  } else { T.moving = false; T.running = false; T.state = 'free'; }
+  for (const a of G.apples) {
+    if (!a.eaten && dist(T.x, T.y, a.x, a.y) < 12) {
+      a.eaten = true; G.apples = G.apples.filter(b => b !== a); Net.send({ t: 'eat', id: a.id });
+      AU.sfx('crunch'); T.sleepT = 7; T.state = 'sleep'; say('Oh, une pomme ! Miam… Zzz');
+      toast('🍎 Une pomme dormeuse ! Tu t’endors 7 secondes…', 2.2); return;
+    }
+  }
+  if (G.pVis) {
+    if (!T.sawP && G.time - (T.lastSpotT || -99) > 4) { T.lastSpotT = G.time; Net.send({ t: 'spot' }); G.spotted++; setMark(T, '!', 1.2); hop(T, 80); FX.lines = 0.5; FX.punch(0.08); AU.sfx('spot'); if (T.prof.whistle) AU.sfx('whistle', 0.7); }
+    Net.seenT -= dt; if (Net.seenT <= 0) { Net.seenT = 1; Net.send({ t: 'seen' }); }
+  }
+  T.sawP = G.pVis;
+  if (!P.hidden && dist(T.x, T.y, P.x, P.y) < 12) { Net.send({ t: 'caught', r: 'chase' }); caught('chase', true); }
+}
+function computeActionsT() {
+  const T = G.T, P = G.P, m = G.m, L = G.L, acts = [];
+  if (G.mode !== 'play' || T.state === 'count' || T.state === 'sleep') return acts;
+  if (T.busy) return [{ id: 'busy', icon: '⏳', label: T.busy.label, sub: 'Bouge pour annuler', progress: T.busy.t / T.busy.dur }];
+  const [ptx, pty] = tileOf(T), cx0 = T.x, cy0 = T.y - 6, cand = [];
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    const tx = ptx + dx, ty = pty + dy, d = Math.hypot(tx * 16 + 8 - cx0, ty * 16 + 8 - cy0);
+    if (d > 21) continue;
+    const hs = L.hideAt.get(ty * m.w + tx);
+    if (hs) cand.push({ id: 'tcheck', spot: hs, icon: '🔍', label: 'Fouiller', sub: hs.n, prio: 1, d });
+    if (m.get(tx, ty) === K.DOOR) { const dr = doorAt(tx, ty); if (dr.locked) cand.push(T.hasKeys ? { id: 'tunlock', door: dr, icon: '🔓', label: 'Ouvrir la porte', sub: 'avec tes clés', prio: 0, d } : { id: 'nokey', icon: '🔒', label: 'Fermé à clé !', sub: 'va chercher les clés', prio: 2, d }); }
+  }
+  if (!T.hasKeys && dist(T.x, T.y - 4, L.keyPt[0] * 16 + 8, L.keyPt[1] * 16 + 8) < 22) cand.push({ id: 'tkeys', icon: '🔑', label: 'Prendre les clés', sub: 'tableau à clés', prio: 0, d: 0 });
+  cand.sort((a, b) => a.prio - b.prio || a.d - b.d);
+  if (cand[0]) acts.push(cand[0]);
+  acts.push({ id: 'shout', icon: '📣', label: 'Crier', sub: '' });
+  return acts;
+}
+function doActionT(a) {
+  const T = G.T, P = G.P;
+  switch (a.id) {
+    case 'tcheck': {
+      const spot = a.spot; T.state = 'check'; spot.shake = 1; hop(T, 50); AU.sfx('search', 0.6);
+      T.ang = Math.atan2(spot.y * 16 + 8 - T.y, spot.x * 16 + 8 - T.x); T.face = faceFromAng(T.ang);
+      for (let i = 0; i < 7; i++) part(spot.x * 16 + 8, spot.y * 16 + 4, 'junk', { vx: rand(-45, 45), vy: rand(-80, -30), g: 200, life: 0.9, col: pick(['#ffffff', '#ff6f91', '#fec43a', '#9fd7ff', '#63c74d']), size: 2 });
+      Net.send({ t: 'tcheck', i: spot.idx });
+      T.busy = { label: 'Je fouille…', dur: 0.9, t: 0, done: () => { if (P.hidden === spot) { Net.send({ t: 'caught', r: 'found' }); caught('found', true); } else { AU.sfx('fail'); toast(pick(['Personne…', 'Vide !', 'Raté, pas ici !', 'Juste de la poussière…']), 1.2); } } };
+      break;
+    }
+    case 'tkeys': T.state = 'keys'; AU.sfx('keys'); T.busy = { label: 'Je prends les clés…', dur: 1.3, t: 0, done: () => { T.hasKeys = true; Net.send({ t: 'keys' }); toast('🔑 Tu as les clés : tu peux ouvrir les portes fermées !', 2.2); } }; break;
+    case 'tunlock': { const d = a.door; T.state = 'unlock'; AU.sfx('keys'); T.busy = { label: 'J’ouvre…', dur: 1.0, t: 0, done: () => { d.locked = false; d.byPlayer = false; Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 0 }); AU.sfx('lock'); cue(d.x * 16 + 8, d.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true }); } }; break; }
+    case 'nokey': toast('🔒 C’est fermé à clé ! Va prendre les clés au tableau à clés (' + G.m.roomAt(G.L.keyPt[0], G.L.keyPt[1]) + ').', 2.6); AU.sfx('bump'); break;
+    case 'shout': {
+      if (G.time - (T.shoutT || -9) < 2.2) return; T.shoutT = G.time;
+      const n = P.cfg.name || 'toi';
+      const lines = T.prof.lines.spot.concat(['{n} ! Où es-tu ?', 'Je vais te trouver, {n} !', 'Heure de colle, {n} !', 'Sors de ta cachette, {n} !']);
+      const text = pick(lines).replace(/\{n\}/g, n);
+      T.bubble = { text, t: 0, dur: Math.max(2, text.length * 0.075) }; AU.say(text, T.prof, 0.7); Net.send({ t: 'say', text }); hop(T, 70);
+      break;
+    }
+  }
+}
+function timeUp() {
+  if (G.mode !== 'play') return;
+  G.mode = 'timeup'; G.caughtT = 0; FX.comic = { t: 0, text: 'DRIIING !' }; FX.punch(0.15); FX.flash = 1; FX.flashCol = '255,255,255';
+  AU.sfx('alarm'); AU.play(null); G.P.busy = null; if (G.T.busy) G.T.busy = null;
+}
+function netUpdate(dt) {
+  const P = G.P, T = G.T;
+  if (G.net.role === 'student') {
+    updatePlayer(dt); if (G.mode !== 'play') return;
+    if (T.state === 'count') { if (!countdownStep(T, dt)) T.state = 'free'; }
+    else if (T.net) {
+      Net.smooth(T, dt); T.ang = T.net.a; T.hasKeys = !!T.net.k;
+      if (T.checkT > 0) { T.checkT -= dt; T.state = 'check'; } else T.state = T.net.st === 'count' ? 'free' : T.net.st;
+    }
+    if (T.bubble) { T.bubble.t += dt; if (T.bubble.t > T.bubble.dur) T.bubble = null; }
+    if (T.markT > 0) T.markT -= dt;
+    if (T.state === 'sleep') { T.zT = (T.zT || 0) - dt; if (T.zT <= 0) { T.zT = 0.9; cue(T.x + 6, T.y - 28, 'zzz', 'Z', { life: 1.4 }); } }
+    stepCues(T, G.tVis, dt, 12);
+    if (G.alarmT > 0) G.alarmT -= dt;
+    const d = dist(T.x, T.y, P.x, P.y) / 16; G.heartT -= dt;
+    if (d < 7 && T.state !== 'sleep' && G.heartT <= 0) { G.heartT = 0.35 + d * 0.11; AU.sfx('heart', clamp(1 - d / 7, 0.15, 1) * (G.alarmT > 0 ? 1 : 0.6)); UI.heart(); }
+    AU.play(G.alarmT > 0 ? 'chase' : 'sneak');
+  } else {
+    updateTeacherLocal(dt); if (G.mode !== 'play') return;
+    if (P.net) {
+      Net.smooth(P, dt); const s = P.net;
+      P.small = s.sm ? 10 : 0; P.slip = s.sl ? 1 : 0; P.skidT = s.sk ? 0.1 : 0;
+      const hs = s.h >= 0 ? G.L.hides[s.h] : null;
+      if (hs !== P.hidden) {
+        if (P.hidden && P.hidden.k === K.DOOR) { const dr = doorAt(P.hidden.x, P.hidden.y); if (dr) dr.hideP = false; }
+        if (hs && hs.k === K.DOOR) { const dr = doorAt(hs.x, hs.y); if (dr) dr.hideP = true; }
+        if (hs && G.pVis) { puff(hs.x * 16 + 8, hs.y * 16 + 8, 8); hs.shake = 0.6; }
+        P.hidden = hs;
+      }
+    }
+    if (P.running && !P.slip && !P.hidden) stepCues(P, G.pVis, dt, 0); else P.stcT = 0;
+    AU.play(G.pVis ? 'chase' : 'sneak');
+  }
+  if (Net.isHost) updateKids(dt);
+  else G.kids.forEach(k => { if (k.net) { const ox = k.x, oy = k.y, a = k.net; k.x += (a[0] - k.x) * Math.min(1, dt * 12); k.y += (a[1] - k.y) * Math.min(1, dt * 12); k.dist = (k.dist || 0) + Math.hypot(k.x - ox, k.y - oy); k.face = a[2]; k.moving = !!a[3]; k.runK = !!a[4]; } });
+  updateDoors(dt);
+  Net.timeLeft -= dt;
+  if (Net.isHost && Net.timeLeft <= 0) { Net.send({ t: 'end' }); timeUp(); }
+  Net.tick(dt);
+}
