@@ -43,7 +43,27 @@ const Input = {
     });
     addEventListener('keyup', e => { this.keys[e.code] = false; });
     addEventListener('blur', () => { this.keys = {}; this.mag = 0; this.jx = this.jy = 0; });
-    document.addEventListener('gesturestart', e => e.preventDefault());
+    // pincer pour zoomer : bloqué… sauf si on est déjà zoomé (pour pouvoir dézoomer)
+    document.addEventListener('gesturestart', e => { if (!(window.visualViewport && visualViewport.scale > 1.02)) e.preventDefault(); });
+    this.antiZoom();
+  },
+  // empêche le zoom par double tap (iOS) dans le jeu et les mini-jeux
+  antiZoom() {
+    const block = e => {
+      const b = e.target.closest && e.target.closest('button, input, select, textarea, a');
+      if (b && !b.classList.contains('act') && !b.classList.contains('slot')) return;
+      if (e.cancelable) e.preventDefault();
+    };
+    ['tkCv', 'sTask', 'touch', 'game', 'hud', 'joy'].forEach(id => { const el = $(id); if (!el) return; el.addEventListener('touchstart', block, { passive: false }); el.addEventListener('touchend', block, { passive: false }); });
+    let lastEnd = 0;
+    document.addEventListener('touchend', e => { const now = performance.now(), quick = now - lastEnd < 320; lastEnd = now; if (quick && e.cancelable && !(e.target.closest && e.target.closest('input, textarea, select, button, a'))) e.preventDefault(); }, { passive: false });
+    // filet de sécurité : si la page s'est quand même zoomée, on la remet à 100 %
+    const unzoom = () => {
+      const vv = window.visualViewport; if (!vv || vv.scale <= 1.02) return;
+      const m = document.querySelector('meta[name=viewport]'); if (!m) return; const c = m.content;
+      m.content = 'width=device-width, initial-scale=1.0001, maximum-scale=1, user-scalable=no'; setTimeout(() => { m.content = c; }, 80);
+    };
+    if (window.visualViewport) visualViewport.addEventListener('resize', () => { clearTimeout(this.uzT); this.uzT = setTimeout(unzoom, 400); });
   }
 };
 
