@@ -366,8 +366,9 @@ const ITEMS = {
   apple: { n: 'Pomme dormeuse', d: 'Pose-la par terre : le prof la croque et s’endort.', short: 'Dodo' },
   mirror: { n: 'Miroir magique', d: 'Montre où est le prof et les sorties pendant 8 s.', short: 'Voir' },
   watch: { n: 'Montre du Lapin blanc', d: 'Le prof avance au ralenti pendant 8 s.', short: 'Ralenti' },
+  disguise: { n: 'Déguisement', d: 'Perruque + fausse moustache : tu changes d’apparence pour toute la partie ! Fais-le quand le prof ne te voit pas.', short: 'Déguise' },
 };
-const ITEM_KEYS = Object.keys(ITEMS);
+const ITEM_KEYS = Object.keys(ITEMS).filter(k => k !== 'disguise');
 const ITEM_CACHE = {};
 function itemCanvas(kind) {
   if (ITEM_CACHE[kind]) return ITEM_CACHE[kind];
@@ -379,6 +380,7 @@ function itemCanvas(kind) {
     case 'slipper': R(1, 7, 9, 3, '#bfefff'); R(7, 5, 4, 3, '#bfefff'); R(2, 6, 5, 1, '#e8fbff'); R(1, 10, 10, 1, '#7fcfe8'); R(9, 3, 1, 1, '#ffffff'); R(3, 2, 1, 3, '#ffffff'); R(2, 3, 3, 1, '#ffffff'); break;
     case 'apple': R(2, 4, 8, 7, '#d6243a'); R(1, 5, 10, 5, '#d6243a'); R(3, 5, 2, 2, '#ff7a8a'); R(5, 1, 1, 3, '#6b4220'); R(6, 1, 3, 2, '#3e8948'); R(8, 8, 2, 2, '#a3162a'); R(3, 11, 6, 1, '#a3162a'); break;
     case 'mirror': R(3, 0, 6, 9, '#f2c14e'); R(2, 1, 8, 7, '#f2c14e'); R(4, 1, 4, 7, '#bfe4ff'); R(3, 2, 6, 5, '#bfe4ff'); R(4, 2, 1, 3, '#ffffff'); R(5, 9, 2, 2, '#c99a2e'); R(3, 11, 6, 1, '#c99a2e'); break;
+    case 'disguise': R(1, 2, 10, 1, '#3a2414'); R(1, 4, 4, 3, '#1d1626'); R(7, 4, 4, 3, '#1d1626'); R(2, 5, 2, 1, '#9fd7ff'); R(8, 5, 2, 1, '#9fd7ff'); R(5, 5, 2, 1, '#1d1626'); R(5, 6, 2, 3, '#f6a0a0'); R(2, 9, 8, 2, '#4a2a14'); R(1, 10, 2, 1, '#4a2a14'); R(9, 10, 2, 1, '#4a2a14'); break;
     case 'watch': R(2, 3, 8, 8, '#f2c14e'); R(1, 4, 10, 6, '#f2c14e'); R(3, 4, 6, 6, '#fff8e0'); R(2, 5, 8, 4, '#fff8e0'); R(5, 5, 1, 3, '#2a2230'); R(6, 7, 2, 1, '#2a2230'); R(5, 1, 2, 2, '#c99a2e'); R(7, 0, 4, 1, '#c99a2e'); R(10, 1, 1, 2, '#c99a2e'); break;
   }
   outlinePass(cv, c);

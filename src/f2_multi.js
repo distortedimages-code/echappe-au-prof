@@ -89,13 +89,17 @@ const Multi = {
     $('inTitle').textContent = role === 'student' ? 'Tu es l’élève !' : 'Tu es ' + pr.name + ' !';
     if (role === 'student') { portrait($('inProf'), st, null, 1); $('inName').textContent = st.name; $('inRole').textContent = 'Le prof (' + pr.name + ') est joué par ' + them + '.'; $('inQuote').textContent = '« Je dois trouver une sortie avant la sonnerie ! »'; }
     else { portrait($('inProf'), pr.cfg, pr.v, 1); $('inName').textContent = pr.name; $('inRole').textContent = 'L’élève, c’est ' + st.name + ' (joué par ' + them + ').'; $('inQuote').textContent = '« ' + st.name + ', je vais t’attraper avant la sonnerie ! »'; }
-    $('inMission').innerHTML = role === 'student' ? '<b style="color:var(--yel)">Ta mission :</b> trouver <b>UNE</b> des 3 sorties secrètes avant la sonnerie.' : '<b style="color:var(--yel)">Ta mission :</b> attraper <b>' + esc(st.name) + '</b> avant la sonnerie.';
-    const hints = role === 'student' ? L.hints : [
+    $('inMission').innerHTML = role === 'student' ? '<b style="color:var(--yel)">Ta mission :</b> faire tes <b>3 tâches</b>, puis trouver <b>UNE</b> des 3 sorties secrètes avant la sonnerie.' : '<b style="color:var(--yel)">Ta mission :</b> repérer <b>' + esc(st.name) + '</b> parmi les faux élèves et l’attraper avant la sonnerie.';
+    const hints = role === 'student' ? ['📋 Fais tes 3 tâches rigolotes (cercles jaunes) : sans elles, les sorties restent fermées !', '🤖 Des faux élèves se promènent comme des robots : imite-les (marche, pauses) pour te fondre dans la masse !', '🥸 Un déguisement est caché dans un meuble : fouille, il change ton look pour toute la partie !'].concat(L.hints.slice(0, 2)) : [
+      '🤖 Attention : plein de faux élèves ! Ils marchent comme des robots, d’un point à un autre, avec des pauses régulières.',
+      '✋ Approche-toi et appuie sur « Attraper ! ». Si tu te trompes, ta tête tourne 3 secondes.',
+      '📋 L’élève doit faire 3 tâches avant de pouvoir sortir : surveille le compteur !',
+      '🥸 L’élève peut trouver un déguisement… et ressembler à un faux élève !',
       '👀 Tu ne vois que devant toi (le cône de lumière).',
       '👣 Les traces orange : l’élève qui court. Les « CLAC ! » : une porte qui s’ouvre.',
       '🔍 Approche-toi d’une cachette et fouille-la : s’il est dedans, c’est gagné !',
       '🔑 Porte fermée à clé ? Va prendre les clés au tableau à clés.',
-      '📣 Le bouton « Crier » pour lui faire peur !'];
+      '🔑 Porte fermée ? Va prendre les clés au tableau à clés.'].slice(0, 7);
     $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     $('inTips').innerHTML = role === 'student'
       ? '⏰ Trouve une sortie en moins de 3 minutes !<br>👆 Un peu = marcher sans bruit · à fond = courir (le prof voit tes traces !).'

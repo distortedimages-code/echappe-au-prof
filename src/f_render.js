@@ -375,6 +375,41 @@ function drawOverlay() {
   }
   if (seeT && (T.state === 'keys' || T.state === 'unlock')) { const b = Math.sin(G.time * 12) * 3 * d; txt(c, '🔑', tsx, tsy - 6 * d + b, Math.round(13 * d), '#ffd23f'); }
   if (seeT && G.slowT > 0) txt(c, '⏱', tsx + 14 * d, tsy, Math.round(10 * d), '#bfe4ff');
+  if (seeT && T.state === 'stun') { // étoiles d'étourdissement
+    for (let i = 0; i < 4; i++) { const a = G.time * 5 + i * Math.PI / 2, x = tsx + Math.cos(a) * 13 * d, y = tsy + 4 * d + Math.sin(a) * 4 * d; txt(c, i % 2 ? '💫' : '⭐', x, y, Math.round((Math.sin(a) > 0 ? 9 : 7) * d), '#ffd23f'); }
+  }
+  // bulles des élèves (« C'est pas moi ! »)
+  G.kids.forEach(k => {
+    if (!k.bub || !k.vis) return;
+    const b = k.bub, al = Math.min(1, (b.dur - b.t) * 4), sc = b.t < 0.16 ? easeOutBack(b.t / 0.16) : 1, F2 = Math.round(8 * d);
+    c.font = F2 + 'px ' + FONT; const w = c.measureText(b.text).width + F2 * 1.4, h = F2 * 2;
+    let [bx, by] = toScreen(k.x, k.y - 36); by -= h / 2;
+    c.save(); c.translate(bx, by); c.scale(sc, sc); c.globalAlpha = al;
+    c.fillStyle = '#ffffff'; c.strokeStyle = '#1a1028'; c.lineWidth = 2 * d; rrect(c, -w / 2, -h / 2, w, h, 6 * d); c.fill(); c.stroke();
+    c.beginPath(); c.moveTo(-4 * d, h / 2 - 1); c.lineTo(0, h / 2 + 6 * d); c.lineTo(4 * d, h / 2 - 1); c.fill();
+    c.fillStyle = '#1a1028'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(b.text, 0, 1 * d);
+    c.restore(); c.globalAlpha = 1;
+  });
+  // tâches (côté élève)
+  if (viewerA() === P && G.tasks && G.mode === 'play' && !P.taskOpen) {
+    G.tasks.forEach((t, i) => {
+      if (t.done) return;
+      let [sx, sy] = toScreen(t.x * 16 + 8, t.y * 16 - 2); const [cx, cy, off] = clampEdge(sx, sy);
+      const bob = Math.sin(G.time * 4 + i) * 3 * d, pulse = 1 + Math.sin(G.time * 6 + i) * 0.08;
+      if (off) {
+        const an = Math.atan2(sy - cy, sx - cx), bx = cx - Math.cos(an) * 6 * d, by = cy - Math.sin(an) * 6 * d, r = 12 * d * pulse;
+        drawArrow(c, bx + Math.cos(an) * (r + 4 * d), by + Math.sin(an) * (r + 4 * d), an, '#ffd23f', 6 * d);
+        c.fillStyle = '#ffd23f'; c.strokeStyle = '#1a1028'; c.lineWidth = 2.5 * d; c.beginPath(); c.arc(bx, by, r, 0, 7); c.fill(); c.stroke();
+        c.font = Math.round(13 * d) + 'px ' + EMOJI_FONT; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#1a1028'; c.fillText(t.def.icon, bx, by + 1 * d);
+      } else {
+        c.save(); c.translate(sx, sy + bob); c.scale(pulse, pulse);
+        c.fillStyle = 'rgba(255,210,63,0.3)'; c.beginPath(); c.arc(0, 0, 16 * d, 0, 7); c.fill();
+        c.strokeStyle = '#ffd23f'; c.lineWidth = 2.5 * d; c.setLineDash([5 * d, 4 * d]); c.lineDashOffset = -G.time * 18 * d; c.beginPath(); c.arc(0, 0, 16 * d, 0, 7); c.stroke(); c.setLineDash([]);
+        c.font = Math.round(18 * d) + 'px ' + EMOJI_FONT; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#1a1028'; c.fillText(t.def.icon, 0, 1 * d); c.restore();
+        txt(c, '!', sx + 13 * d, sy - 13 * d + bob, Math.round(11 * d), '#ffd23f');
+      }
+    });
+  }
   // bulle du prof
   if (T.bubble) {
     const heard = !(G.tVis || G.mode === 'caught');

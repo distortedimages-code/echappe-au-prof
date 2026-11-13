@@ -177,7 +177,7 @@ const UI = {
     $('inMission').innerHTML = '<b style="color:var(--yel)">Ta mission :</b> trouver <b>UNE</b> des 3 sorties secrètes.';
     portrait($('inProf'), pr.cfg, pr.v, 1);
     $('inHints').innerHTML = ''; L.hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
-    const extra = [];
+    const extra = ['📋 D’abord, fais tes <b>3 tâches rigolotes</b> (cercles jaunes ⭐ sur la carte), puis file vers une sortie !', '🥸 Un <b>déguisement</b> est caché dans certains meubles : fouille !'];
     if (pr.tires) extra.push('💨 Il court vite… mais il s’essouffle !');
     if (pr.chatty) extra.push('🗣️ Elle parle tout le temps : écoute où elle est !');
     if (pr.hasKeys) extra.push('🔑 Elle a TOUTES les clés et connaît les petites cachettes.');
@@ -200,7 +200,7 @@ const UI = {
     const i = G.lvl, pr = G.T.prof, p = $('resPanel'), t = G.time;
     const mm = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
     if (win) {
-      const par = [120, 150, 170, 170, 210][i];
+      const par = [180, 210, 230, 230, 270][i];
       const stars = 1 + (G.spotted <= 1 ? 1 : 0) + (t < par ? 1 : 0);
       this.prog.stars[i] = Math.max(this.prog.stars[i] || 0, stars);
       this.prog.unlocked = Math.max(this.prog.unlocked, Math.min(5, i + 2)); this.save();
@@ -271,11 +271,11 @@ const UI = {
     const st = $('hStatus'); let s = '😌 Calme', cls = '';
     if (G.net) {
       if (teach) {
-        if (T.state === 'count') { s = '🙈 Tu comptes…'; cls = 'warn'; } else if (T.state === 'sleep') { s = '💤 Tu dors…'; cls = 'cool'; }
+        if (T.state === 'count') { s = '🙈 Tu comptes…'; cls = 'warn'; } else if (T.state === 'sleep') { s = '💤 Tu dors…'; cls = 'cool'; } else if (T.state === 'stun') { s = '😵 La tête qui tourne…'; cls = 'cool'; }
         else if (G.pVis) { s = '👀 En vue ! Attrape !'; cls = 'alarm'; } else if (G.slowT > 0) { s = '🐢 Ralenti…'; cls = 'cool'; } else s = '🎯 Trouve ' + (P.cfg.name || 'l’élève');
       } else {
         if (T.state === 'count') { s = '⏳ Ça compte… file !'; cls = 'warn'; } else if (G.alarmT > 0) { s = '🚨 POURSUITE !'; cls = 'alarm'; }
-        else if (T.state === 'sleep') { s = '💤 Dodo !'; cls = 'cool'; } else if (T.state === 'check') { s = '🔎 Fouille une cachette'; cls = 'warn'; }
+        else if (T.state === 'sleep') { s = '💤 Dodo !'; cls = 'cool'; } else if (T.state === 'stun') { s = '😵 Le prof est sonné !'; cls = 'cool'; } else if (T.state === 'check') { s = '🔎 Fouille une cachette'; cls = 'warn'; }
         else if (T.state === 'keys' || T.state === 'unlock') { s = '🔑 Prend ses clés'; cls = 'cool'; } else if (T.running) { s = '🏃 Le prof court !'; cls = 'warn'; } else s = '👀 Le prof te cherche';
       }
     } else switch (T.state) {
@@ -293,6 +293,13 @@ const UI = {
     const t = G.net ? Math.max(0, Net.timeLeft) : G.time, ht = $('hTime');
     ht.textContent = (G.net ? '⏰ ' : '⏱ ') + Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
     ht.style.color = G.net && t < 30 ? '#ff8a96' : '';
+    if (G.tasks !== this.taskRef || (teach ? 'T' + (G.tasksRemote || 0) : G.tasks.map(t => t.done ? 1 : 0).join('')) !== this.taskSig) {
+      this.taskRef = G.tasks; this.taskSig = teach ? 'T' + (G.tasksRemote || 0) : G.tasks.map(t => t.done ? 1 : 0).join('');
+      const el = $('hTasks'), n = G.tasks.length; el.classList.toggle('hidden', !n || G.mode === 'intro');
+      if (teach) { const r = G.tasksRemote || 0; el.innerHTML = `<div class="hd">TÂCHES DE L’ÉLÈVE</div><div class="tl">📋 ${r}/${n} ${r >= n ? '😱 SORTIES OUVERTES' : '· sorties 🔒'}</div>`; el.classList.toggle('all', r >= n); }
+      else { el.innerHTML = `<div class="hd">📋 TÂCHES ${G.tasksDone}/${n}</div>` + G.tasks.map(t => `<div class="tl${t.done ? ' ok' : ''}">${t.done ? '✅' : t.def.icon} ${esc(t.def.name)}</div>`).join(''); el.classList.toggle('all', tasksLeft() === 0); }
+    }
+    if (G.mode === 'intro') $('hTasks').classList.add('hidden'); else if (G.tasks.length) $('hTasks').classList.remove('hidden');
     $('hLocks').textContent = teach ? (T.hasKeys ? '🔑 ✔' : '🔑 ✘') : '🔑×' + locksLeft();
     const d = dist(T.x, T.y, P.x, P.y) / 16; $('hHeart').textContent = teach ? '🎯' : (T.state === 'chase' || G.alarmT > 0) ? '❤️‍🔥' : d < 4 ? '💓' : d < 8 ? '💗' : '🤍';
     const eff = [];
@@ -339,6 +346,7 @@ function loop(ts) {
   try {
     FX.update(dt);
     if (['play', 'escape', 'caught', 'timeup'].includes(G.mode)) update(dt);
+    TaskUI.tick(dt);
     if (G.P && ['play', 'intro', 'paused', 'escape', 'caught', 'timeup', 'result'].includes(G.mode)) renderGame(dt);
     else { V.ctx.setTransform(1, 0, 0, 1, 0, 0); V.ctx.fillStyle = '#22163f'; V.ctx.fillRect(0, 0, V.W, V.H); }
     UI.hud(dt); UI.tickCreator(dt); Title.draw(dt);
@@ -346,7 +354,7 @@ function loop(ts) {
   requestAnimationFrame(loop);
 }
 function boot() {
-  setupView(); Input.init(); UI.init();
+  setupView(); Input.init(); UI.init(); TaskUI.init();
   const go = () => requestAnimationFrame(loop);
   if (document.fonts && document.fonts.load) Promise.race([document.fonts.load('10px "Press Start 2P"'), new Promise(r => setTimeout(r, 1500))]).then(go, go); else go();
 }

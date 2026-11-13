@@ -106,7 +106,7 @@ function confetti(x, y, n = 40) { for (let i = 0; i < n; i++) { const a = -Math.
 function toast(text, dur = 2.4) { UI.toast(text, dur); }
 
 // ---------- Démarrage d'un niveau ----------
-function startLevel(idx, cfg, setup) {
+function startLevel(idx, cfg, setup, opts) {
   const def = LEVELS[idx], L = finalizeLevel(def.build()); L.def = def; G.net = null; G.appleId = 0; G.alarmT = 0; G.pVis = true;
   G.L = L; G.m = L.m; G.lvl = idx; G.time = 0; G.spotted = 0; G.reveal = 0; G.slowT = 0; G.shake = 0; G.found = 0;
   G.cues = []; G.parts = []; G.apples = []; G.searched = new Set(); G.intercomT = 24; G.kidCueT = 3; G.smallDoorTip = false; G.banner = null; G.heartT = 0;
@@ -121,7 +121,10 @@ function startLevel(idx, cfg, setup) {
     G.kids = setup.kids.map(k => ({ cfg: k.cfg, x: k.x, y: k.y, ang: Math.PI / 2, face: 0, anim: 0, moving: false, path: null, pi: 0, beh: k.beh, st: 0, ph: Math.random() * 6, isKid: true }));
     G.ball = setup.ball ? { from: setup.ball[0], to: setup.ball[1], t: 0 } : null; G.tagIt = 4;
     L.kidSpots = L.itemSpots.filter(([x, y]) => { const f = L.m.fs[y * L.m.w + x]; return f === FS.ASPHALT || f === FS.GRASS || f === FS.SAND; });
-  } else { spawnItems(); spawnKids(L.kids || 0); }
+  } else if (opts && opts.robots) { spawnItems(); spawnRobots(L.robots || 6); }
+  else { spawnItems(); spawnKids(L.kids || 0); }
+  G.tasks = (setup && setup.tasks ? setup.tasks.map(i => L.taskPool[i]).filter(Boolean) : shuffle(L.taskPool.slice()).slice(0, 3)).map(t => Object.assign({ def: TASKDEFS[t.id], done: false, room: L.m.roomAt(t.x, t.y) }, t)); G.tasksDone = 0; G.tasksRemote = 0;
+  { const keys = []; for (let y = 0; y < L.m.h; y++) for (let x = 0; x < L.m.w; x++) { const key = y * L.m.w + x; if (!SEARCHABLE_KINDS.has(L.m.get(x, y)) || L.candAt.has(key) || G.tasks.some(t => t.x === x && t.y === y)) continue; if ([[0, 1], [0, -1], [1, 0], [-1, 0]].some(([dx, dy]) => L.reach[(y + dy) * L.m.w + x + dx] >= 0 && L.m.get(x + dx, y + dy) === K.FLOOR)) keys.push(key); } G.disguiseAt = new Set(shuffle(keys).slice(0, 2)); }
   spawnPigeons(); FX.reset(); G.camX = null;
   G.trees = []; for (let y = 0; y < L.m.h; y++) for (let x = 0; x < L.m.w; x++) if (L.m.get(x, y) === K.TREE) G.trees.push([x, y]);
   G.mapCanvas = renderMapCanvas(L);
@@ -133,6 +136,24 @@ function spawnItems() {
   const chosen = [];
   for (const s of spots) { if (chosen.length >= kinds.length) break; if (chosen.every(c => Math.abs(c[0] - s[0]) + Math.abs(c[1] - s[1]) >= 8)) chosen.push(s); }
   G.items = chosen.map((s, i) => ({ id: i, x: s[0] * 16 + 8, y: s[1] * 16 + 12, kind: kinds[i], ph: Math.random() * 6 }));
+}
+function spawnRobots(n) {
+  const L = G.L, spots = [];
+  L.hides.forEach(s => { if (!s.small) spots.push(s.stand[0]); }); L.taskPool.forEach(t => spots.push(t.stand[0]));
+  const far = spots.filter(([x, y]) => Math.abs(x - L.start[0]) + Math.abs(y - L.start[1]) > 5);
+  G.kids = []; G.ball = null; G.robotSpots = far;
+  L.kidSpots = L.itemSpots.filter(([x, y]) => { const f = L.m.fs[y * L.m.w + x]; return f === FS.ASPHALT || f === FS.GRASS || f === FS.SAND; });
+  for (let i = 0; i < n; i++) {
+    const route = shuffle(far.slice()).slice(0, 4), s = route[0];
+    let cfg = randomChar('');
+    if (i < 2 && G.P && G.P.cfg) { const pc = G.P.cfg; cfg = Object.assign(cfg, i === 0 ? { top: pc.top, topCol: pc.topCol, bottom: pc.bottom, botCol: pc.botCol } : { hair: pc.hair, hairCol: pc.hairCol, topCol: pc.topCol, skin: pc.skin }); }
+    G.kids.push({ cfg, x: s[0] * 16 + 8, y: s[1] * 16 + 12, ang: 0, face: 0, anim: 0, moving: false, path: null, pi: 0, beh: 'robot', route, ri: 0, st: rand(0.3, 2.5), pause: pick([2, 2.5, 3]), ph: Math.random() * 6, isKid: true });
+  }
+}
+function fleeKid(k) {
+  const T = G.T, spots = G.robotSpots || []; if (!spots.length) return;
+  let best = spots[0], bd = -1; spots.forEach(s => { const d = dist(s[0] * 16, s[1] * 16, T.x, T.y) + rand(0, 40); if (d > bd) { bd = d; best = s; } });
+  const [kx, ky] = tileOf(k), p = astar(kx, ky, best[0], best[1], passTeach(false)); if (p) { k.path = p; k.pi = 0; } k.fleeT = 2.5;
 }
 function spawnKids(n) {
   G.kids = []; G.ball = null; if (!n) return;
@@ -184,7 +205,7 @@ function perceive(dt) {
       if (inCone && los(ex, ey, px, py)) sees = true;
     }
     if (sees) {
-      const rate = d < 40 ? 8 : (1.3 + 2.6 * (1 - d / range)) * (P.running ? 1.5 : 1);
+      const rate = (d < 40 ? 8 : (1.3 + 2.6 * (1 - d / range)) * (P.running ? 1.5 : 1)) * (P.disguised ? 0.5 : 1);
       T.detect = Math.min(1.3, T.detect + rate * dt); T.lastSeen = [P.x, P.y];
     }
   }
@@ -408,6 +429,16 @@ function updateKids(dt) {
     switch (k.beh) {
       case 'jump': k.moving = false; k.face = 0; break;
       case 'ball': if (G.ball) { const o = G.kids[G.ball.from === i ? G.ball.to : G.ball.from]; k.face = o.x > k.x ? 2 : 3; } k.moving = false; break;
+      case 'robot': {
+        if (!k.route) break;
+        if (k.fleeT > 0) { k.fleeT -= dt; k.runK = true; if (k.path && k.pi < k.path.length) followPath(k, 3.3 * 16, dt); else k.moving = false; break; }
+        k.runK = false;
+        if (!k.path || k.pi >= k.path.length) {
+          k.moving = false; k.st -= dt; if (k.st < k.pause - 0.4) k.face = k.ri % 2 ? 1 : 0;
+          if (k.st <= 0) { k.ri = (k.ri + 1) % k.route.length; const t = k.route[k.ri], [kx, ky] = tileOf(k), p = astar(kx, ky, t[0], t[1], pass); if (p) { k.path = p; k.pi = 0; } k.st = k.pause; }
+        } else followPath(k, 1.9 * 16, dt);
+        break;
+      }
       case 'tag': {
         k.runK = true;
         if (i === G.tagIt) {
@@ -503,6 +534,7 @@ function updatePlayer(dt) {
     if (inp.mag > 0.6) { P.unhideT += dt; if (P.unhideT > 0.18) unhide(); } else P.unhideT = 0;
     return;
   }
+  if (P.taskOpen) { P.moving = false; P.running = false; P.runT = 0; return; }
   if (P.skidT > 0) {
     P.skidT -= dt; P.moving = false; P.running = false;
     moveP(P.skv[0] * dt, P.skv[1] * dt); const dec = Math.max(0, 1 - dt * 9); P.skv[0] *= dec; P.skv[1] *= dec;
@@ -569,7 +601,7 @@ function updatePlayer(dt) {
     }
   }
   // trou de souris
-  if (P.small > 0) { for (const e of G.L.exits) if (e.type === 'small') { if (Math.abs(P.x - (e.x * 16 + 8)) < 13 && Math.abs(P.y - 6 - (e.y * 16 + 8)) < 13) { escape(e, e.x, e.y); return; } } }
+  if (P.small > 0) { for (const e of G.L.exits) if (e.type === 'small') { if (Math.abs(P.x - (e.x * 16 + 8)) < 13 && Math.abs(P.y - 6 - (e.y * 16 + 8)) < 13) { if (tasksLeft() > 0) { if (G.msgCD <= 0) { G.msgCD = 3; toast('🔒 Finis d’abord tes tâches (' + G.tasksDone + '/' + G.tasks.length + ') !', 2); } } else { escape(e, e.x, e.y); return; } } } }
 }
 function unshrink() {
   const P = G.P; P.small = 0; P.spin = 0.5; AU.sfx('grow'); puff(P.x, P.y - 6, 10);
@@ -611,12 +643,17 @@ function computeActions() {
     if (d > 21) continue;
     const key = ty * m.w + tx, k = m.get(tx, ty);
     const ex = L.exitAt.get(key);
-    if (ex && !ex.done) {
+    const locked = tasksLeft() > 0, lockSub = 'Finis tes tâches (' + G.tasksDone + '/' + G.tasks.length + ')';
+    const tk = G.tasks.find(t => !t.done && t.x === tx && t.y === ty);
+    if (tk) cand.push({ id: 'task', task: tk, icon: tk.def.icon, label: 'Tâche !', sub: tk.def.name, prio: 0.5, d });
+    if (ex && !ex.done && locked && (ex.type === 'hold' || P.small > 0)) cand.push({ id: 'locked', icon: '🔒', label: ex.label, sub: lockSub, prio: 0, d });
+    else if (ex && !ex.done) {
       if (ex.type === 'hold') cand.push({ id: 'exit', ex, icon: ex.icon, label: ex.label, sub: ex.progress > 0 ? Math.round(ex.progress * 100) + ' %' : '', prio: 0, d });
       else if (ex.type === 'small') cand.push({ id: 'small', ex, icon: ex.icon, label: P.small > 0 ? 'Se faufiler !' : 'Un trou minuscule…', sub: P.small > 0 ? '' : 'il faudrait rétrécir', prio: 0, d });
     }
     const sx = L.candAt.get(key);
-    if (sx && !G.searched.has(key)) cand.push({ id: 'search', tx, ty, ex: sx, icon: '🔍', label: sx.label, sub: '', prio: 2, d });
+    if (sx && sx.revealed && sx.secret[0] === tx && sx.secret[1] === ty) cand.push(locked ? { id: 'locked', icon: '🔒', label: 'Passage secret', sub: lockSub, prio: 0, d } : { id: 'secretGo', ex: sx, tx, ty, icon: '🚪', label: 'Prendre le passage !', sub: '', prio: 0, d });
+    else if (sx && !G.searched.has(key)) cand.push({ id: 'search', tx, ty, ex: sx, icon: '🔍', label: sx.label, sub: '', prio: 2, d });
     else if (SEARCHABLE_KINDS.has(k) && !G.searched.has(key)) cand.push({ id: 'search', tx, ty, icon: '🔍', label: 'Fouiller', sub: '', prio: 3, d });
     const hs = L.hideAt.get(key);
     if (hs && (!hs.small || P.small > 0)) {
@@ -651,6 +688,9 @@ function doAction(a) {
   switch (a.id) {
     case 'unhide': unhide(); break;
     case 'hide': hide(a.spot); break;
+    case 'task': TaskUI.open(a.task); break;
+    case 'locked': AU.sfx('fail'); toast('🔒 Il te reste ' + tasksLeft() + ' tâche' + (tasksLeft() > 1 ? 's' : '') + ' avant de pouvoir t’échapper ! (regarde la liste 📋)', 2.6); break;
+    case 'secretGo': escape(a.ex, a.tx, a.ty); break;
     case 'exit': {
       const ex = a.ex;
       P.busy = { label: ex.label + '…', dur: ex.time, t: ex.progress * ex.time, ex, noise: ex.noise, noiseT: 0, snd: ex.snd, word: ex.word, nx: ex.x * 16 + 8, ny: ex.y * 16 + 8, done: () => { ex.done = true; escape(ex, ex.x, ex.y); } };
@@ -668,8 +708,12 @@ function doAction(a) {
           G.searched.add(key);
           const ex = a.ex;
           if (ex && ex.secret && ex.secret[0] === a.tx && ex.secret[1] === a.ty) {
-            ex.revealed = true; ex.done = true; AU.sfx('found'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 24); toast('🎉 ' + ex.reveal, 2.2);
-            setTimeout(() => { if (G.mode === 'play') escape(ex, a.tx, a.ty); }, 700);
+            ex.revealed = true; AU.sfx('found'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 24);
+            if (tasksLeft() > 0) toast('🎉 ' + ex.reveal + ' Reviens quand tes tâches seront finies !', 3);
+            else { ex.done = true; toast('🎉 ' + ex.reveal, 2.2); setTimeout(() => { if (G.mode === 'play') escape(ex, a.tx, a.ty); }, 700); }
+          } else if (G.disguiseAt && G.disguiseAt.has(key)) {
+            if (P.inv.length >= 3) { G.searched.delete(key); toast('🥸 Il y a un déguisement… mais ton sac est plein !', 2.2); }
+            else { G.disguiseAt.delete(key); P.inv.push('disguise'); AU.sfx('pickup'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 16); hop(P, 100); FX.flyers.push({ kind: 'disguise', slot: P.inv.length - 1, wx: a.tx * 16 + 8, wy: a.ty * 16, t: 0 }); toast('🥸 Un déguisement ! ' + ITEMS.disguise.d, 3.4); }
           } else if (Math.random() < 0.18 && G.found < 2 && P.inv.length < 3) {
             G.found++; const kd = pick(ITEM_KEYS); P.inv.push(kd); AU.sfx('pickup'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 12);
             toast('😮 Tu trouves : ' + ITEMS[kd].n + ' ! ' + ITEMS[kd].d, 3.2);
@@ -716,6 +760,15 @@ function useItem(i) {
       if (P.hidden) { toast('Sors de ta cachette pour poser la pomme.', 1.6); used = false; break; }
       { const ap = { id: (G.appleId = (G.appleId || 0) + 1) + (G.net && Net.isHost ? 0 : 1000), x: P.x, y: P.y + 2, eaten: false }; G.apples.push(ap); if (G.net) Net.send({ t: 'apple', id: ap.id, x: Math.round(ap.x), y: Math.round(ap.y) }); } AU.sfx('blip'); toast('🍎 Pomme posée ! Éloigne-toi…', 1.8);
       break;
+    case 'disguise': {
+      if (P.hidden) { toast('Sors de ta cachette pour te déguiser.', 1.6); used = false; break; }
+      const src = G.kids.length ? pick(G.kids).cfg : randomChar('');
+      const nc = Object.assign({}, src, { name: P.cfg.name }); P.cfg = nc; P.disguised = true; P.spin = 0.7;
+      puff(P.x, P.y - 10, 20, '#ffffff'); sparkle(P.x, P.y - 12, 16); AU.sfx('pouf'); AU.sfx('magic'); cue(P.x, P.y - 40, 'word', 'TADAAA !', { col: '#ffd23f', pop: true });
+      if (G.net) Net.send({ t: 'disguise', cfg: nc }); else if (!G.T.seeNow) { G.T.knows = null; G.T.detect = 0; }
+      toast('🥸 Déguisement enfilé ! ' + (G.kids.length ? 'Tu ressembles à un autre élève…' : 'Le prof va avoir du mal à te reconnaître.'), 2.6);
+      break;
+    }
     case 'mirror': G.reveal = 8; FX.flash = 0.7; FX.flashCol = '220,240,255'; AU.sfx('magic'); toast('🪞 Miroir, gentil miroir : montre-moi le prof… et les sorties !', 2.4); break;
     case 'watch': G.slowT = 8; if (G.net) Net.send({ t: 'slow', d: 8 }); FX.flash = 0.6; FX.flashCol = '140,190,255'; AU.sfx('slow'); toast('⏱️ Tic… tac… Le prof est au ralenti !', 2); break;
   }
@@ -764,7 +817,7 @@ function update(dt) {
     G.escT += dt; const P = G.P, t = Math.min(1, G.escT / 0.8);
     const ex0 = P.x, ey0 = P.y; P.x = lerp(G.escFrom[0], G.escTo[0], t); P.y = lerp(G.escFrom[1], G.escTo[1], t); P.moving = t < 1; P.running = true; P.dist = (P.dist || 0) + Math.hypot(P.x - ex0, P.y - ey0) + dt * 30; P.skidT = 0;
     if (Math.random() < dt * 8) sparkle(P.x, P.y - 8, 2);
-    updateDoors(dt); updateKids(dt);
+    updateDoors(dt); if (!G.net || Net.isHost) updateKids(dt);
     if (G.escT > 0.85 && !FX.iris) FX.iris = { mode: 'out', t: 0, dur: 0.7, wx: G.escTo[0], wy: G.escTo[1] - 8 };
     if (G.escT > 1.9) { G.mode = 'result'; if (G.net) Multi.result('escaped'); else UI.result(true); }
   } else if (G.mode === 'caught') {
@@ -803,12 +856,13 @@ function update(dt) {
         if (d < R * (P.small > 0 ? 0.6 : 1)) { let inC = d < 28; if (!inC) inC = Math.abs(angDiff(Math.atan2(py - G.eye[1], px - G.eye[0]), T.ang)) < fov; if (inC && los(G.eye[0], G.eye[1], px, py)) vis = true; }
       }
       G.pVis = vis || (G.mode !== 'play' && G.mode !== 'paused');
+      G.kids.forEach(k => { const d = Math.hypot(k.x - G.eye[0], k.y - 10 - G.eye[1]); let v = false; if (T.state !== 'count' && d < R) { let inC = d < 28; if (!inC) inC = Math.abs(angDiff(Math.atan2(k.y - 10 - G.eye[1], k.x - G.eye[0]), T.ang)) < fov; v = inC && los(G.eye[0], G.eye[1], k.x, k.y - 10); } k.vis = v; });
     } else {
     G.pVis = true;
     if (P.hidden) { G.eye = [P.hidden.x * 16 + 8, P.hidden.y * 16 + 8]; G.visR = P.hidden.peek * 16; }
     else { G.eye = [P.x, P.y - 7]; G.visR = (G.L.outdoor ? 9 : 7.5) * 16 * (P.small > 0 ? 0.85 : 1); }
     G.tVis = dist(G.eye[0], G.eye[1], T.x, T.y - 12) < G.visR && los(G.eye[0], G.eye[1], T.x, T.y - 12);
-    }
     G.kids.forEach(k => k.vis = dist(G.eye[0], G.eye[1], k.x, k.y - 10) < G.visR && los(G.eye[0], G.eye[1], k.x, k.y - 10));
+    }
   }
 }

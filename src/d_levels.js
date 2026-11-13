@@ -64,7 +64,8 @@ function buildL1() {
       { type: 'search', cands, label: 'Fouiller le buisson', reveal: 'Un trou dans le grillage !', icon: '🌿' },
       { type: 'small', x: 0, y: 20, label: 'Se faufiler sous la grille', icon: '🐭' }
     ],
-    kids: 10
+    kids: 10, robots: 10,
+    tasks: [['pigeons', 15, 13], ['craie', 20, 24], ['toboggan', 26, 15], ['casquette', 23, 12], ['cabane', 28, 18], ['chaussettes', 9, 24]]
   };
 }
 // ---------- Niveau 2 : la vie scolaire ----------
@@ -113,7 +114,8 @@ function buildL2() {
   // escaliers
   m.fdec(31, 25, 'stairs', { w: 3, h: 3 }); m.put(34, 23, K.PLANT);
   return {
-    m, start: [5, 23], tStart: [6, 9], keyPt: [10, 1], binders: true, lockerCol: '#e07a3a', sofaCol: '#3d7bff',
+    m, start: [5, 23], tStart: [6, 9], keyPt: [10, 1], binders: true, lockerCol: '#e07a3a', sofaCol: '#3d7bff', robots: 6,
+    tasks: [['tampon', 3, 3], ['photocopies', 11, 5], ['coussin', 7, 3], ['nounours', 27, 5], ['bisous', 4, 17], ['couleurs', 26, 19]],
     extraPatrol: [[6, 13], [17, 13], [29, 13], [20, 20], [20, 27], [6, 9]],
     exits: [
       { type: 'hold', x: 31, y: 0, label: 'Ouvrir la fenêtre', icon: '🪟', time: 2.5, noise: 9, snd: 'creak', word: 'CRIIIC' },
@@ -167,7 +169,8 @@ function buildL3() {
   [26, 28].forEach(y => [25, 26, 27, 28, 31, 32, 33, 34, 37, 38, 39, 40].forEach(x => m.put(x, y, K.TABLE)));
   m.put(42, 23, K.ARMOIRE); m.put(42, 30, K.TRASH); m.put(23, 23, K.PLANT); m.put(38, 31, K.X_WINDOW);
   return {
-    m, start: [20, 29], tStart: [6, 3], keyPt: [41, 15], lockerCol: '#d94a5a', sofaCol: '#7b45a8',
+    m, start: [20, 29], tStart: [6, 3], keyPt: [41, 15], lockerCol: '#d94a5a', sofaCol: '#7b45a8', robots: 8,
+    tasks: [['hamster', 15, 4], ['vacances', 5, 2], ['plante', 12, 9], ['moustache', 10, 1], ['sucre', 35, 18], ['squelette', 42, 23]],
     extraPatrol: [[6, 12], [20, 12], [33, 12], [20, 22], [20, 28], [9, 16], [16, 20]],
     exits: [
       { type: 'hold', x: 38, y: 31, label: 'Ouvrir la fenêtre', icon: '🪟', time: 2.5, noise: 9, snd: 'creak', word: 'CRIIIC' },
@@ -215,7 +218,8 @@ function buildL4() {
   m.put(28, 23, K.BENCH); m.put(31, 23, K.BENCH); [[28, 29], [29, 29]].forEach(([x, y]) => { m.put(x, y, K.MATS); cands.push([x, y]); });
   m.put(32, 21, K.ARMOIRE); m.put(27, 30, K.BALLBIN);
   return {
-    m, start: [5, 28], tStart: [13, 9], keyPt: [31, 12], lockerCol: '#3fae8e', sofaCol: '#3d7bff',
+    m, start: [5, 28], tStart: [13, 9], keyPt: [31, 12], lockerCol: '#3fae8e', sofaCol: '#3d7bff', robots: 7,
+    tasks: [['ballon', 28, 1], ['pompes', 12, 10], ['chrono', 28, 14], ['mousse', 13, 21], ['chaussettes', 1, 24]],
     extraPatrol: [[6, 4], [20, 4], [6, 15], [20, 15], [32, 9], [36, 18], [36, 27], [13, 19]],
     exits: [
       { type: 'hold', x: 36, y: 31, label: 'Pousser l’issue de secours', icon: '🚨', time: 2, noise: 16, snd: 'alarm', word: 'DRIIIING' },
@@ -258,7 +262,8 @@ function buildL5() {
   m.put(28, 28, K.PLANT); m.put(40, 28, K.PLANT); m.row(30, 20, 2, K.BENCH); m.put(40, 18, K.SHELF); m.put(40, 19, K.SHELF); m.put(34, 29, K.X_ELEV);
   m.dec(30, 15, 'frame'); m.dec(9, 11, 'portrait');
   return {
-    m, start: [23, 26], tStart: [33, 6], keyPt: [8, 1], binders: true, lockerCol: '#8b5a2b', sofaCol: '#e0249a',
+    m, start: [23, 26], tStart: [33, 6], keyPt: [8, 1], binders: true, lockerCol: '#8b5a2b', sofaCol: '#e0249a', robots: 6,
+    tasks: [['coussin', 33, 4], ['chocolat', 3, 3], ['photocopies', 10, 1], ['plante', 12, 1], ['couleurs', 3, 18], ['moustache', 34, 1]],
     extraPatrol: [[6, 13], [20, 13], [33, 13], [6, 27], [34, 22], [30, 8]],
     exits: [
       { type: 'hold', x: 34, y: 29, label: 'Appeler l’ascenseur', icon: '🛗', time: 4, noise: 7, snd: 'ding', word: 'DING !' },
@@ -421,6 +426,12 @@ function finalizeLevel(L) {
       e.from = [[0, 1], [0, -1], [1, 0], [-1, 0]].map(([dx, dy]) => [e.x + dx, e.y + dy]).find(([a, b]) => m.get(a, b) === K.FLOOR);
     }
   });
+  // postes de tâches
+  L.taskPool = (L.tasks || []).map(([id, x, y]) => {
+    const own = m.get(x, y) === K.FLOOR && ok(x, y);
+    const stand = own ? [[x, y]] : [[0, 1], [0, -1], [1, 0], [-1, 0]].map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => m.get(a, b) === K.FLOOR && ok(a, b));
+    return stand.length ? { id, x, y, stand } : null;
+  }).filter(Boolean);
   // emplacements pour les objets
   L.itemSpots = [];
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
