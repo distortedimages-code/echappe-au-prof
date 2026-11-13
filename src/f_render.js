@@ -199,7 +199,8 @@ function updateCamera(dt) {
   if (G.mode === 'caught') { tx = (P.x + G.T.x) / 2 - lw / 2; ty = (P.y + G.T.y) / 2 - 10 - lh * 0.45; }
   const mw = m.w * 16, mh = m.h * 16;
   tx = mw < lw ? (mw - lw) / 2 : clamp(tx, -8, mw - lw + 8);
-  ty = mh < lh ? (mh - lh) / 2 : clamp(ty, -40, mh - lh + 60);
+  const se = screenEdges(), topPad = Math.max(40, se.t / V.a - 18), botPad = Math.max(60, (V.H - se.b) / V.a - 10);
+  ty = mh < lh ? (mh - lh) / 2 : clamp(ty, -topPad, mh - lh + botPad);
   if (G.camX == null) { G.camX = tx; G.camY = ty; }
   const k = 1 - Math.exp(-dt * 6);
   G.camX += (tx - G.camX) * k; G.camY += (ty - G.camY) * k;

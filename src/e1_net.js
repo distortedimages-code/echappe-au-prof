@@ -79,14 +79,16 @@ const Net = {
     if (!this.isHost) { this.send({ t: 'rematch', swap: !!swap, lvl: level }); return; }
     if (swap) this.role = this.role === 'student' ? 'teacher' : 'student';
     if (level != null) this.level = clamp(level, 0, LEVELS.length - 1);
-    const scfg = this.studentCfg() || randomChar('Élève');
-    startLevel(this.level, scfg, null, { robots: true });
+    // nouvelle apparence secrète à chaque manche : le prof ne sait pas à quoi ressemble l'élève
+    const base = this.studentCfg(), scfg = randomChar((base && base.name) || 'Élève');
+    const seed = UI.procOn() ? newSeed() : null;
+    startLevel(this.level, scfg, null, { robots: true, seed });
     this.setup = {
       t: 'setup', lvl: this.level, hostRole: this.role, time: 180,
       items: G.items.map(i => ({ id: i.id, x: i.x, y: i.y, kind: i.kind })),
       secrets: G.L.exits.map(e => e.secret || null),
       kids: G.kids.map(k => ({ cfg: k.cfg, beh: k.beh, x: k.x, y: k.y })), ball: G.ball ? [G.ball.from, G.ball.to] : null,
-      student: scfg, tasks: G.tasks.map(t => G.L.taskPool.findIndex(p => p.id === t.id && p.x === t.x && p.y === t.y))
+      student: scfg, seed: G.seed, tasks: G.tasks.map(t => G.L.taskPool.findIndex(p => p.id === t.id && p.x === t.x && p.y === t.y))
     };
     this.send(this.setup);
     this.enter(this.setup);

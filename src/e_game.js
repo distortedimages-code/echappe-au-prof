@@ -107,7 +107,10 @@ function toast(text, dur = 2.4) { UI.toast(text, dur); }
 
 // ---------- Démarrage d'un niveau ----------
 function startLevel(idx, cfg, setup, opts) {
-  const def = LEVELS[idx], L = finalizeLevel(def.build()); L.def = def; G.net = null; G.appleId = 0; G.alarmT = 0; G.pVis = true;
+  const def = LEVELS[idx], seed = setup ? setup.seed : (opts && opts.seed);
+  let L = seed != null ? buildProcLevel(idx, seed) : null;
+  if (!L) L = finalizeLevel(def.build());
+  L.def = def; G.seed = L.seed != null ? L.seed : null; G.net = null; G.appleId = 0; G.alarmT = 0; G.pVis = true;
   G.L = L; G.m = L.m; G.lvl = idx; G.time = 0; G.spotted = 0; G.reveal = 0; G.slowT = 0; G.shake = 0; G.found = 0;
   G.cues = []; G.parts = []; G.apples = []; G.searched = new Set(); G.intercomT = 24; G.kidCueT = 3; G.smallDoorTip = false; G.banner = null; G.heartT = 0;
   G.doorIdx = new Int16Array(L.m.w * L.m.h).fill(-1);

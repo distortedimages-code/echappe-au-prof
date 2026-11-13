@@ -43,6 +43,13 @@ h2.px{font-size:15px;color:var(--yel);text-shadow:3px 3px 0 var(--ink);line-heig
 .sub{font-size:24px;color:var(--cyan);letter-spacing:1px}
 #titleCv{width:100%;max-width:440px;image-rendering:pixelated;border:3px solid var(--ink);border-radius:8px;box-shadow:0 5px 0 var(--ink);background:#c2b9a8}
 .toggles{display:flex;gap:10px;justify-content:center}
+.procTog{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:3px solid var(--ink);border-radius:10px;background:var(--panel2);color:var(--paper);box-shadow:0 4px 0 var(--ink);padding:9px 12px;font-family:'VT323',ui-monospace,monospace;font-size:19px;line-height:1.05;margin-bottom:12px}
+.procTog .pi{font-size:28px}
+.procTog b{font-family:'Press Start 2P',ui-monospace,monospace;font-size:10px;color:var(--yel);display:block;margin-bottom:3px}
+.procTog .sw{margin-left:auto;flex:none;width:52px;height:28px;border-radius:14px;border:3px solid var(--ink);background:#5a4a8a;position:relative}
+.procTog .sw::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}
+.procTog.on .sw{background:var(--green)}
+.procTog.on .sw::after{left:26px}
 .tog{font-size:22px;width:56px;height:52px;border:3px solid var(--ink);border-radius:8px;background:var(--panel2);box-shadow:0 4px 0 var(--ink)}
 .tog.off{opacity:.4;filter:grayscale(1)}
 .tiny{font-size:18px;opacity:.75;line-height:1.15}
@@ -297,6 +304,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     <div class="wrap">
       <div class="panel who"><canvas id="whoCv" width="20" height="34"></canvas><div style="flex:1"><div class="tiny">Tu joues avec</div><div class="px" id="whoName" style="font-size:13px;color:var(--yel)"></div></div><button class="btn ghost" id="bWho" style="font-size:10px;padding:10px">Changer</button></div>
       <h2 class="px">🏫 Choisis ton niveau</h2>
+      <button class="procTog" id="bProc"></button>
       <div id="lvlList" style="display:flex;flex-direction:column;gap:12px"></div>
       <button class="btn ghost" id="bLvlBack">◀ Accueil</button>
     </div>
