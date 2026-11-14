@@ -77,6 +77,14 @@ const Net = {
   studentCfg() { return this.role === 'student' ? UI.cfg() : this.them.cfg; },
   newRound(swap, level) {
     if (!this.isHost) { this.send({ t: 'rematch', swap: !!swap, lvl: level }); return; }
+    if (this.mode === 'guard') {
+      // deux surveillants contre deux fugueurs (l'ordinateur)
+      this.role = 'teacher';
+      const seed = newSeed(), fugs = [randomChar('Fugueur'), randomChar('Fugueuse')];
+      infStart(UI.cfg() || randomChar('Surveillant'), seed, { role: 'teacher', guard: true, host: true, fugs });
+      this.setup = { t: 'setup', mode: 'guard', seed, time: GUARD_TIME, fugs };
+      this.send(this.setup); this.enter(this.setup); return;
+    }
     if (this.mode === 'coop') {
       // en équipe : deux élèves contre les profs, chacun avec son perso (modifiable dans l'intro)
       this.role = 'student';
@@ -139,7 +147,8 @@ const Net = {
         break;
       case 'setup':
         this.role = d.hostRole === 'student' ? 'teacher' : 'student'; this.setup = d; this.mode = d.mode || 'classic';
-        if (d.mode === 'coop') { this.role = 'student'; infStart(d.cfgG, d.seed, { coop: true, host: false, cfg2: d.cfgH }); }
+        if (d.mode === 'guard') { this.role = 'teacher'; infStart(UI.cfg() || randomChar('Surveillant'), d.seed, { role: 'teacher', guard: true, host: false, fugs: d.fugs }); }
+        else if (d.mode === 'coop') { this.role = 'student'; infStart(d.cfgG, d.seed, { coop: true, host: false, cfg2: d.cfgH }); }
         else if (d.mode === 'inf') infStart(d.student, d.seed, { role: this.role });
         else { this.level = d.lvl; startLevel(d.lvl, d.student, d); }
         this.enter(d);
@@ -151,6 +160,7 @@ const Net = {
     }
     if (!G.net || !G.P) return;
     if (G.inf && G.inf.coop && coopRecv(d)) return;
+    if (G.inf && G.inf.guard && guardRecv(d)) return;
     switch (d.t) {
       case 's': if (this.role === 'teacher') { if (G.inf) infRecvPos(P, d); else P.net = d; } break;
       case 'T': if (this.role === 'student') { if (G.inf) infRecvPos(T, d); else T.net = d; } break;
@@ -200,6 +210,7 @@ const Net = {
       if (this.role === 'student') this.send({ t: 's', fl: G.inf ? G.inf.cur : undefined, x: +P.x.toFixed(1), y: +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0 });
       else this.send({ t: 'T', fl: G.inf ? G.inf.cur : undefined, x: +T.x.toFixed(1), y: +T.y.toFixed(1), a: +T.ang.toFixed(2), f: T.face, m: T.moving ? 1 : 0, r: T.running ? 1 : 0, st: T.state, k: T.hasKeys ? 1 : 0 });
     }
+    if (G.inf && G.inf.guard) guardNetTick(dt);
     if (G.inf) {
       this.kidsT -= dt;
       if (this.role === 'student' && G.T.fl === G.inf.cur && this.kidsT <= 0) { this.kidsT = 0.1; const a = []; G.kids.forEach((k, i) => { if (k.beh !== 'sit' && k.beh !== 'crowd') a.push([i, Math.round(k.x), Math.round(k.y), k.face, k.moving ? 1 : 0, k.runK ? 1 : 0, +((k.ang || 0).toFixed(2))]); }); this.send({ t: 'k', a }); }
@@ -291,6 +302,7 @@ function grabTarget() {
   const T = G.T, P = G.P, R = 22; let best = null, bd = R;
   if (!P.hidden && G.pVis) { const d = dist(T.x, T.y, P.x, P.y); if (d < bd) { bd = d; best = P; } }
   G.kids.forEach(k => { if (!k.vis || k.fleeT > 0 || k.isWatcher || k.gone) return; const d = dist(T.x, T.y, k.x, k.y); if (d < bd) { bd = d; best = k; } });
+  if (G.inf && G.inf.guard) G.inf.fugs.forEach(f => { if (!f.vis) return; const d = dist(T.x, T.y, f.x, f.y) - 4; if (d < bd) { bd = d; best = f; } });
   return best;
 }
 const GRAB_LINES = ['C’est pas moi !', 'Hé ! Lâchez-moi !', 'Je suis un élève modèle, moi !', 'Bip boup… erreur !', 'Mauvaise personne !', 'Je dirai tout à mes parents !'];
@@ -331,7 +343,8 @@ function doActionT(a) {
     case 'grab': {
       const w = a.who; hop(T, 60); AU.sfx('whistle', 0.4); T.ang = Math.atan2(w.y - T.y, w.x - T.x); T.face = faceFromAng(T.ang);
       cue(w.x, w.y - 30, 'word', 'ATTRAPÉ ?!', { col: '#ffd23f', pop: true, life: 0.9 });
-      if (w === P) { if (!P.hidden && dist(T.x, T.y, P.x, P.y) < 30) { Net.send({ t: 'caught', r: 'chase' }); caught('chase', true); } }
+      if (w.isFug) guardTry(w, 'grab');
+      else if (w === P) { if (!P.hidden && dist(T.x, T.y, P.x, P.y) < 30) { Net.send({ t: 'caught', r: 'chase' }); caught('chase', true); } }
       else grabFail(G.kids.indexOf(w));
       break;
     }
@@ -340,7 +353,7 @@ function doActionT(a) {
       T.ang = Math.atan2(spot.y * 16 + 8 - T.y, spot.x * 16 + 8 - T.x); T.face = faceFromAng(T.ang);
       for (let i = 0; i < 7; i++) part(spot.x * 16 + 8, spot.y * 16 + 4, 'junk', { vx: rand(-45, 45), vy: rand(-80, -30), g: 200, life: 0.9, col: pick(['#ffffff', '#ff6f91', '#fec43a', '#9fd7ff', '#63c74d']), size: 2 });
       Net.send({ t: 'tcheck', i: spot.idx });
-      T.busy = { label: 'Je fouille…', dur: 0.9, t: 0, done: () => { if (P.hidden === spot) { Net.send({ t: 'caught', r: 'found' }); caught('found', true); } else { AU.sfx('fail'); toast(pick(['Personne…', 'Vide !', 'Raté, pas ici !', 'Juste de la poussière…']), 1.2); } } };
+      T.busy = { label: 'Je fouille…', dur: 0.9, t: 0, done: () => { const fh = G.inf && G.inf.guard && G.inf.fugs.find(f => f.fl === G.inf.cur && f.st === 'hide' && f.hide === spot.idx); if (fh) { guardTry(fh, 'found'); return; } if (P.hidden === spot) { Net.send({ t: 'caught', r: 'found' }); caught('found', true); } else { AU.sfx('fail'); toast(pick(['Personne…', 'Vide !', 'Raté, pas ici !', 'Juste de la poussière…']), 1.2); } } };
       break;
     }
     case 'tkeys': T.state = 'keys'; AU.sfx('keys'); T.busy = { label: 'Je prends les clés…', dur: 1.3, t: 0, done: () => { T.hasKeys = true; Net.send({ t: 'keys' }); toast('🔑 Tu as les clés : tu peux ouvrir les portes fermées !', 2.2); } }; break;
@@ -363,6 +376,7 @@ function timeUp() {
 }
 function netUpdate(dt) {
   if (G.inf && G.inf.coop) { coopUpdate(dt); return; }
+  if (G.inf && G.inf.guard) { guardUpdate(dt); return; }
   const P = G.P, T = G.T;
   if (G.net.role === 'student') {
     updatePlayer(dt); if (G.mode !== 'play') return;

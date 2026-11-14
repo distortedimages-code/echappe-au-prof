@@ -516,6 +516,7 @@ function updateDoors(dt) {
   if (!P.hidden && !P.out) actors.push(P);
   if (G.P2 && !G.P2.hidden && !G.P2.out && G.P2.x > -9000) actors.push(G.P2);
   G.kids.forEach(k => actors.push(k));
+  if (G.inf && G.inf.guard) { G.inf.fugs.forEach(f => { if (f.fl === G.inf.cur && f.st !== 'hide' && f.st !== 'caught' && f.st !== 'out') actors.push(f); }); if (G.T2 && G.T2.x > -9000) actors.push(G.T2); }
   for (const d of G.doors) {
     const cx = d.x * 16 + 8, cy = d.y * 16 + 8; let opener = null;
     if (!d.locked) for (const a of actors) { if (Math.abs(a.x - cx) < 15 && Math.abs(a.y - 5 - cy) < 15) { opener = a; break; } }

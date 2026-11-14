@@ -235,6 +235,14 @@ const UI = {
   },
   hudInf() {
     const I = G.inf, el = $('hTasks');
+    if (I.guard) {
+      $('bPlan').classList.toggle('hidden', G.mode !== 'play'); $('bPing').classList.toggle('hidden', G.mode !== 'play'); $('bDiv').classList.add('hidden');
+      const Q = G.T2, free = I.fugs.filter(f => f.st !== 'caught' && f.st !== 'out').length;
+      const sig3 = ['G', free, I.caughtN, I.outN, Q.fl, I.cur].join('|');
+      if (sig3 === this.infSig && !el.classList.contains('hidden')) return; this.infSig = sig3; el.classList.remove('hidden');
+      el.innerHTML = `<div class="hd">🏃 ${free} FUGUEUR${free > 1 ? 'S' : ''} EN FUITE</div><div class="tl">🔒 ${I.caughtN} attrapé${I.caughtN > 1 ? 's' : ''} · 🌳 ${I.outN} évadé${I.outN > 1 ? 's' : ''}</div><div class="tl">🤝 ${esc(guardName(Q))} : ${Q.fl === I.cur ? '👀 ' : ''}${INF_FLOOR_META[Q.fl] ? INF_FLOOR_META[Q.fl].short : '?'}</div>`;
+      return;
+    }
     if (I.multi && I.role === 'teacher') {
       $('bPlan').classList.toggle('hidden', G.mode !== 'play');
       const pg = I.ping, age = pg ? Math.floor(pg.t) : 0;
@@ -305,7 +313,8 @@ const UI = {
       '👁️ Devant une porte fermée, regarde par le trou de la serrure avant d’entrer.',
       '🗺️ Un plan d’évacuation affiché dans un couloir montre où sont les profs.',
       '🔥 L’alarme incendie vide les étages… mais il y aura un appel dans la cour !',
-      '🇬🇧 Au 2e, Miss Teacup ne t’envoie pas en colle : elle te fait une leçon d’anglais ! Bonne réponse = un objet magique en cadeau, faute = elle confisque tes objets.'];
+      '🇬🇧 Au 2e, Miss Teacup ne t’envoie pas en colle : elle te fait une leçon d’anglais ! Bonne réponse = un objet magique en cadeau.',
+      '🦴 Au 1er, M. Silex fait passer une interro d’histoire : bonne réponse = un animal de compagnie qui fait fuir les profs !'];
     $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     $('inTips').innerHTML = '🎲 Le collège est différent à chaque partie.<br>👆 Un peu = marcher sans bruit · à fond = courir (ça s’entend !).';
     G.mode = 'intro'; this.show('sIntro'); this.hudSig = null; this.invSig = null; this.infSig = null; $('bGo').textContent = 'C’est parti !'; $('bGo').disabled = false;

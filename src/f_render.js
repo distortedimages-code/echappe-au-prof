@@ -270,6 +270,14 @@ function renderGame(dt) {
   // le coéquipier (toujours visible pour toi)
   const Q = G.P2;
   if (Q && G.inf && G.inf.coop && !Q.out && !Q.hidden && Q.x > -9000) ents.push([Q.y, () => occlude(ctx, Q, () => drawSprite(ctx, Q.cfg, null, Q, { scale: Q.small > 0 ? 0.5 : 1 }))]);
+  // surveillants en équipe : le coéquipier et les fugueurs que je vois
+  if (G.inf && G.inf.guard) {
+    const Q2 = G.T2; if (Q2 && Q2.fl === G.inf.cur && Q2.x > -9000) ents.push([Q2.y, () => occlude(ctx, Q2, () => drawTeacher(ctx, Q2))]);
+    G.inf.fugs.forEach(f => { if (!f.vis) return; ents.push([f.y, () => occlude(ctx, f, () => {
+      if (f.st === 'seat') drawSprite(ctx, f.cfg, null, f, { sy: 0.86, bob: 2, noShadow: true }); else drawSprite(ctx, f.cfg, null, f, {});
+      if (f.markT > 0) txt(ctx, '!', f.x, f.y - 38, 10, '#e43b44');
+    })]); });
+  }
   // les animaux de compagnie
   const drawPet = A => {
     const p = A && A.pet; if (!p || A.x < -9000 || A.out || p.x == null) return;
@@ -288,6 +296,7 @@ function renderGame(dt) {
   }
   ents.sort((a, b) => a[0] - b[0]).forEach(e => e[1]());
   if (P.hidden && viewerA() === P) drawEyes(ctx, P.hidden);
+  if (G.inf && G.inf.guard) { const Q2 = G.T2; if (Q2 && Q2.fl === G.inf.cur && Q2.x > -9000) { txt(ctx, Q2.prof.name, Q2.x, Q2.y - 44, 6, '#7ff0ff'); if (Q2.bubble) txt(ctx, Q2.bubble.text, Q2.x, Q2.y - 52, 6, '#ffffff'); } G.inf.fugs.forEach(f => { if (f.vis && f.bub) txt(ctx, f.bub.text, f.x, f.y - 30, 6, '#ffe6a0'); }); }
   if (Q && G.inf && G.inf.coop && !Q.out && Q.x > -9000) { const hs = Q.hidden; if (hs) txt(ctx, '🫣', hs.x * 16 + 8, hs.y * 16 - 6 + Math.sin(G.time * 4) * 1.5, 9, '#fff'); else txt(ctx, (Q.jail ? '🔒 ' : '') + (Q.cfg.name || ''), Q.x, Q.y - (Q.small > 0 ? 22 : 36), 6, '#7ff0ff'); }
   drawParts(ctx);
   // feuilles qui tombent
@@ -361,9 +370,10 @@ function wrap(c, text, maxW) {
 function rrect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r); c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h); c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r); c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath(); }
 function screenEdges() { const d = V.dpr, narrow = V.W / d < 640; return { l: 16 * d, r: V.W - (narrow ? 16 : 120) * d, t: (narrow ? 158 : 70) * d, b: V.H - (narrow ? 200 : 110) * d }; }
 function drawPartnerHint(c, d) {
-  const I = G.inf, Q = G.P2; if (!Q) return;
+  const I = G.inf, Q = I.guard ? G.T2 : G.P2; if (!Q) return;
+  const qn = Q.cfg ? Q.cfg.name : Q.prof ? Q.prof.name : '';
   const pg = I.ping;
-  if (pg && pg.fl === I.cur && pg.t < 6) {
+  if (pg && pg.fl === I.cur && pg.t < 6 && pg.x >= 0) {
     const [sx, sy] = toScreen(pg.x, pg.y - 10), [cx, cy, off] = clampEdge(sx, sy), al = clamp(1 - pg.t / 6, 0.3, 1), pul = 1 + Math.sin(G.time * 8) * 0.15;
     c.globalAlpha = al;
     if (off) { const an = Math.atan2(sy - cy, sx - cx); drawArrow(c, cx, cy, an, '#3fc8ff', 7 * d); txt(c, '📍', cx - Math.cos(an) * 15 * d, cy - Math.sin(an) * 15 * d, Math.round(12 * d), '#fff'); }
@@ -375,7 +385,7 @@ function drawPartnerHint(c, d) {
   if (!off) return;
   const an = Math.atan2(sy - cy, sx - cx);
   c.globalAlpha = 0.85; drawArrow(c, cx, cy, an, '#7ff0ff', 6 * d);
-  txt(c, (Q.jail ? '🔒' : '🤝') + ' ' + (Q.cfg.name || ''), cx - Math.cos(an) * 26 * d, cy - Math.sin(an) * 16 * d, Math.round(8 * d), '#7ff0ff');
+  txt(c, (Q.jail ? '🔒' : '🤝') + ' ' + (qn || ''), cx - Math.cos(an) * 26 * d, cy - Math.sin(an) * 16 * d, Math.round(8 * d), '#7ff0ff');
   c.globalAlpha = 1;
 }
 function toScreen(wx, wy) { return [wx * V.a + V.e, wy * V.a + V.f]; }
@@ -452,7 +462,7 @@ function drawOverlay() {
     c.restore(); c.globalAlpha = 1;
   });
   // le coéquipier hors de l'écran ou à un autre étage, et ses appels 📍
-  if (G.inf && G.inf.coop && G.mode === 'play') drawPartnerHint(c, d);
+  if (G.inf && (G.inf.coop || G.inf.guard) && G.mode === 'play') drawPartnerHint(c, d);
   // signalement d'un prof (surveillant en multi)
   if (G.inf && G.inf.multi && G.inf.role === 'teacher' && G.inf.ping && G.inf.ping.fl === G.inf.cur && G.inf.ping.t < 10 && G.mode === 'play') {
     const pg = G.inf.ping; let [sx, sy] = toScreen(pg.x, pg.y - 8); const [cx, cy, off] = clampEdge(sx, sy), pul = 1 + Math.sin(G.time * 8) * 0.15, al = clamp(1 - pg.t / 10, 0.25, 1);
@@ -564,6 +574,8 @@ function drawPost() {
   }
   if (G.mode === 'play' && FX.goA < 1) { const s = popScale(FX.goA); c.globalAlpha = Math.min(1, (1 - FX.goA) * 3); c.save(); c.translate(W / 2, H * 0.32); c.scale(s, s); waveText(c, 'FILE !', 0, 0, Math.round(40 * d), ['#63c74d', '#ffd23f', '#ff4f8b', '#2ce8d5', '#ffffff'], FX.goA, 3 * d); c.restore(); c.globalAlpha = 1; }
   // effet BD quand on se fait attraper
+  // le « BOUM » de bande dessinée ne reste jamais collé à l'écran
+  if (FX.comic && FX.comic.t > 2.6 && G.mode !== 'caught' && G.mode !== 'timeup' && G.mode !== 'lesson') FX.comic = null;
   if (FX.comic) {
     const a = FX.comic.t, s = a < 0.35 ? easeOutBack(Math.min(1, a / 0.35)) : 1 + Math.sin(a * 6) * 0.03;
     c.save(); c.globalAlpha = Math.min(1, a * 4) * 0.55; c.fillStyle = V.halftone; c.fillRect(0, 0, W, H); c.restore();

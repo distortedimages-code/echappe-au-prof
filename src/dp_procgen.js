@@ -546,8 +546,8 @@ const newSeed = () => (Math.random() * 4294967295) >>> 0;
 // ================= MODE INFILTRATION : les étages =================
 const INF_FLOOR_META = [
   { name: 'Rez-de-chaussée', short: 'RDC', prof: 0 },
-  { name: '1er étage', short: '1er', prof: 6, ws: WS.GREEN, fs: FS.LINO, corFs: FS.CHECK, lockerCol: '#e07a3a', sofaCol: '#3d7bff' },
-  { name: '2e étage', short: '2e', prof: 5, ws: WS.PAINT, fs: FS.WOOD, corFs: FS.CHECK, lockerCol: '#d94a5a', sofaCol: '#7b45a8' },
+  { name: '1er étage', short: '1er', prof: 6, profMulti: 1, ws: WS.GREEN, fs: FS.LINO, corFs: FS.CHECK, lockerCol: '#e07a3a', sofaCol: '#3d7bff' },
+  { name: '2e étage', short: '2e', prof: 5, profMulti: 2, ws: WS.PAINT, fs: FS.WOOD, corFs: FS.CHECK, lockerCol: '#d94a5a', sofaCol: '#7b45a8' },
   { name: '3e étage', short: '3e', prof: 4, ws: WS.BLUE, fs: FS.WOOD, corFs: FS.LINO, lockerCol: '#3fae8e', sofaCol: '#e0249a' }
 ];
 const INF_SUBJECTS = ['Français', 'Maths', 'Histoire-géo', 'Anglais', 'Espagnol', 'SVT', 'Physique', 'Musique', 'Arts plastiques', 'Techno', 'Latin', 'Allemand'];

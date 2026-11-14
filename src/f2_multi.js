@@ -27,7 +27,8 @@ const Multi = {
   },
   create() {
     const me = UI.cfg();
-    const b = this.body(`<div class="modes"><button class="mode" data-m="classic"><b>🏃 Cache-cache</b><span>5 niveaux, tu choisis ton rôle</span></button><button class="mode" data-m="inf"><b>🕵️ Infiltration</b><span>4 étages, rôles tirés au sort</span></button><button class="mode" data-m="coop"><b>🤝 En équipe</b><span>2 élèves contre les profs</span></button></div>
+    const b = this.body(`<div class="modes"><button class="mode" data-m="classic"><b>🏃 Cache-cache</b><span>5 niveaux, tu choisis ton rôle</span></button><button class="mode" data-m="inf"><b>🕵️ Infiltration</b><span>4 étages, rôles tirés au sort</span></button><button class="mode" data-m="coop"><b>🤝 En équipe</b><span>2 élèves contre les profs</span></button><button class="mode" data-m="guard"><b>👮 Surveillants</b><span>2 surveillants contre 2 fugueurs</span></button></div>
+      <div id="mGuardInfo" class="panel howto">👮 <b>Surveillants en équipe</b> : vous êtes <b>deux surveillants</b>. Deux élèves vont filer de leur classe du 3e étage pour s’échapper du collège. Trouvez-les parmi les autres élèves et attrapez-les (✋) avant qu’ils ne sortent !<br>🔍 Ils se cachent quand ils vous voient : fouillez les cachettes. 🔔 Écoutez : quelqu’un qui crochète la grille du 1er, ça fait du bruit… 📍 Appelez-vous et partagez-vous les étages !</div>
       <div id="mCoopInfo" class="panel howto">🤝 <b>Infiltration en équipe</b> : vous êtes <b>deux élèves</b>, assis côte à côte au 3e étage. Échappez-vous du collège <b>tous les deux</b> !<br>🥁 Faites diversion, ✊ frappez aux portes pour attirer les profs, 📍 appelez-vous… Si l’un se fait attraper, il part en <b>salle de colle</b> (1er étage) : l’autre doit venir le libérer. Le vieux portail ? Il faut être deux pour le pousser !</div>
       <div id="mInfInfo" class="panel howto">🕵️ <b>Infiltration à deux</b> : l’élève part de sa classe au 3e étage et doit s’échapper par la cour. L’autre joueur est <b>le surveillant</b> : il se promène dans tous les couloirs, d’étage en étage, pour l’attraper.<br>🎲 Les rôles sont tirés au sort à chaque partie, et l’élève choisit une nouvelle apparence au début.</div>
       <div id="mClassic"><h3 class="px" style="font-size:11px;color:var(--cyan)">Tu veux jouer…</h3>
@@ -36,7 +37,7 @@ const Multi = {
         <button class="role" data-r="teacher"><canvas width="20" height="34"></canvas><b>Le prof</b><span>celui du niveau</span></button>
       </div>
       <h3 class="px" style="font-size:11px;color:var(--cyan)">Niveau</h3>
-      <div class="lvlpick">${LEVELS.map((L, i) => `<button data-l="${i}"><b>${i + 1}</b><span>${esc(L.title)}</span></button>`).join('')}</div>
+      <div class="lvlpick">${LEVELS.map((L, i) => PROFS[L.prof].lesson ? '' : `<button data-l="${i}"><b>${i + 1}</b><span>${esc(L.title)}</span></button>`).join('')}</div>
       <button class="procTog" id="mProc"></button></div>
       <button class="btn big green" id="mGo">Créer ▶</button>
       <button class="btn ghost" id="mBack">◀ Retour</button>`);
@@ -47,7 +48,7 @@ const Multi = {
       portrait(cvs[0], me, null, 1); portrait(cvs[1], pr.cfg, pr.v, 1);
       b.querySelector('.role[data-r="teacher"] span').textContent = pr.name;
       b.querySelectorAll('.mode').forEach(r => r.classList.toggle('sel', r.dataset.m === this.mode));
-      $('mClassic').classList.toggle('hidden', this.mode !== 'classic'); $('mInfInfo').classList.toggle('hidden', this.mode !== 'inf'); $('mCoopInfo').classList.toggle('hidden', this.mode !== 'coop');
+      $('mClassic').classList.toggle('hidden', this.mode !== 'classic'); $('mInfInfo').classList.toggle('hidden', this.mode !== 'inf'); $('mCoopInfo').classList.toggle('hidden', this.mode !== 'coop'); $('mGuardInfo').classList.toggle('hidden', this.mode !== 'guard');
     };
     b.querySelectorAll('.mode').forEach(r => r.onclick = () => { AU.sfx('tick'); this.mode = r.dataset.m; paint(); });
     b.querySelectorAll('.role').forEach(r => r.onclick = () => { AU.sfx('tick'); this.role = r.dataset.r; paint(); });
@@ -91,6 +92,7 @@ const Multi = {
     $('mBack').onclick = () => { AU.sfx('blip'); Net.close(true); G.net = null; UI.openTitle(); };
   },
   intro() {
+    if (G.inf && G.inf.guard) { this.introGuard(); return; }
     if (G.inf && G.inf.coop) { this.introCoop(); return; }
     if (G.inf) { this.introInf(); return; }
     const role = Net.role, L = LEVELS[Net.level], pr = PROFS[L.prof], st = G.P.cfg, them = Net.them.name || 'l’autre joueur';
@@ -160,6 +162,45 @@ const Multi = {
     $('toast').classList.add('hidden'); $('banner').classList.add('hidden');
     AU.play('sneak');
   },
+  introGuard() {
+    const I = G.inf, pr = G.T.prof, Q = G.T2;
+    $('inNum').textContent = '👮 SURVEILLANTS EN ÉQUIPE · 4 ÉTAGES';
+    $('inTitle').textContent = 'Rattrapez les fugueurs !';
+    portrait($('inProf'), pr.cfg, pr.v, 1); $('inName').textContent = pr.name; $('inRole').textContent = 'Ton coéquipier : ' + guardName(Q) + ' (il commence ' + (Q.fl === 0 ? 'au rez-de-chaussée' : 'au ' + INF_FLOOR_META[Q.fl].name) + ')';
+    $('inQuote').textContent = '« Personne ne quitte ce collège sans autorisation ! »';
+    $('inMission').innerHTML = '<b style="color:var(--yel)">Votre mission :</b> deux élèves de la classe de ' + esc(I.maitresseName) + ' (3e étage) vont tenter de s’échapper. Attrapez-les <b>tous les deux</b> avant qu’ils ne sortent du collège (6 min).';
+    const hints = [
+      '🧒 Les fugueurs ressemblent à tous les autres élèves… sauf qu’ils ne restent pas en classe !',
+      '❗ Quand ils te voient, ils sursautent et filent se cacher : fouille les cachettes (🔍).',
+      '✋ Attention : attraper un élève innocent te donne le tournis 3 secondes.',
+      '🔔 Pour descendre au rez-de-chaussée, ils doivent crocheter la grille du 1er étage : c’est long et ça fait du bruit !',
+      '📢 De temps en temps, quelqu’un les aperçoit : écoute les rumeurs.',
+      '📍 Appelle ton coéquipier et partagez-vous les étages. 🗺️ Le plan montre où il est.'
+    ];
+    $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
+    $('inTips').innerHTML = '🎲 Nouveau collège à chaque partie · 🕐 6 minutes<br>👆 Un peu = marcher · à fond = courir.';
+    $('bGo').textContent = 'Prêt !'; $('bGo').disabled = false;
+    G.mode = 'intro'; UI.show('sIntro'); UI.hudSig = null; UI.invSig = null; UI.infSig = null;
+    $('toast').classList.add('hidden'); $('banner').classList.add('hidden');
+    AU.play('sneak');
+  },
+  resultGuard(c, o, timeUp) {
+    const p = $('resPanel'), t = G.time, mm = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+    const win = o === 0, title = win ? (c === 2 ? 'TOUS<br>ATTRAPÉS !' : 'PERSONNE<br>N’EST SORTI !') : o === 2 ? 'ILS SE SONT<br>ÉCHAPPÉS !' : 'UN FUGUEUR<br>S’EST ÉCHAPPÉ…';
+    const line = win ? (c === 2 ? 'Bravo, les deux fugueurs passent la journée en salle de colle !' : 'DRIIING ! La sonnerie : les fugueurs retournent en classe, penauds.') : o === 2 ? 'Les deux fugueurs ont filé… La directrice va vous convoquer !' : c ? 'Vous en avez attrapé un… mais l’autre court encore !' : 'Un fugueur a filé… il faudra faire mieux !';
+    p.innerHTML = `<div class="bigtitle" style="color:${win ? 'var(--green)' : o === 2 ? 'var(--red)' : 'var(--yel)'}">${title}</div>
+      <div class="stars">${win ? '🏆🏆' : o === 2 ? '😵' : '🏆'}</div>
+      <div class="quote" style="text-align:center">${esc(line)}</div>
+      <div class="stats"><span>⏱️ ${mm}</span><span>🔒 ${c}/2 attrapés</span><span>🌳 ${o} évadé${o > 1 ? 's' : ''}</span></div>
+      <button class="btn big green" id="rAgain">👮 Rejouer en surveillants</button>
+      <button class="btn ghost" id="rQuit">🏠 Quitter la partie</button>
+      <div class="tiny" id="rStat" style="text-align:center"></div>`;
+    $('rAgain').onclick = () => { AU.sfx('blip'); if (!Net.isHost) $('rStat').textContent = '⏳ Demande envoyée à ton coéquipier…'; Net.newRound(false); };
+    $('rQuit').onclick = () => { AU.sfx('blip'); Net.close(); G.net = null; G.inf = null; UI.openTitle(); };
+    $('bDiv').classList.add('hidden'); $('bPing').classList.add('hidden'); $('bPlan').classList.add('hidden');
+    if (win) AU.sfx('win'); else AU.sfx('fail');
+    UI.show('sResult');
+  },
   introCoop() {
     const I = G.inf, me = G.P.cfg, Q = G.P2, them = Net.them.name || 'ton coéquipier';
     $('inNum').textContent = '🤝 INFILTRATION EN ÉQUIPE · 4 ÉTAGES';
@@ -174,8 +215,7 @@ const Multi = {
       '✊ « Toc toc » à une porte : le prof vient ouvrir… cache-toi vite !',
       '🔒 Attrapé·e ? Direction la salle de colle (1er étage). Ton équipier peut te libérer (sinon 60 s et retour en classe).',
       '🚧 Le vieux portail de la cour : il faut le pousser à deux ! (le trou du grillage, chacun son tour)',
-      '📍 Appelle ton équipier : il voit où tu es. 🗺️ Le plan montre aussi où il est.',
-      '🇬🇧 Au 2e, Miss Teacup fait passer une leçon d’anglais au lieu de la colle (3 fois max).'
+      '📍 Appelle ton équipier : il voit où tu es. 🗺️ Le plan montre aussi où il est.'
     ];
     $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     $('inTips').innerHTML = '🎲 Nouveau collège à chaque partie · 🕐 8 minutes<br>👆 Un peu = marcher sans bruit · à fond = courir (ça s’entend !).';
@@ -218,7 +258,9 @@ const Multi = {
     if (outcome === 'escaped') { title = role === 'student' ? 'ÉVASION<br>RÉUSSIE !' : 'RATÉ !'; line = role === 'student' ? 'Tu as trouvé la sortie !' : st + ' a trouvé la sortie…'; }
     else if (outcome === 'caught') { title = role === 'student' ? 'HEURE<br>DE COLLE !' : 'ATTRAPÉ !'; line = role === 'student' ? '« ' + pr.lines.caught + ' »' : 'Bravo, tu as attrapé ' + st + ' !'; }
     else { title = 'DRIIING !'; line = role === 'student' ? 'La sonnerie a sonné… le prof gagne !' : 'La sonnerie a sonné : tu gagnes !'; }
-    const lastLvl = Net.level >= LEVELS.length - 1;
+    // les cours d'anglais et d'histoire-géo sont pour le jeu en solo
+    let nextLvl = Net.level + 1; while (nextLvl < LEVELS.length && PROFS[LEVELS[nextLvl].prof].lesson) nextLvl++;
+    const lastLvl = nextLvl >= LEVELS.length;
     p.innerHTML = `<div class="bigtitle" style="color:${win ? 'var(--green)' : 'var(--red)'}">${title}</div>
       <div class="stars">${win ? '🏆' : '😵'}</div>
       <div class="quote" style="text-align:center">${esc(line)}</div>
@@ -231,7 +273,7 @@ const Multi = {
     const ask = (swap, lvl) => { AU.sfx('blip'); if (!Net.isHost) $('rStat').textContent = '⏳ Demande envoyée à l’autre joueur…'; Net.newRound(swap, lvl); };
     $('rAgain').onclick = () => ask(false);
     $('rSwap').onclick = () => ask(true);
-    if ($('rNext')) $('rNext').onclick = () => ask(false, Net.level + 1);
+    if ($('rNext')) $('rNext').onclick = () => ask(false, nextLvl);
     $('rQuit').onclick = () => { AU.sfx('blip'); Net.close(); G.net = null; UI.openTitle(); };
     UI.show('sResult');
   },

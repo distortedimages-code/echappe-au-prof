@@ -390,5 +390,5 @@ const Lesson = {
     if (d) d(r.ok, r.lost, r.gift, r.pet);
   },
   // partie interrompue (quitter, fin de partie…)
-  abort() { this.res = null; this.q = null; this.done = null; const s = $('sLesson'); if (s) s.classList.add('hidden'); if (G.P) G.P.lesson = false; }
+  abort() { this.res = null; this.q = null; this.done = null; const s = $('sLesson'); if (s) s.classList.add('hidden'); if (G.P) G.P.lesson = false; FX.comic = null; }
 };

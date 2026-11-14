@@ -37,14 +37,14 @@ function infStairsOf(I, f) {
 // ---------- création de la partie ----------
 function infStart(cfg, seed, mopt) {
   if (seed == null) seed = newSeed();
-  const R = mkRng(seed ^ 0x51ed), multi = !!mopt, coop = !!(mopt && mopt.coop);
+  const R = mkRng(seed ^ 0x51ed), multi = !!mopt, coop = !!(mopt && mopt.coop), guard = !!(mopt && mopt.guard);
   const I = { seed, multi, coop, auth: !coop || !!mopt.host, role: mopt ? (mopt.role || 'student') : 'student', ping: null, floors: [], cur: INF_TOP, startFloor: INF_TOP, warn: 0, grace: 0, hunt: false, keys: false, plan: false, alarm: null, alarmUsed: false, t: 0, radio: null, chased: 0, route: '' };
   const first = R.ch(0.5) ? 'A' : 'B', other = first === 'A' ? 'B' : 'A';
   I.downVia = { 3: first, 2: other, 1: first };
   for (let f = 0; f <= INF_TOP; f++) {
     const L = buildInfFloor(f, f === INF_TOP, seed);
     const meta = INF_FLOOR_META[f];
-    L.def = { prof: meta.prof, title: meta.name, place: meta.name, hints: [], inf: true };
+    L.def = { prof: multi && meta.profMulti != null ? meta.profMulti : meta.prof, title: meta.name, place: meta.name, hints: [], inf: true };
     I.floors.push({ f, L, meta, stairs: infStairsOf(I, f) });
   }
   // trousseau : dans un bureau de prof d'un étage (pas dans la salle de départ)
@@ -58,7 +58,7 @@ function infStart(cfg, seed, mopt) {
   I.startRoom = { x: sc.r.x, y: sc.r.y, w: sc.r.w, h: sc.r.h };
   const seats = sc.seats.slice().sort((a, b) => b[1] - a[1]);
   I.seat = seats[Math.min(seats.length - 1, R.i(0, Math.min(4, seats.length - 1)))];
-  if (coop) { const pair = seats.find(s => seats.some(o => o[1] === s[1] && o[0] === s[0] + 1)) || seats[0]; const nb = seats.find(o => o[1] === pair[1] && o[0] === pair[0] + 1) || seats.find(o => o !== pair); I.seatH = pair; I.seatG = nb; I.seat = mopt.host ? pair : nb; I.seat2 = mopt.host ? nb : pair; }
+  if (coop || guard) { const pair = seats.find(s => seats.some(o => o[1] === s[1] && o[0] === s[0] + 1)) || seats[0]; const nb = seats.find(o => o[1] === pair[1] && o[0] === pair[0] + 1) || seats.find(o => o !== pair); I.seatH = pair; I.seatG = nb; I.seat = guard || mopt.host ? pair : nb; I.seat2 = guard || mopt.host ? nb : pair; }
   I.maitresseName = R.p(INF_MAITRESSES);
   G.inf = I; G.net = null; G.seed = null;
   // personnages, objets, portes : un « monde » par étage
@@ -73,7 +73,8 @@ function infStart(cfg, seed, mopt) {
   I.floors.forEach(F => infSetupFloor(F, R, itemPlan));
   if (multi && !coop && I.role === 'teacher') { I.cur = 1; I.plan = true; }
   if (coop) coopSetupJail(R);
-  infLoad(multi && !coop && I.role === 'teacher' ? 1 : INF_TOP, true);
+  if (guard) guardSetup(I, R, mopt);
+  infLoad(guard ? I.cur : multi && !coop && I.role === 'teacher' ? 1 : INF_TOP, true);
   if (multi) infRepark();
   FX.reset(); G.camX = null;
   G.mode = 'intro';
@@ -84,7 +85,7 @@ function infSetupFloor(F, R, itemPlan) {
   G.doorIdx = new Int16Array(m.w * m.h).fill(-1);
   G.doors = m.doors.map((d, i) => { G.doorIdx[d.y * m.w + d.x] = i; return { x: d.x, y: d.y, open: 0, target: 0, closeT: 0, locked: false, byPlayer: false, hideP: false, horiz: m.get(d.x - 1, d.y) !== K.FLOOR && m.get(d.x + 1, d.y) !== K.FLOOR }; });
   G.searched = new Set(); G.apples = []; G.disguiseAt = new Set(); G.ball = null;
-  if (!I.multi || I.coop) { const T = newTeacher(infProf(F.meta.prof), L); T.state = 'patrol'; T.st = 0; T.det = {}; G.T = T; }
+  if (!I.multi || I.coop) { const T = newTeacher(infProf(L.def.prof), L); T.state = 'patrol'; T.st = 0; T.det = {}; G.T = T; }
   // objets magiques (2 par étage, posés hors de la salle de départ)
   const spots = L.itemSpots.filter(([x, y]) => !(I.startRoom && F.f === INF_TOP && x >= I.startRoom.x && y >= I.startRoom.y && x < I.startRoom.x + I.startRoom.w && y < I.startRoom.y + I.startRoom.h));
   R.sh(spots); const chosen = [];
@@ -529,6 +530,10 @@ function infDrawPlan(cv, f) {
   const dot = (a, col, r) => { if (!a || a.gone || a.x < 0) return; c.fillStyle = col; c.strokeStyle = '#1a1028'; c.lineWidth = 1.5; c.beginPath(); c.arc(ox + a.x / 16 * s, oy + (a.y - 6) / 16 * s, r, 0, 7); c.fill(); c.stroke(); };
   (kids || []).forEach(k => { if (k.isWatcher) dot(k, '#ff8a3a', Math.max(3, s * 0.42)); });
   if (!(I.multi && I.role === 'teacher')) dot(T, '#e43b44', Math.max(4, s * 0.55));
+  if (I.guard) {
+    const Q = G.T2, q = Q && (Q.x > -9000 ? Q : Q.last); if (q && Q.fl === f) { dot(q, '#7ff0ff', Math.max(4, s * 0.55)); c.font = `bold ${Math.max(9, s) | 0}px VT323, monospace`; c.fillStyle = '#1a6f8a'; c.fillText(guardName(Q), ox + q.x / 16 * s, oy + (q.y - 6) / 16 * s - s * 1.1); }
+    if (I.ping && I.ping.fl === f && I.ping.x >= 0 && I.ping.t < 20) icon([I.ping.x / 16 - 0.5, (I.ping.y - 6) / 16 - 0.5], '📍', 1.5);
+  }
   if (I.coop) {
     const Q = G.P2; if (Q && Q.fl === f && !Q.out) { const q = Q.x > -9000 ? Q : Q.last; if (q) { dot(q, '#7ff0ff', Math.max(4, s * 0.55)); c.font = `bold ${Math.max(9, s) | 0}px VT323, monospace`; c.fillStyle = '#1a6f8a'; c.fillText(Q.jail ? '🔒 ' + (Q.cfg.name || '') : (Q.cfg.name || ''), ox + q.x / 16 * s, oy + (q.y - 6) / 16 * s - s * 1.1); } }
     if (I.ping && I.ping.fl === f && I.ping.t < 20) icon([I.ping.x / 16 - 0.5, (I.ping.y - 6) / 16 - 0.5], '📍', 1.5);
@@ -809,7 +814,7 @@ function coopDiversion() {
 }
 function coopLookAt(x, y) { G.kids.forEach(k => { if (!k.isWatcher || k.state === 'evac' || dist(k.x, k.y, x, y) > 8 * 16) return; k.state = 'look'; k.st = 3.5; k.lookBase = Math.atan2(y - k.y, x - k.x); setMark(k, '?', 1); }); }
 function coopPing() {
-  const I = G.inf, P = G.P; if (!I || !I.coop || (I.cdPing || 0) > 0) return; I.cdPing = 1.5;
+  const I = G.inf; if (!I || !(I.coop || I.guard) || (I.cdPing || 0) > 0) return; const P = I.guard ? G.T : G.P; I.cdPing = 1.5;
   Net.send({ t: 'ping', x: Math.round(P.x), y: Math.round(P.y), fl: I.cur }); AU.sfx('ding', 0.5);
   cue(P.x, P.y - 36, 'word', '📍', { pop: true, life: 1.2 });
 }
