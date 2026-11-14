@@ -177,7 +177,8 @@ function spawnKids(n) {
 // ---------- Bruits ----------
 function makeNoise(x, y, r, word, kind) {
   const T = G.T; if (!T || T.gone || G.mode !== 'play') return;
-  if (G.net) { if (G.net.role === 'student' && kind !== 'step' && kind !== 'door') Net.send({ t: 'noise', x: Math.round(x), y: Math.round(y), r, w: word || null }); return; }
+  if (G.inf && G.inf.coop) { if (!G.inf.auth) { Net.send({ t: 'cnoise', x: Math.round(x), y: Math.round(y), r, w: word || null, k: kind || null }); return; } }
+  else if (G.net) { if (G.net.role === 'student' && kind !== 'step' && kind !== 'door') Net.send({ t: 'noise', x: Math.round(x), y: Math.round(y), r, w: word || null }); return; }
   if (!['patrol', 'look', 'search', 'check', 'investigate', 'alert'].includes(T.state)) return;
   const d = Math.hypot(T.x - x, T.y - y) / 16; let R = r * T.prof.hear;
   if (!los(T.x, T.y - 12, x, y - 6)) R *= 0.6;
@@ -191,6 +192,7 @@ function say(text) {
   const T = G.T; if (!T || !text) return;
   text = text.replace(/\{n\}/g, (G.P.cfg && G.P.cfg.name) || 'toi');
   T.bubble = { text, t: 0, dur: Math.max(2, text.length * 0.075) };
+  if (G.inf && G.inf.coop && G.inf.auth) Net.send({ t: 'bub', w: 'T', text, dur: T.bubble.dur });
   const d = dist(T.x, T.y, G.P.x, G.P.y) / 16;
   if (d < 20) AU.say(text, T.prof, clamp(1.25 - d / 15, 0.15, 1));
 }
@@ -507,12 +509,14 @@ function updateKids(dt) {
 // ---------- Portes ----------
 function updateDoors(dt) {
   const T = G.T, P = G.P, actors = [T];
-  if (!P.hidden) actors.push(P);
+  if (!P.hidden && !P.out) actors.push(P);
+  if (G.P2 && !G.P2.hidden && !G.P2.out && G.P2.x > -9000) actors.push(G.P2);
   G.kids.forEach(k => actors.push(k));
   for (const d of G.doors) {
     const cx = d.x * 16 + 8, cy = d.y * 16 + 8; let opener = null;
     if (!d.locked) for (const a of actors) { if (Math.abs(a.x - cx) < 15 && Math.abs(a.y - 5 - cy) < 15) { opener = a; break; } }
     if (d.hideP) opener = opener || P;
+    if (d.forceT > 0) { d.forceT -= dt; if (!d.locked) opener = opener || T; }
     if (opener) { if (d.target === 0) { d.target = 1; onDoorOpen(d, opener); } d.closeT = 1.1; }
     else if (d.target === 1) { d.closeT -= dt; if (d.closeT <= 0) d.target = 0; }
     d.open += (d.target - d.open) * Math.min(1, dt * 14);
@@ -559,6 +563,8 @@ function moveA(P, dx, dy, solid, hw, hh) {
 }
 function updatePlayer(dt) {
   const P = G.P, inp = Input.get(), T = G.T;
+  if (P.out) { P.moving = false; return; }
+  if (P.jail) { P.jailT = (P.jailT || 0) + dt; if (P.jailT > 60) coopAutoRelease(); }
   P.vx = 0; P.vy = 0;
   { const dT = dist(T.x, T.y, P.x, P.y) / 16, danger = ['chase', 'search', 'check', 'investigate', 'alert'].includes(T.state);
     P.trem = 0;
@@ -581,6 +587,9 @@ function updatePlayer(dt) {
   if (P.busy) {
     const b = P.busy;
     if (inp.mag > 0.35) { if (b.ex) b.ex.progress = b.t / b.dur; P.busy = null; if (!b.peek) toast('Action annulée', 0.9); return; }
+    const waitPartner = G.inf && G.inf.coop && b.ex && b.ex.gate && !(G.P2 && G.P2.pg);
+    if (waitPartner) { b.label = 'Attends ' + (G.P2.cfg.name || 'ton coéquipier') + '…'; P.moving = false; P.running = false; return; }
+    if (b.ex && b.ex.gate && G.inf && G.inf.coop) b.label = b.ex.label + '…';
     b.t += dt; if (b.ex) b.ex.progress = b.t / b.dur;
     if (b.noise) { b.noiseT -= dt; if (b.noiseT <= 0) { b.noiseT = 0.7; makeNoise(b.nx, b.ny, b.noise, b.word); if (b.snd) AU.sfx(b.snd, 0.8); if (b.word) cue(b.nx, b.ny - 8, 'word', b.word, { col: '#ffffff', pop: true, life: 0.9 }); } }
     P.moving = false; P.running = false;
@@ -678,13 +687,14 @@ function computeActions() {
   const cand = [];
   for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
     const tx = ptx + dx, ty = pty + dy, d = Math.hypot(tx * 16 + 8 - cx0, ty * 16 + 8 - cy0);
-    if (d > 21) continue;
+    if (d > 21 && !(d < 30 && G.inf && G.inf.coop && (G.L.exitAt.get(ty * m.w + tx) || {}).gate)) continue;
     const key = ty * m.w + tx, k = m.get(tx, ty);
     const ex = L.exitAt.get(key);
     const locked = tasksLeft() > 0, lockSub = 'Finis tes tâches (' + G.tasksDone + '/' + G.tasks.length + ')';
     const tk = G.tasks.find(t => !t.done && t.x === tx && t.y === ty);
     if (tk) cand.push({ id: 'task', task: tk, icon: tk.def.icon, label: 'Tâche !', sub: tk.def.name, prio: 0.5, d });
     if (ex && !ex.done && G.inf && ex.gate && !G.inf.keys && !G.inf.alarm) cand.push({ id: 'gateLocked', icon: '🔒', label: ex.label, sub: 'fermé à clé', prio: 0, d });
+    else if (ex && !ex.done && G.inf && G.inf.coop && ex.gate && !coopPartnerNear(ex)) cand.push({ id: 'gateTwo', icon: '🚧', label: ex.label, sub: 'il faut être deux !', prio: 0, d });
     else if (ex && !ex.done && locked && (ex.type === 'hold' || P.small > 0)) cand.push({ id: 'locked', icon: '🔒', label: ex.label, sub: lockSub, prio: 0, d });
     else if (ex && !ex.done) {
       if (ex.type === 'hold') cand.push({ id: 'exit', ex, icon: ex.icon, label: ex.label, sub: ex.progress > 0 ? Math.round(ex.progress * 100) + ' %' : '', prio: 0, d });
@@ -702,8 +712,8 @@ function computeActions() {
     if (k === K.DOOR) {
       const dr = doorAt(tx, ty);
       if (dr.locked && !dr.byPlayer) {
-        const canKey = (P.keys || 0) > 0 || (G.inf && G.inf.keys);
-        cand.push(canKey ? { id: 'openKey', door: dr, icon: '🗝️', label: 'Ouvrir', sub: G.inf && G.inf.keys ? 'avec le trousseau' : 'avec ta clé', prio: 0.4, d } : { id: 'lockedDoor', icon: '🔒', label: 'Fermé à clé', sub: 'il faut une clé 🗝️', prio: 3, d });
+        const confisc = dr.jail && P.jail, canKey = ((P.keys || 0) > 0 || (G.inf && G.inf.keys)) && !confisc;
+        if (confisc) cand.push({ id: 'lockedDoor', icon: '🔒', label: 'Fermé à clé', sub: 'clés confisquées !', prio: 3, d }); else cand.push(canKey ? { id: 'openKey', door: dr, icon: '🗝️', label: 'Ouvrir', sub: G.inf && G.inf.keys ? 'avec le trousseau' : 'avec ta clé', prio: 0.4, d } : { id: 'lockedDoor', icon: '🔒', label: 'Fermé à clé', sub: 'il faut une clé 🗝️', prio: 3, d });
       }
       else if (!actorInDoor(dr)) {
         if (dr.locked && dr.byPlayer) cand.push({ id: 'unlock', door: dr, icon: '🔓', label: 'Déverrouiller', sub: '', prio: 4, d });
@@ -718,6 +728,7 @@ function computeActions() {
     if (dd > 12 && dd < 44) cand.push({ id: 'lock', door: d0, icon: '🔒', label: 'Fermer à clé', sub: 'derrière moi !', prio: 0.15, d: 0 });
   }
   if (G.inf) infActions(cand, P);
+  if (G.inf && G.inf.coop) coopActions(cand, P);
   cand.sort((a, b) => a.prio - b.prio || a.d - b.d);
   const seen = new Set();
   for (const c of cand) { if (seen.has(c.id)) continue; seen.add(c.id); acts.push(c); if (acts.length >= 2) break; }
@@ -733,6 +744,7 @@ function doAction(a) {
   const P = G.P; if (!a || G.mode !== 'play') return;
   AU.init();
   if (G.net && G.net.role === 'teacher') { doActionT(a); return; }
+  if (G.inf && G.inf.coop && coopDo(a)) return;
   if (G.inf && infDo(a)) return;
   switch (a.id) {
     case 'gateLocked': AU.sfx('fail'); toast('🔒 Le portail est fermé à clé. Il te faut le trousseau du concierge… ou attendre que les pompiers l’ouvrent 🔥', 3); break;
@@ -783,7 +795,7 @@ function doAction(a) {
       P.busy = { label: 'J’ouvre…', dur: 0.6, t: 0, done: () => { if (!d.locked) return; d.locked = false; d.byPlayer = false; if (!(G.inf && G.inf.keys)) P.keys = Math.max(0, (P.keys || 0) - 1); AU.sfx('lock'); AU.sfx('keys', 0.5); cue(d.x * 16 + 8, d.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true }); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 0 }); UI.hudSig = null; } };
       break;
     }
-    case 'lockedDoor': AU.sfx('bump'); toast('🔒 Cette porte est fermée à clé. Trouve une petite clé 🗝️ (elles brillent par terre)… ou le trousseau du concierge !', 3); break;
+    case 'lockedDoor': AU.sfx('bump'); if (P.jail) { toast('🔒 Tes clés ont été confisquées… Attends que ton équipier vienne te libérer !', 2.6); break; } toast('🔒 Cette porte est fermée à clé. Trouve une petite clé 🗝️ (elles brillent par terre)… ou le trousseau du concierge !', 3); break;
     case 'unlock': { const d = a.door; d.locked = false; d.byPlayer = false; AU.sfx('lock'); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 0 }); break; }
     case 'gag': toast(a.gag.text, 2.4); AU.sfx('bump'); makeNoise(a.gag.x * 16 + 8, a.gag.y * 16 + 16, 3, 'BOUM'); break;
   }
@@ -834,6 +846,7 @@ function useItem(i) {
 // ---------- Fin de niveau ----------
 function escape(ex, tx, ty, fromNet) {
   if (G.mode !== 'play') return;
+  if (G.inf && G.inf.coop) { coopEscape(ex, tx, ty); return; }
   if (G.net && G.net.role === 'student' && !fromNet) Net.send({ t: 'escape', e: G.L.exits.indexOf(ex), x: tx, y: ty });
   const P = G.P; if (P.hidden) unhide(); P.busy = null;
   G.mode = 'escape'; G.escT = 0; G.escFrom = [P.x, P.y]; G.escTo = [tx * 16 + 8, ty * 16 + 12];
@@ -841,6 +854,7 @@ function escape(ex, tx, ty, fromNet) {
 }
 function caught(reason, fromNet) {
   if (G.mode !== 'play') return;
+  if (G.inf && G.inf.coop && !fromNet) { coopCaught(G.P, reason); return; }
   const P = G.P, T = G.T;
   if (P.hidden) { const s = P.hidden; P.hidden = null; if (s.k === K.DOOR) { const d = doorAt(s.x, s.y); if (d) d.hideP = false; } const st = s.stand[0]; P.x = st[0] * 16 + 8; P.y = st[1] * 16 + 12; puff(s.x * 16 + 8, s.y * 16 + 8, 12); }
   P.busy = null; G.mode = 'caught'; G.caughtT = 0; T.state = 'caught'; T.moving = false; setMark(T, '!', 3);

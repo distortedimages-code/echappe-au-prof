@@ -115,7 +115,7 @@ function conePath(c, A) {
 function drawCone(c, A) {
   const T = A || G.T, pr = T.prof, ex = T.x, ey = T.y - 12, R = pr.range * 16;
   conePath(c, T);
-  const col = T.state === 'chase' ? '255,60,80' : (T.detect > 0.3 || T.state === 'alert' || T.state === 'investigate') ? '255,160,50' : '255,236,140';
+  const col = T.state === 'chase' ? '255,60,80' : ((G.inf && G.inf.coop ? T.detShow || 0 : T.detect) > 0.3 || T.state === 'alert' || T.state === 'investigate') ? '255,160,50' : '255,236,140';
   const g = c.createRadialGradient(ex, ey, 4, ex, ey, R);
   g.addColorStop(0, `rgba(${col},0.38)`); g.addColorStop(0.7, `rgba(${col},0.16)`); g.addColorStop(1, `rgba(${col},0)`);
   c.fillStyle = g; c.fill();
@@ -262,17 +262,21 @@ function renderGame(dt) {
   if (showT && !T.gone) ents.push([T.y, () => occlude(ctx, T, () => drawTeacher(ctx, T))]);
   FX.ghosts.forEach(g => ents.push([g.y - 0.1, () => drawSprite(ctx, P.cfg, null, { x: g.x, y: g.y, face: g.face, dist: g.dist, moving: true, running: true }, { tint: '#7ff0ff', alpha: 0.45 * (1 - g.t / 0.32), scale: g.small ? 0.5 : 1, noShadow: true, still: true, gait: 'run' })]));
   FX.zips.forEach(zp => ents.push([zp.y1, () => { const t = zp.t, e = t * t; drawSprite(ctx, P.cfg, null, { x: lerp(zp.x0, zp.x1, e), y: lerp(zp.y0, zp.y1, e), face: zp.face, moving: false }, { sx: 1 + t * 0.6, sy: 1 - t * 0.8, scale: zp.small ? 0.5 : 1, alpha: 1 - t * 0.5, still: true }); }]));
-  if (!P.hidden && G.pVis !== false) {
+  if (!P.hidden && !P.out && G.pVis !== false) {
     let sc = P.small > 0 ? 0.5 : 1; if (P.small > 0 && P.small < 3 && (G.time * 7 | 0) % 2) sc = 0.75;
     let al = 1; if (G.mode === 'escape') { al = clamp(1 - (G.escT - 0.5) / 0.6, 0, 1); sc *= clamp(1 - (G.escT - 0.4) / 0.8, 0.2, 1); }
     ents.push([P.y, () => occlude(ctx, P, () => drawSprite(ctx, P.cfg, null, P, { scale: sc, alpha: al, dx: P.trem ? Math.sin(G.time * 70) * P.trem : 0 }))]);
   }
+  // le coéquipier (toujours visible pour toi)
+  const Q = G.P2;
+  if (Q && G.inf && G.inf.coop && !Q.out && !Q.hidden && Q.x > -9000) ents.push([Q.y, () => occlude(ctx, Q, () => drawSprite(ctx, Q.cfg, null, Q, { scale: Q.small > 0 ? 0.5 : 1 }))]);
   if (G.ball) {
     const a = G.kids[G.ball.from], b = G.kids[G.ball.to];
     if (a && b && (a.vis || b.vis)) { const t = G.ball.t, bx = lerp(a.x, b.x, t), by = lerp(a.y, b.y, t); ents.push([by, () => { const h = Math.sin(Math.PI * t) * 14 + 10; ctx.fillStyle = 'rgba(10,6,20,0.3)'; ctx.beginPath(); ctx.ellipse(bx, by, 2.2, 0.9, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#f77622'; ctx.beginPath(); ctx.arc(bx, by - h, 2.2, 0, 7); ctx.fill(); ctx.fillStyle = '#ffb070'; ctx.fillRect(bx - 1, by - h - 1.5, 1, 1); }]); }
   }
   ents.sort((a, b) => a[0] - b[0]).forEach(e => e[1]());
   if (P.hidden && viewerA() === P) drawEyes(ctx, P.hidden);
+  if (Q && G.inf && G.inf.coop && !Q.out && Q.x > -9000) { const hs = Q.hidden; if (hs) txt(ctx, '🫣', hs.x * 16 + 8, hs.y * 16 - 6 + Math.sin(G.time * 4) * 1.5, 9, '#fff'); else txt(ctx, (Q.jail ? '🔒 ' : '') + (Q.cfg.name || ''), Q.x, Q.y - (Q.small > 0 ? 22 : 36), 6, '#7ff0ff'); }
   drawParts(ctx);
   // feuilles qui tombent
   for (const l of FX.leaves) { ctx.globalAlpha = l.rest > 0 ? Math.max(0, 1 - l.rest / 3) : 1; ctx.fillStyle = l.col; ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.rest > 0 ? 0.4 : Math.sin(l.t * 4 + l.ph) * 0.9); ctx.fillRect(-1.5, -0.6, 3, 1.3); ctx.restore(); }
@@ -344,6 +348,24 @@ function wrap(c, text, maxW) {
 }
 function rrect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r); c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h); c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r); c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath(); }
 function screenEdges() { const d = V.dpr, narrow = V.W / d < 640; return { l: 16 * d, r: V.W - (narrow ? 16 : 120) * d, t: (narrow ? 158 : 70) * d, b: V.H - (narrow ? 200 : 110) * d }; }
+function drawPartnerHint(c, d) {
+  const I = G.inf, Q = G.P2; if (!Q) return;
+  const pg = I.ping;
+  if (pg && pg.fl === I.cur && pg.t < 6) {
+    const [sx, sy] = toScreen(pg.x, pg.y - 10), [cx, cy, off] = clampEdge(sx, sy), al = clamp(1 - pg.t / 6, 0.3, 1), pul = 1 + Math.sin(G.time * 8) * 0.15;
+    c.globalAlpha = al;
+    if (off) { const an = Math.atan2(sy - cy, sx - cx); drawArrow(c, cx, cy, an, '#3fc8ff', 7 * d); txt(c, '📍', cx - Math.cos(an) * 15 * d, cy - Math.sin(an) * 15 * d, Math.round(12 * d), '#fff'); }
+    else { c.strokeStyle = '#3fc8ff'; c.lineWidth = 3 * d; c.beginPath(); c.arc(sx, sy, 16 * d * pul, 0, 7); c.stroke(); txt(c, '📍', sx, sy - 24 * d, Math.round(13 * d), '#fff'); }
+    c.globalAlpha = 1;
+  }
+  if (Q.out || Q.x < -9000) return;
+  const [sx, sy] = toScreen(Q.x, Q.y - 14), [cx, cy, off] = clampEdge(sx, sy);
+  if (!off) return;
+  const an = Math.atan2(sy - cy, sx - cx);
+  c.globalAlpha = 0.85; drawArrow(c, cx, cy, an, '#7ff0ff', 6 * d);
+  txt(c, (Q.jail ? '🔒' : '🤝') + ' ' + (Q.cfg.name || ''), cx - Math.cos(an) * 26 * d, cy - Math.sin(an) * 16 * d, Math.round(8 * d), '#7ff0ff');
+  c.globalAlpha = 1;
+}
 function toScreen(wx, wy) { return [wx * V.a + V.e, wy * V.a + V.f]; }
 function clampEdge(sx, sy) { const e = screenEdges(); const cx = clamp(sx, e.l, e.r), cy = clamp(sy, e.t, e.b); return [cx, cy, cx !== sx || cy !== sy]; }
 function drawArrow(c, x, y, ang, col, size) {
@@ -417,6 +439,8 @@ function drawOverlay() {
     c.fillStyle = '#1a1028'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(b.text, 0, 1 * d);
     c.restore(); c.globalAlpha = 1;
   });
+  // le coéquipier hors de l'écran ou à un autre étage, et ses appels 📍
+  if (G.inf && G.inf.coop && G.mode === 'play') drawPartnerHint(c, d);
   // signalement d'un prof (surveillant en multi)
   if (G.inf && G.inf.multi && G.inf.role === 'teacher' && G.inf.ping && G.inf.ping.fl === G.inf.cur && G.inf.ping.t < 10 && G.mode === 'play') {
     const pg = G.inf.ping; let [sx, sy] = toScreen(pg.x, pg.y - 8); const [cx, cy, off] = clampEdge(sx, sy), pul = 1 + Math.sin(G.time * 8) * 0.15, al = clamp(1 - pg.t / 10, 0.25, 1);

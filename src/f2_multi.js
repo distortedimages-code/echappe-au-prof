@@ -27,7 +27,8 @@ const Multi = {
   },
   create() {
     const me = UI.cfg();
-    const b = this.body(`<div class="modes"><button class="mode" data-m="classic"><b>🏃 Cache-cache</b><span>5 niveaux, tu choisis ton rôle</span></button><button class="mode" data-m="inf"><b>🕵️ Infiltration</b><span>4 étages, rôles tirés au sort</span></button></div>
+    const b = this.body(`<div class="modes"><button class="mode" data-m="classic"><b>🏃 Cache-cache</b><span>5 niveaux, tu choisis ton rôle</span></button><button class="mode" data-m="inf"><b>🕵️ Infiltration</b><span>4 étages, rôles tirés au sort</span></button><button class="mode" data-m="coop"><b>🤝 En équipe</b><span>2 élèves contre les profs</span></button></div>
+      <div id="mCoopInfo" class="panel howto">🤝 <b>Infiltration en équipe</b> : vous êtes <b>deux élèves</b>, assis côte à côte au 3e étage. Échappez-vous du collège <b>tous les deux</b> !<br>🥁 Faites diversion, ✊ frappez aux portes pour attirer les profs, 📍 appelez-vous… Si l’un se fait attraper, il part en <b>salle de colle</b> (1er étage) : l’autre doit venir le libérer. Le vieux portail ? Il faut être deux pour le pousser !</div>
       <div id="mInfInfo" class="panel howto">🕵️ <b>Infiltration à deux</b> : l’élève part de sa classe au 3e étage et doit s’échapper par la cour. L’autre joueur est <b>le surveillant</b> : il se promène dans tous les couloirs, d’étage en étage, pour l’attraper.<br>🎲 Les rôles sont tirés au sort à chaque partie, et l’élève choisit une nouvelle apparence au début.</div>
       <div id="mClassic"><h3 class="px" style="font-size:11px;color:var(--cyan)">Tu veux jouer…</h3>
       <div class="roles">
@@ -46,7 +47,7 @@ const Multi = {
       portrait(cvs[0], me, null, 1); portrait(cvs[1], pr.cfg, pr.v, 1);
       b.querySelector('.role[data-r="teacher"] span').textContent = pr.name;
       b.querySelectorAll('.mode').forEach(r => r.classList.toggle('sel', r.dataset.m === this.mode));
-      $('mClassic').classList.toggle('hidden', this.mode === 'inf'); $('mInfInfo').classList.toggle('hidden', this.mode !== 'inf');
+      $('mClassic').classList.toggle('hidden', this.mode !== 'classic'); $('mInfInfo').classList.toggle('hidden', this.mode !== 'inf'); $('mCoopInfo').classList.toggle('hidden', this.mode !== 'coop');
     };
     b.querySelectorAll('.mode').forEach(r => r.onclick = () => { AU.sfx('tick'); this.mode = r.dataset.m; paint(); });
     b.querySelectorAll('.role').forEach(r => r.onclick = () => { AU.sfx('tick'); this.role = r.dataset.r; paint(); });
@@ -90,6 +91,7 @@ const Multi = {
     $('mBack').onclick = () => { AU.sfx('blip'); Net.close(true); G.net = null; UI.openTitle(); };
   },
   intro() {
+    if (G.inf && G.inf.coop) { this.introCoop(); return; }
     if (G.inf) { this.introInf(); return; }
     const role = Net.role, L = LEVELS[Net.level], pr = PROFS[L.prof], st = G.P.cfg, them = Net.them.name || 'l’autre joueur';
     $('inNum').textContent = 'PARTIE À DEUX · NIVEAU ' + (Net.level + 1) + ' · ' + L.place.toUpperCase();
@@ -158,7 +160,55 @@ const Multi = {
     $('toast').classList.add('hidden'); $('banner').classList.add('hidden');
     AU.play('sneak');
   },
+  introCoop() {
+    const I = G.inf, me = G.P.cfg, Q = G.P2, them = Net.them.name || 'ton coéquipier';
+    $('inNum').textContent = '🤝 INFILTRATION EN ÉQUIPE · 4 ÉTAGES';
+    $('inTitle').textContent = 'Évasion à deux !';
+    portrait($('inProf'), me, null, 1); $('inName').textContent = me.name; $('inRole').textContent = 'Ton équipier : ' + (Q.cfg.name || them) + ' (assis·e à côté de toi)';
+    $('inQuote').textContent = '« On sort ensemble… ou pas du tout ! »';
+    $('inMission').innerHTML = '<b style="color:var(--yel)">Votre mission :</b> sortir de la classe de ' + esc(I.maitresseName) + ' (3e étage) et vous échapper du collège <b>tous les deux</b> avant la sonnerie (8 min).'
+      + '<div class="looks"><button class="btn cyan" id="bLook">🎲 Changer d’apparence</button><button class="btn ghost" id="bMine">😀 Mon perso</button></div>';
+    const hints = [
+      '⚠️ Les avertissements comptent pour l’équipe : 3, et les profs vous courent après !',
+      '🥁 Diversion : un gros BADABOUM attire les profs… pendant que l’autre file.',
+      '✊ « Toc toc » à une porte : le prof vient ouvrir… cache-toi vite !',
+      '🔒 Attrapé·e ? Direction la salle de colle (1er étage). Ton équipier peut te libérer (sinon 60 s et retour en classe).',
+      '🚧 Le vieux portail de la cour : il faut le pousser à deux ! (le trou du grillage, chacun son tour)',
+      '📍 Appelle ton équipier : il voit où tu es. 🗺️ Le plan montre aussi où il est.'
+    ];
+    $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
+    $('inTips').innerHTML = '🎲 Nouveau collège à chaque partie · 🕐 8 minutes<br>👆 Un peu = marcher sans bruit · à fond = courir (ça s’entend !).';
+    const setLook = cfg => { cfg.name = me.name; G.P.cfg = cfg; portrait($('inProf'), cfg, null, 1); Net.send({ t: 'look', cfg }); AU.sfx('pouf', 0.5); };
+    $('bLook').onclick = () => setLook(randomChar(me.name));
+    $('bMine').onclick = () => { const c = UI.cfg(); if (c) setLook(Object.assign({}, c)); };
+    $('bGo').textContent = 'Prêt !'; $('bGo').disabled = false;
+    G.mode = 'intro'; UI.show('sIntro'); UI.hudSig = null; UI.invSig = null; UI.infSig = null;
+    $('toast').classList.add('hidden'); $('banner').classList.add('hidden');
+    AU.play('sneak');
+  },
+  resultCoop(outcome) {
+    const I = G.inf, p = $('resPanel'), P = G.P, Q = G.P2, out = (P.out ? 1 : 0) + (Q.out ? 1 : 0);
+    const t = G.time, mm = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+    let title, line, win = outcome === 'win';
+    if (win) { title = 'LIBRES<br>TOUS LES DEUX !'; line = 'Vous avez quitté le collège ensemble. Quelle équipe !'; AU.sfx('win'); }
+    else if (outcome === 'jail') { title = 'COLLÉS<br>TOUS LES DEUX !'; line = '« Vous deux, vous passez la journée en salle de colle ! »'; }
+    else { title = 'DRIIING !'; line = out ? 'La sonnerie a sonné : ' + (P.out ? 'tu es sorti·e, mais pas ' + (Q.cfg.name || 'ton équipier') : (Q.cfg.name || 'Ton équipier') + ' est sorti·e, mais pas toi') + '…' : 'La sonnerie a sonné… vous êtes encore dans le collège !'; }
+    p.innerHTML = `<div class="bigtitle" style="color:${win ? 'var(--green)' : out ? 'var(--yel)' : 'var(--red)'}">${title}</div>
+      <div class="stars">${win ? '🏆🏆' : out ? '🏆' : '😵'}</div>
+      <div class="quote" style="text-align:center">${esc(line)}</div>
+      <div class="stats"><span>⏱️ ${mm}</span><span>🌳 ${out}/2 dehors</span><span>⚠️ ${I.warn}/3</span><span>🔒 colle ×${I.colles || 0}</span><span>${I.keys ? '🔑' : ''}${I.alarmUsed ? '🔥' : ''}</span></div>
+      <div class="prof"><canvas id="rLook" width="20" height="34"></canvas><canvas id="rLook2" width="20" height="34"></canvas><div class="quote">${esc(P.cfg.name || 'Toi')} &amp; ${esc(Q.cfg.name || 'ton équipier')}</div></div>
+      <button class="btn big green" id="rAgain">🤝 Rejouer en équipe</button>
+      <button class="btn ghost" id="rQuit">🏠 Quitter la partie</button>
+      <div class="tiny" id="rStat" style="text-align:center"></div>`;
+    portrait($('rLook'), P.cfg, null, 1); portrait($('rLook2'), Q.cfg, null, 1);
+    $('rAgain').onclick = () => { AU.sfx('blip'); if (!Net.isHost) $('rStat').textContent = '⏳ Demande envoyée à ton équipier…'; Net.newRound(false); };
+    $('rQuit').onclick = () => { AU.sfx('blip'); Net.close(); G.net = null; G.inf = null; UI.openTitle(); };
+    $('bDiv').classList.add('hidden'); $('bPing').classList.add('hidden'); $('bPlan').classList.add('hidden');
+    UI.show('sResult');
+  },
   result(outcome) {
+    if (G.inf && G.inf.coop) { this.resultCoop(outcome === 'escaped' ? 'win' : 'time'); return; }
     if (G.inf) { this.resultInf(outcome); return; }
     const role = Net.role, p = $('resPanel'), st = G.P.cfg.name || 'l’élève', pr = G.T.prof;
     const win = (role === 'student') === (outcome === 'escaped');

@@ -77,6 +77,15 @@ const Net = {
   studentCfg() { return this.role === 'student' ? UI.cfg() : this.them.cfg; },
   newRound(swap, level) {
     if (!this.isHost) { this.send({ t: 'rematch', swap: !!swap, lvl: level }); return; }
+    if (this.mode === 'coop') {
+      // en équipe : deux élèves contre les profs, chacun avec son perso (modifiable dans l'intro)
+      this.role = 'student';
+      const h = Object.assign({}, UI.cfg() || randomChar('Élève')), g = Object.assign({}, this.them.cfg || randomChar(this.them.name || 'Élève')), seed = newSeed();
+      h.name = h.name || 'Joueur 1'; g.name = g.name || this.them.name || 'Joueur 2';
+      infStart(h, seed, { coop: true, host: true, cfg2: g });
+      this.setup = { t: 'setup', mode: 'coop', seed, time: 480, cfgH: h, cfgG: g };
+      this.send(this.setup); this.enter(this.setup); return;
+    }
     if (this.mode === 'inf') {
       // infiltration : rôles tirés au sort, nouveau collège, nouveau look secret pour l'élève
       this.role = Math.random() < 0.5 ? 'student' : 'teacher';
@@ -116,7 +125,7 @@ const Net = {
   start() {
     G.mode = 'play'; UI.show('play'); FX.iris = { mode: 'in', t: 0, dur: 0.75 }; AU.play('sneak');
     UI.hudSig = null; UI.invSig = null; $('bGo').disabled = false;
-    const T = G.T; if (G.inf) { T.state = 'free'; G.inf.grace = 2; } else { T.state = 'count'; T.st = 3.3; T.countN = 0; }
+    const T = G.T; if (G.inf) { if (!G.inf.coop) T.state = 'free'; G.inf.grace = 2; } else { T.state = 'count'; T.st = 3.3; T.countN = 0; }
     $('hint').classList.add('hidden');
   },
   // ---------- réception ----------
@@ -130,7 +139,8 @@ const Net = {
         break;
       case 'setup':
         this.role = d.hostRole === 'student' ? 'teacher' : 'student'; this.setup = d; this.mode = d.mode || 'classic';
-        if (d.mode === 'inf') infStart(d.student, d.seed, { role: this.role });
+        if (d.mode === 'coop') { this.role = 'student'; infStart(d.cfgG, d.seed, { coop: true, host: false, cfg2: d.cfgH }); }
+        else if (d.mode === 'inf') infStart(d.student, d.seed, { role: this.role });
         else { this.level = d.lvl; startLevel(d.lvl, d.student, d); }
         this.enter(d);
         break;
@@ -140,6 +150,7 @@ const Net = {
       case 'bye': this.closing = true; this.close(true); G.net = null; G.mode = 'menu'; Multi.open(); Multi.error('L’autre joueur a quitté la partie.'); break;
     }
     if (!G.net || !G.P) return;
+    if (G.inf && G.inf.coop && coopRecv(d)) return;
     switch (d.t) {
       case 's': if (this.role === 'teacher') { if (G.inf) infRecvPos(P, d); else P.net = d; } break;
       case 'T': if (this.role === 'student') { if (G.inf) infRecvPos(T, d); else T.net = d; } break;
@@ -181,6 +192,7 @@ const Net = {
   },
   // ---------- envoi régulier ----------
   tick(dt) {
+    if (G.inf && G.inf.coop) { coopNetTick(dt); return; }
     this.sendT -= dt;
     if (this.sendT <= 0) {
       this.sendT = 0.05;
@@ -350,6 +362,7 @@ function timeUp() {
   AU.sfx('alarm'); AU.play(null); G.P.busy = null; if (G.T.busy) G.T.busy = null;
 }
 function netUpdate(dt) {
+  if (G.inf && G.inf.coop) { coopUpdate(dt); return; }
   const P = G.P, T = G.T;
   if (G.net.role === 'student') {
     updatePlayer(dt); if (G.mode !== 'play') return;

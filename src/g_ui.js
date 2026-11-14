@@ -87,6 +87,8 @@ const UI = {
     tap('bMulti', () => Multi.open());
     tap('bInf', () => { AU.init(); if (!this.chars.length) this.openCreator(-1, 'inf'); else this.launchInf(); });
     tap('bPlan', () => this.openPlan());
+    tap('bDiv', () => coopDiversion());
+    tap('bPing', () => coopPing());
     tap('plClose', () => this.closePlan());
     tap('pkClose', () => { const A = G.P && viewerA(); if (A && A.busy && A.busy.peek) A.busy = null; });
     tap('bCharsBack', () => this.charsBack === 'levels' ? this.openLevels() : this.charsBack === 'multi' ? Multi.open() : this.openTitle());
@@ -213,15 +215,21 @@ const UI = {
       return;
     }
     const hideLeft = I.hunt && G.P.hidden ? Math.ceil(20 - (I.hideT || 0)) : 0;
-    const sig = [I.keys, I.plan, I.alarmUsed, !!I.alarm, I.warn, I.hunt, I.cur, I.alarm ? Math.ceil(Math.max(0, I.alarm.dur - I.alarm.t) / 5) : 0, hideLeft, G.P.keys || 0].join('|');
+    const Q = I.coop ? G.P2 : null, P = G.P;
+    const qs = Q ? (Q.out ? '🌳 dehors !' : Q.jail ? '🔒 en colle (1er)' : (Q.fl === I.cur ? '👀 ' : '') + INF_FLOOR_META[Q.fl].short) : '';
+    const jailLeft = P.jail ? Math.ceil(60 - (P.jailT || 0)) : 0;
+    const sig = [I.keys, I.plan, I.alarmUsed, !!I.alarm, I.warn, I.hunt, I.cur, I.alarm ? Math.ceil(Math.max(0, I.alarm.dur - I.alarm.t) / 5) : 0, hideLeft, G.P.keys || 0, qs, P.out, Math.ceil(jailLeft / 5)].join('|');
     $('bPlan').classList.toggle('hidden', !I.plan || G.mode !== 'play');
+    $('bDiv').classList.toggle('hidden', !I.coop || G.mode !== 'play' || P.out || P.jail); $('bDiv').classList.toggle('cd', (I.cdDiv || 0) > 0);
+    $('bPing').classList.toggle('hidden', !I.coop || G.mode !== 'play');
     if (sig === this.infSig && !el.classList.contains('hidden')) return; this.infSig = sig;
     el.classList.remove('hidden');
     const dots = [0, 1, 2].map(i => i < I.warn ? '🟡' : '⚪').join('');
     const kf = I.plan && !I.keys ? ' (' + INF_FLOOR_META[I.keysFloor].short + ')' : '';
     const st = (ok, ic) => ok ? '✅' : ic;
     const al = I.alarm ? `🔥 ${I.alarm.call ? 'fin' : 'appel'} ${Math.ceil(Math.max(0, (I.alarm.call ? I.alarm.dur : 32) - I.alarm.t))} s` : st(I.alarmUsed, '🔥');
-    el.innerHTML = `<div class="hd">${I.hunt ? (hideLeft ? '🫣 RESTE CACHÉ·E ' + hideLeft + ' s' : '🚨 ON TE CHERCHE ! cache-toi 20 s') : '⚠️ ' + dots}</div><div class="tl">${st(I.keys, '🔑')}${kf} · ${st(I.plan, '🗺️')} · ${al}${G.P.keys ? ' · 🗝️×' + G.P.keys : ''}</div>`;
+    const head = P.out ? '🌳 TU ES DEHORS ! guide ton équipier' : P.jail ? '🔒 EN COLLE… (' + jailLeft + ' s)' : I.hunt ? (hideLeft ? '🫣 RESTE CACHÉ·E ' + hideLeft + ' s' : (I.coop ? '🚨 ON VOUS CHERCHE ! cachez-vous 20 s' : '🚨 ON TE CHERCHE ! cache-toi 20 s')) : '⚠️ ' + dots;
+    el.innerHTML = `<div class="hd">${head}</div><div class="tl">${st(I.keys, '🔑')}${kf} · ${st(I.plan, '🗺️')} · ${al}${G.P.keys ? ' · 🗝️×' + G.P.keys : ''}</div>` + (Q ? `<div class="tl">🤝 ${esc(Q.cfg.name || 'Équipier')} : ${qs}</div>` : '');
     el.classList.toggle('all', I.keys);
   },
   launch(i, keepSeed) {
@@ -268,7 +276,7 @@ const UI = {
     $('inTips').innerHTML = '🎲 Le collège est différent à chaque partie.<br>👆 Un peu = marcher sans bruit · à fond = courir (ça s’entend !).';
     G.mode = 'intro'; this.show('sIntro'); this.hudSig = null; this.invSig = null; this.infSig = null; $('bGo').textContent = 'C’est parti !'; $('bGo').disabled = false;
     $('hint').classList.remove('hidden'); $('hint').style.opacity = 1; Input.used = false;
-    $('toast').classList.add('hidden'); $('banner').classList.add('hidden'); $('bPlan').classList.add('hidden');
+    $('toast').classList.add('hidden'); $('banner').classList.add('hidden'); $('bPlan').classList.add('hidden'); $('bDiv').classList.add('hidden'); $('bPing').classList.add('hidden');
     AU.play('sneak');
   },
   openPlan(f) {
@@ -396,10 +404,10 @@ const UI = {
     this.hudT -= dt; if (this.hudT > 0) return; this.hudT = 0.12;
     const VA = viewerA(), teach = G.net && G.net.role === 'teacher';
     const [tx, ty] = tileOf(VA); $('hRoom').textContent = '📍 ' + (G.inf ? INF_FLOOR_META[G.inf.cur].short + ' · ' : '') + (G.m.roomAt(tx, ty) || '…');
-    if (G.inf) this.hudInf();
+    if (G.inf) this.hudInf(); else { $('bDiv').classList.add('hidden'); $('bPing').classList.add('hidden'); }
     $('inv').style.visibility = teach ? 'hidden' : '';
     const st = $('hStatus'); let s = '😌 Calme', cls = '';
-    if (G.net) {
+    if (G.net && !(G.inf && G.inf.coop)) {
       if (teach) {
         if (T.state === 'count') { s = '🙈 Tu comptes…'; cls = 'warn'; } else if (T.state === 'sleep') { s = '💤 Tu dors…'; cls = 'cool'; } else if (T.state === 'stun') { s = '😵 La tête qui tourne…'; cls = 'cool'; }
         else if (G.pVis) { s = '👀 En vue ! Attrape !'; cls = 'alarm'; } else if (G.slowT > 0) { s = '🐢 Ralenti…'; cls = 'cool'; } else s = '🎯 Trouve ' + (P.cfg.name || 'l’élève');

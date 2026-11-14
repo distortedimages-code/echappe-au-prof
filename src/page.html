@@ -125,6 +125,8 @@ ul.hints li{background:rgba(255,255,255,.06);border-radius:6px;padding:5px 8px;l
 #hTasks .tl.ok{opacity:.5;text-decoration:line-through}
 #hTasks.all{border-color:var(--green);animation:blink .5s steps(2) 6}
 .btn.orange{background:#ff8a3a}
+#bDiv,#bPing{width:44px;height:40px;border:3px solid var(--ink);border-radius:9px;background:#d8f4ff;font-size:22px;box-shadow:0 3px 0 var(--ink);pointer-events:auto;animation:tkIn .4s;margin-top:4px}
+#bDiv{background:#ffe0c8}#bDiv.cd{opacity:.4;filter:grayscale(1)}
 #bPlan{width:44px;height:40px;border:3px solid var(--ink);border-radius:9px;background:#f6efd8;font-size:22px;box-shadow:0 3px 0 var(--ink);pointer-events:auto;animation:tkIn .4s}
 #sPeek{position:absolute;inset:0;z-index:31;display:flex;align-items:flex-start;justify-content:center;padding-top:calc(150px + env(safe-area-inset-top));pointer-events:none}
 .pkPanel{pointer-events:auto;width:min(78vw,330px);background:#2a1a0e;border:3px solid var(--ink);border-radius:16px;box-shadow:0 5px 0 var(--ink);padding:8px;animation:tkIn .3s cubic-bezier(.2,1.6,.4,1)}
@@ -242,7 +244,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     <div class="hudTop">
       <button id="bPause" class="hbtn" aria-label="Pause">❚❚</button>
       <div class="hudInfo"><div id="hRoom">📍</div><div id="hStatus" class="chip">Calme</div><div id="hTasks" class="hidden"></div></div>
-      <div class="hudRight"><div id="hTime">0:00</div><div id="hLocks">🔒×3</div><div id="hHeart">🤍</div><button id="bPlan" class="hidden" aria-label="Plan du collège">🗺️</button></div>
+      <div class="hudRight"><div id="hTime">0:00</div><div id="hLocks">🔒×3</div><div id="hHeart">🤍</div><button id="bPlan" class="hidden" aria-label="Plan du collège">🗺️</button><button id="bPing" class="hidden" aria-label="Appeler mon équipier">📍</button><button id="bDiv" class="hidden" aria-label="Faire diversion">🥁</button></div>
     </div>
     <div id="hEffects"></div>
     <div id="hHidden" class="hidden"></div>
