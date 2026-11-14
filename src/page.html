@@ -163,6 +163,9 @@ ul.hints li{background:rgba(255,255,255,.06);border-radius:6px;padding:5px 8px;l
 .lsLostI{display:flex;gap:8px;margin-top:6px}.lsLostI canvas{width:42px;height:42px;image-rendering:pixelated;background:#fff;border:3px solid var(--ink);border-radius:8px;filter:grayscale(.3);animation:lsGone 1.2s .3s forwards}
 @keyframes lsGone{to{opacity:.25;transform:translateY(10px) rotate(-12deg)}}
 #lsDone{width:100%}
+#sLesson.hist .lsName{color:#8a4a1a}#sLesson.hist .lsChoices .choice{background:#f6e3c4}
+.lsPet{font-size:46px;line-height:1;margin:6px 0 2px;animation:lsPop .6s .2s both}
+#hPet{font-size:15px;background:rgba(20,11,38,.75);border:2px solid var(--ink);border-radius:8px;padding:2px 6px;color:#ff8fa8;text-align:center;white-space:nowrap}
 #sPlan{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(10,6,20,.7);padding:12px}
 .plPanel{width:min(96vw,560px);background:var(--panel);border:3px solid var(--ink);border-radius:14px;box-shadow:0 5px 0 var(--ink);padding:10px;animation:tkIn .3s cubic-bezier(.2,1.6,.4,1)}
 .plHead{display:flex;align-items:center;justify-content:space-between;font-family:'Press Start 2P',ui-monospace,monospace;font-size:11px;color:var(--yel);margin-bottom:8px}
@@ -273,7 +276,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     <div class="hudTop">
       <button id="bPause" class="hbtn" aria-label="Pause">❚❚</button>
       <div class="hudInfo"><div id="hRoom">📍</div><div id="hStatus" class="chip">Calme</div><div id="hTasks" class="hidden"></div></div>
-      <div class="hudRight"><div id="hTime">0:00</div><div id="hLocks">🔒×3</div><div id="hHeart">🤍</div><button id="bPlan" class="hidden" aria-label="Plan du collège">🗺️</button><button id="bPing" class="hidden" aria-label="Appeler mon équipier">📍</button><button id="bDiv" class="hidden" aria-label="Faire diversion">🥁</button></div>
+      <div class="hudRight"><div id="hTime">0:00</div><div id="hLocks">🔒×3</div><div id="hPet" class="hidden"></div><div id="hHeart">🤍</div><button id="bPlan" class="hidden" aria-label="Plan du collège">🗺️</button><button id="bPing" class="hidden" aria-label="Appeler mon équipier">📍</button><button id="bDiv" class="hidden" aria-label="Faire diversion">🥁</button></div>
     </div>
     <div id="hEffects"></div>
     <div id="hHidden" class="hidden"></div>
@@ -282,7 +285,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     <div id="hint">Glisse ton doigt pour bouger</div>
     <div id="sPeek" class="hidden"><div class="pkPanel"><div class="pkHead"><span>👁️ Par le trou de la serrure…</span><button id="pkClose" aria-label="Arrêter de regarder">✖</button></div><canvas id="peekCv" width="300" height="300"></canvas><div class="pkHint">Bouge pour arrêter de regarder</div></div></div>
     <div id="sLesson" class="hidden"><div class="lsPanel">
-      <div class="lsHead"><canvas id="lsProf" width="22" height="34"></canvas><div><div id="lsName" class="lsName">Miss Teacup</div><div id="lsSub" class="lsSub"></div></div><div class="lsFlag">🇬🇧</div></div>
+      <div class="lsHead"><canvas id="lsProf" width="22" height="34"></canvas><div><div id="lsName" class="lsName">Miss Teacup</div><div id="lsSub" class="lsSub"></div></div><div id="lsFlag" class="lsFlag">🇬🇧</div></div>
       <div id="lsQ" class="lsQ"></div>
       <div id="lsFr" class="lsFr"></div>
       <div id="lsChoices" class="lsChoices"></div>

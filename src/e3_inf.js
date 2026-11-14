@@ -22,7 +22,7 @@ function infProf(i) {
   const p = PROFS[i];
   return Object.assign({}, p, {
     intercom: false, hasKeys: false,
-    lines: Object.assign({}, p.lines, p.english ? { start: '' } : { spot: ['TOI ! Reviens ici, {n} !', 'Cette fois, je t’attrape, {n} !', 'Trois avertissements, ça suffit !'], start: '' })
+    lines: Object.assign({}, p.lines, p.lesson ? { start: '' } : { spot: ['TOI ! Reviens ici, {n} !', 'Cette fois, je t’attrape, {n} !', 'Trois avertissements, ça suffit !'], start: '' })
   });
 }
 // qui descend par où : escaliers alternés pour obliger à traverser chaque étage
@@ -695,7 +695,7 @@ function coopUpdate(dt) {
     if (T.markT > 0) T.markT -= dt;
     G.kids.forEach(k => { if (k.bub) { k.bub.t += dt; if (k.bub.t > k.bub.dur) k.bub = null; } if (k.net) { const a = k.net; if (Math.abs(a[0] - k.x) + Math.abs(a[1] - k.y) > 80) { k.x = a[0]; k.y = a[1]; } else { const ox = k.x, oy = k.y; k.x += (a[0] - k.x) * Math.min(1, dt * 12); k.y += (a[1] - k.y) * Math.min(1, dt * 12); k.dist = (k.dist || 0) + Math.hypot(k.x - ox, k.y - oy); } k.face = a[2]; k.moving = !!a[3]; if (a.length > 5) k.ang = a[5]; } });
   }
-  updateDoors(dt);
+  updateDoors(dt); petFollow(P, dt); if (Q.fl === I.cur) petFollow(Q, dt);
   infUpdate(dt); if (G.mode !== 'play') return;
   // cœur qui bat, musique
   if (!T.gone) { const d = dist(T.x, T.y, P.x, P.y) / 16; G.heartT -= dt; if (d < 7 && T.state !== 'sleep' && G.heartT <= 0) { G.heartT = 0.35 + d * 0.11; AU.sfx('heart', clamp(1 - d / 7, 0.15, 1) * (T.state === 'chase' ? 1 : 0.6)); UI.heart(); } }
@@ -710,12 +710,14 @@ function coopUpdate(dt) {
 }
 // ---------- attrapé : direction la salle de colle ----------
 function coopCaught(who, reason) {
-  const I = G.inf, T = G.T, eng = T.prof && T.prof.english;
+  const I = G.inf, T = G.T, eng = T.prof && T.prof.lesson;
+  // le compagnon fait fuir le prof
+  if (who.pet && who.pet.charges > 0 && who.pet.leaveT == null) { const remote = who !== (I.me || G.P); petScare(T, who, remote); if (remote) Net.send({ t: 'petUse' }); return; }
   if (eng) {
     T.state = 'release'; T.st = 3.5; T.path = null; T.detect = 0; T.det = {}; T.knows = null; I.grace = Math.max(I.grace, 3);
     I.hunt = false; I.hideT = 0; I.warn = Math.min(I.warn, 2); UI.infSig = null; UI.hudSig = null; Net.send({ t: 'twarn', n: I.warn, hunt: 0, you: 0, text: '', silent: 1 });
     if (who === (I.me || G.P)) { if ((G.lessons || 0) < LESSON_MAX) lessonStart(reason); else coopJail(); }
-    else { who.jailMove = G.time; Net.send({ t: 'caughtYou', eng: 1, r: reason }); toast('🇬🇧 Miss Teacup a attrapé ' + (who.cfg.name || 'ton coéquipier') + ' : leçon d’anglais !', 2.6); }
+    else { who.jailMove = G.time; Net.send({ t: 'caughtYou', eng: 1, r: reason }); toast((T.prof.lesson === 'hist' ? '🦴 ' : '🇬🇧 ') + T.prof.name + ' a attrapé ' + (who.cfg.name || 'ton coéquipier') + ' : ' + (T.prof.lesson === 'hist' ? 'interro d’histoire !' : 'leçon d’anglais !'), 2.6); }
     return;
   }
   T.state = 'patrol'; T.path = null; T.detect = 0; T.det = {}; T.knows = null; I.grace = Math.max(I.grace, 3);
@@ -818,7 +820,9 @@ function coopRecv(d) {
     case 's': {
       const was = Q.fl; if (d.jail && !Q.jail) I.colles = (I.colles || 0) + 1; Q.out = !!d.out; Q.jail = !!d.jail; Q.pg = !!d.pg;
       if (Q.out) { Q.fl = d.fl; Q.x = -9999; Q.y = -9999; Q.net = null; Q.away = true; Q.last = null; if (!P.out) coopTakeAuth(); return true; }
-      Q.hidF = d.h >= 0; Q.lesson = !!d.ls; infRecvPos(Q, d); if (d.jail) Q.jailMove = 0;
+      Q.hidF = d.h >= 0; Q.lesson = !!d.ls;
+      if (d.pk >= 0 && d.pc > 0) { if (!Q.pet || Q.pet.i !== d.pk) Q.pet = { i: d.pk, e: PETS[d.pk].e, n: PETS[d.pk].n, charges: d.pc, x: Q.x, y: Q.y, t: 0 }; else Q.pet.charges = d.pc; } else Q.pet = null;
+      infRecvPos(Q, d); if (d.jail) Q.jailMove = 0;
       if (was === I.cur && Q.fl !== I.cur && !P.out) coopTakeAuth();   // il est parti : je reprends la main
       return true;
     }
@@ -839,7 +843,8 @@ function coopRecv(d) {
     case 'knock': if (I.auth && d.fl === I.cur) coopKnock(d.i); return true;
     case 'jailLock': I.floors[1].doors.forEach(dr => { if (dr.jail) { dr.locked = true; dr.byPlayer = false; } }); return true;
     case 'caughtYou': if (!P.jail && !P.out && !P.lesson) { if (d.eng && (G.lessons || 0) < LESSON_MAX) lessonStart(d.r); else coopJail(); } return true;
-    case 'lessonDone': toast(d.ok ? '🇬🇧 ' + (Q.cfg.name || 'Ton coéquipier') + ' a bien répondu à Miss Teacup !' : '🇬🇧 ' + (Q.cfg.name || 'Ton coéquipier') + ' s’est trompé·e… objets magiques confisqués !', 2.4); return true;
+    case 'lessonDone': toast(d.ok ? '✅ ' + (Q.cfg.name || 'Ton coéquipier') + ' a bien répondu à ' + (d.who || 'la prof') + ' !' : '❌ ' + (Q.cfg.name || 'Ton coéquipier') + ' s’est trompé·e… objets magiques confisqués !', 2.4); return true;
+    case 'petUse': if (P.pet) petUsed(P, G.T); return true;
     case 'freed': if (P.jail) { P.jail = false; P.jailT = 0; UI.banner('🔓 ' + (Q.cfg.name || 'Ton coéquipier') + ' t’a libéré·e ! File !'); AU.sfx('found'); } return true;
     case 'ping': I.ping = { x: d.x, y: d.y, fl: d.fl, t: 0, room: '', who: Q.cfg.name }; AU.sfx('ding', 0.4); if (d.fl !== I.cur) toast('📍 ' + (Q.cfg.name || 'Ton coéquipier') + ' t’appelle (' + INF_FLOOR_META[d.fl].name + ')', 1.8); return true;
     case 'gateDone': { const ex = G.L.exits && G.L.exits.find(e => e.gate); if (I.cur === 0 && ex && P.busy && P.busy.ex === ex) { P.busy = null; escape(ex, ex.x, ex.y); } return true; }
@@ -857,7 +862,7 @@ function coopNetTick(dt) {
   if (N.sendT <= 0) {
     N.sendT = 0.05;
     const pg = P.busy && P.busy.ex && P.busy.ex.gate ? 1 : 0;
-    N.send({ t: 's', fl: I.cur, x: P.out ? -9999 : +P.x.toFixed(1), y: P.out ? -9999 : +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0, out: P.out ? 1 : 0, jail: P.jail ? 1 : 0, pg, ls: P.lesson ? 1 : 0 });
+    N.send({ t: 's', fl: I.cur, x: P.out ? -9999 : +P.x.toFixed(1), y: P.out ? -9999 : +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0, out: P.out ? 1 : 0, jail: P.jail ? 1 : 0, pg, ls: P.lesson ? 1 : 0, pk: P.pet && P.pet.leaveT == null ? P.pet.i : -1, pc: P.pet ? P.pet.charges : 0 });
     if (I.auth && Q.fl === I.cur && T) N.send({ t: 'ai', x: +T.x.toFixed(1), y: +T.y.toFixed(1), a: +T.ang.toFixed(2), f: T.face, m: T.moving ? 1 : 0, r: T.running ? 1 : 0, st: T.state, g: T.gone ? 1 : 0, dm: +((T.det && T.det.them) || 0).toFixed(2) });
   }
   if (N.kidsT <= 0) {

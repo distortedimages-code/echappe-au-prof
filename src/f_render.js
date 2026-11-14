@@ -270,6 +270,18 @@ function renderGame(dt) {
   // le coéquipier (toujours visible pour toi)
   const Q = G.P2;
   if (Q && G.inf && G.inf.coop && !Q.out && !Q.hidden && Q.x > -9000) ents.push([Q.y, () => occlude(ctx, Q, () => drawSprite(ctx, Q.cfg, null, Q, { scale: Q.small > 0 ? 0.5 : 1 }))]);
+  // les animaux de compagnie
+  const drawPet = A => {
+    const p = A && A.pet; if (!p || A.x < -9000 || A.out || p.x == null) return;
+    const bob = p.moving || p.jump > 0 ? Math.abs(Math.sin(p.t * 12)) * 3 : Math.sin(p.t * 3) * 0.6;
+    ents.push([p.y, () => {
+      ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 5, 2, 0, 0, 7); ctx.fill();
+      ctx.globalAlpha = p.leaveT != null ? Math.max(0, p.leaveT / 1.2) : 1;
+      ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#000'; ctx.fillText(p.e, p.x, p.y + 1 - bob);
+      ctx.globalAlpha = 1;
+    }]);
+  };
+  drawPet(P); if (Q && G.inf && G.inf.coop && Q.fl === G.inf.cur) drawPet(Q);
   if (G.ball) {
     const a = G.kids[G.ball.from], b = G.kids[G.ball.to];
     if (a && b && (a.vis || b.vis)) { const t = G.ball.t, bx = lerp(a.x, b.x, t), by = lerp(a.y, b.y, t); ents.push([by, () => { const h = Math.sin(Math.PI * t) * 14 + 10; ctx.fillStyle = 'rgba(10,6,20,0.3)'; ctx.beginPath(); ctx.ellipse(bx, by, 2.2, 0.9, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#f77622'; ctx.beginPath(); ctx.arc(bx, by - h, 2.2, 0, 7); ctx.fill(); ctx.fillStyle = '#ffb070'; ctx.fillRect(bx - 1, by - h - 1.5, 1, 1); }]); }

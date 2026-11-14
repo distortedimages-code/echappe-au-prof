@@ -292,6 +292,8 @@ function updateTeacher(dt) {
   if (T.state === 'caught') return;
   // après une leçon d'anglais : la prof reste plantée là quelques secondes, le temps de filer
   if (T.state === 'release') { T.st -= dt; T.moving = false; if (T.st <= 0) { T.state = 'patrol'; T.path = null; T.detect = 0; } return; }
+  // un compagnon lui a sauté dessus : il s'enfuit
+  if (T.state === 'scared') { teacherScared(T, dt); return; }
   if (T.state === 'count') {
     T.st -= dt; T.moving = false;
     const n = 3 - Math.ceil(T.st - 0.3);
@@ -859,8 +861,10 @@ function caught(reason, fromNet) {
   if (G.mode !== 'play') return;
   if (G.inf && G.inf.coop && !fromNet) { coopCaught(G.P, reason); return; }
   const P = G.P, T = G.T;
-  // Miss Teacup : une leçon d'anglais au lieu de l'heure de colle (3 fois maximum)
-  if (!G.net && T.prof && T.prof.english && (G.lessons || 0) < LESSON_MAX) { lessonStart(reason); return; }
+  // le compagnon fait fuir le prof (3 fois)
+  if (!G.net && P.pet && P.pet.charges > 0 && P.pet.leaveT == null) { petScare(T, P); return; }
+  // Miss Teacup / M. Silex : une leçon au lieu de l'heure de colle (3 fois maximum)
+  if (!G.net && T.prof && T.prof.lesson && (G.lessons || 0) < LESSON_MAX) { lessonStart(reason); return; }
   if (P.hidden) { const s = P.hidden; P.hidden = null; if (s.k === K.DOOR) { const d = doorAt(s.x, s.y); if (d) d.hideP = false; } const st = s.stand[0]; P.x = st[0] * 16 + 8; P.y = st[1] * 16 + 12; puff(s.x * 16 + 8, s.y * 16 + 8, 12); }
   P.busy = null; G.mode = 'caught'; G.caughtT = 0; T.state = 'caught'; T.moving = false; setMark(T, '!', 3);
   T.bubble = { text: reason === 'found' ? 'TROUVÉ ! Heure de colle !' : 'ATTRAPÉ ! Heure de colle !', t: 0, dur: 3 };
@@ -881,7 +885,7 @@ function update(dt) {
     if (G.net) { netUpdate(dt); if (G.mode !== 'play') return; }
     else {
     updatePlayer(dt); if (G.mode !== 'play') return;
-    updateTeacher(dt); updateKids(dt); updateDoors(dt);
+    updateTeacher(dt); updateKids(dt); updateDoors(dt); petFollow(G.P, dt);
     if (G.inf) { infUpdate(dt); if (G.mode !== 'play') return; }
     // cœur qui bat
     const d = dist(G.T.x, G.T.y, G.P.x, G.P.y) / 16;

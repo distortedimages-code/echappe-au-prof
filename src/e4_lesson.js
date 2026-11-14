@@ -166,27 +166,32 @@ function lessonStart(reason) {
   G.lessons = (G.lessons || 0) + 1;
   T.state = 'release'; T.st = 99; T.moving = false; T.path = null; T.detect = 0; if (T.det) T.det = {};
   T.ang = Math.atan2(P.y - T.y, P.x - T.x); T.face = faceFromAng(T.ang); P.face = faceFromAng(T.ang + Math.PI);
-  T.bubble = { text: reason === 'found' ? 'Found you! English lesson!' : 'Got you! English lesson!', t: 0, dur: 2.2 };
-  AU.sayEn(T.bubble.text, T.prof); AU.sfx('caught', 0.55); G.shake = 0.3; FX.comic = { t: 0, text: 'ENGLISH LESSON !' };
+  const hist = T.prof.lesson === 'hist';
+  T.bubble = { text: hist ? (reason === 'found' ? 'Trouvé·e ! Interro surprise !' : 'Attrapé·e ! Interro surprise d’histoire !') : (reason === 'found' ? 'Found you! English lesson!' : 'Got you! English lesson!'), t: 0, dur: 2.2 };
+  if (hist) AU.say(T.bubble.text, T.prof); else AU.sayEn(T.bubble.text, T.prof);
+  AU.sfx('caught', 0.55); G.shake = 0.3; FX.comic = { t: 0, text: hist ? 'INTERRO SURPRISE !' : 'ENGLISH LESSON !' };
   puff((P.x + T.x) / 2, (P.y + T.y) / 2 - 10, 14, '#ffffff');
   if (G.net) { P.lesson = true; } else { G.mode = 'lesson'; }
   const n = G.lessons;
-  setTimeout(() => { if (G.mode === 'lesson' || P.lesson) Lesson.open(T.prof, n, (ok, lost, gift) => lessonEnd(ok, lost, gift)); }, 650);
+  const prof = T.prof;
+  setTimeout(() => { if (G.mode === 'lesson' || P.lesson) Lesson.open(prof, n, (ok, lost, gift, pet) => lessonEnd(ok, lost, gift, pet, prof)); }, 650);
 }
-function lessonEnd(ok, lost, gift) {
-  const P = G.P, T = G.T, I = G.inf;
+function lessonEnd(ok, lost, gift, pet, prof) {
+  const P = G.P, T = G.T, I = G.inf, hist = prof && prof.lesson === 'hist';
+  FX.comic = null;
   P.lesson = false;
   if (!(G.inf && G.inf.coop && !G.inf.auth)) { T.state = 'release'; T.st = 2.6; }
-  T.bubble = { text: ok ? pick(['Very good! Off you go!', 'Well done! Go back to class!', 'Excellent! You can go…']) : pick(['Practice makes perfect!', 'Revise your lesson, please!']), t: 0, dur: 2.4 };
-  AU.sayEn(T.bubble.text, T.prof);
+  T.bubble = { text: hist ? (ok ? pick(['Bravo ! Un vrai petit Homo sapiens !', 'Excellent ! File, maintenant !']) : pick(['Révise ta leçon sur la Préhistoire !', 'Même Homo habilis savait ça…'])) : (ok ? pick(['Very good! Off you go!', 'Well done! Go back to class!', 'Excellent! You can go…']) : pick(['Practice makes perfect!', 'Revise your lesson, please!'])), t: 0, dur: 2.4 };
+  if (hist) AU.say(T.bubble.text, T.prof); else AU.sayEn(T.bubble.text, T.prof);
   if (I) {
     I.hunt = false; I.warn = Math.min(I.warn, 2); I.grace = Math.max(I.grace || 0, 3); I.hideT = 0; UI.infSig = null;
-    if (I.coop) { Net.send({ t: 'twarn', n: I.warn, hunt: 0, you: 0, text: '', silent: 1 }); Net.send({ t: 'lessonDone', ok: ok ? 1 : 0 }); }
+    if (I.coop) { Net.send({ t: 'twarn', n: I.warn, hunt: 0, you: 0, text: '', silent: 1 }); Net.send({ t: 'lessonDone', ok: ok ? 1 : 0, who: prof ? prof.name : '' }); }
   }
   if (!G.net) G.mode = 'play';
   UI.hudSig = null; UI.invSig = null;
-  if (lost && lost.length) toast('🎒 Miss Teacup a confisqué : ' + lost.map(k => ITEMS[k].n).join(', '), 3);
-  if (gift) { toast('🎁 Cadeau de Miss Teacup : ' + ITEMS[gift].n + ' ! ' + ITEMS[gift].d, 3.4); FX.flyers.push({ kind: gift, slot: P.inv.length - 1, wx: P.x, wy: P.y - 20, t: 0 }); sparkle(P.x, P.y - 14, 14); }
+  if (lost && lost.length) toast('🎒 ' + (prof ? prof.name : 'La prof') + ' a confisqué : ' + lost.map(k => ITEMS[k].n).join(', '), 3);
+  if (pet) { UI.banner(pet.e + ' ' + pet.n + ' te suit partout et fera fuir les profs qui t’attrapent (3 fois) !'); sparkle(P.x, P.y - 14, 18); UI.hudSig = null; }
+  if (gift) { toast('🎁 Cadeau de ' + (prof ? prof.name : 'Miss Teacup') + ' : ' + ITEMS[gift].n + ' ! ' + ITEMS[gift].d, 3.4); FX.flyers.push({ kind: gift, slot: P.inv.length - 1, wx: P.x, wy: P.y - 20, t: 0 }); sparkle(P.x, P.y - 14, 14); }
   if (G.lessons >= LESSON_MAX) setTimeout(() => toast('⚠️ Plus de leçon de rattrapage : la prochaine fois, c’est l’heure de colle !', 3), 1200);
 }
 
@@ -286,7 +291,13 @@ function lsChoices(q) {
 
 // ---------- la fiche de leçon (écran) ----------
 const Lesson = {
-  used: new Set(), q: null, done: null, res: null, bound: false, opts: [],
+  used: new Set(), usedH: new Set(), q: null, done: null, res: null, bound: false, opts: [], prof: null,
+  pickHist() {
+    let idx = HIST_BANK.map((q, i) => i).filter(i => !this.usedH.has(i));
+    if (!idx.length) { this.usedH.clear(); idx = HIST_BANK.map((q, i) => i); }
+    const i = idx[Math.floor(Math.random() * idx.length)]; this.usedH.add(i); const h = HIST_BANK[i];
+    return { hist: 1, show: h.q, ask: pick(['Interro surprise ! Alors, petit Homo sapiens…', 'Voyons si tu as bien appris ta leçon…', 'Question d’histoire !', 'Sors ton cahier… dans ta tête !']), en: h.a, c: h.w.slice(), e: h.e, p: h.a };
+  },
   pick() {
     const r = Math.random();
     if (r < 0.28) return lsDayQ();
@@ -308,8 +319,10 @@ const Lesson = {
     $('lsDone').addEventListener('click', () => this.close());
   },
   open(prof, n, done) {
-    this.bind(); this.done = done; this.res = null;
-    const q = this.q = this.pick();
+    this.bind(); this.done = done; this.res = null; this.prof = prof;
+    const hist = prof.lesson === 'hist';
+    const q = this.q = hist ? this.pickHist() : this.pick();
+    $('lsFlag').textContent = hist ? '🦴' : '🇬🇧'; $('sLesson').classList.toggle('hist', hist);
     portrait($('lsProf'), prof.cfg, prof.v, 1);
     $('lsName').textContent = prof.name; $('lsSub').textContent = 'Leçon ' + n + ' / ' + LESSON_MAX + (n >= LESSON_MAX ? ' · dernière chance !' : '');
     $('lsQ').textContent = q.ask || pick(['Hello! How do you say in English…', 'Repeat after me… in English, please!', 'Now, translate this sentence!', 'Ready? In English, please…']);
@@ -328,7 +341,7 @@ const Lesson = {
       const all = words.concat(extra); for (let k = all.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [all[k], all[j]] = [all[j], all[k]]; }
       $('lsTiles').innerHTML = all.map(w => `<button class="tile" data-w="${esc(w)}">${esc(w)}</button>`).join(''); $('lsHelp').classList.remove('hidden');
     } else { $('lsTiles').innerHTML = ''; $('lsHelp').classList.add('hidden'); }
-    $('lsChoices').classList.remove('hidden'); $('lsAsk').classList.add('hidden'); $('lsType').classList.remove('hidden'); $('lsType').textContent = '✍️ Je préfère l’écrire moi-même';
+    $('lsChoices').classList.remove('hidden'); $('lsAsk').classList.add('hidden'); $('lsType').classList.toggle('hidden', !!q.hist); $('lsType').textContent = '✍️ Je préfère l’écrire moi-même';
     $('lsRes').classList.add('hidden');
     $('sLesson').classList.remove('hidden'); Input.reset();
     AU.sfx('blip');
@@ -336,7 +349,7 @@ const Lesson = {
   choose(i) {
     if (!this.q || this.res) return; const o = this.opts[i]; if (!o) return;
     [...$('lsChoices').children].forEach((b, k) => b.classList.add(this.opts[k].good ? 'good' : k === i ? 'bad' : 'off'));
-    this.finish({ ok: o.good, typos: [], picked: o.t, hint: o.good ? '' : lsHint(lsNorm(o.t), this.q) });
+    this.finish({ ok: o.good, typos: [], picked: o.t, hint: o.good ? '' : this.q.hist ? this.q.e : lsHint(lsNorm(o.t), this.q) });
   },
   submit() {
     if (!this.q || this.res) return;
@@ -346,32 +359,35 @@ const Lesson = {
   },
   finish(r) {
     this.res = r;
-    const P = G.P; let lost = [], gift = null;
+    const P = G.P, hist = !!this.q.hist; let lost = [], gift = null, pet = null;
     if (!r.ok) { lost = (P.inv || []).filter(k => k !== 'key'); P.inv = (P.inv || []).filter(k => k === 'key'); }
+    else if (hist) pet = petGive(P);
     else if ((P.inv || []).length < 3) { gift = pick(ITEM_KEYS); P.inv.push(gift); }
-    UI.invSig = null; r.lost = lost; r.gift = gift;
+    UI.invSig = null; r.lost = lost; r.gift = gift; r.pet = pet;
     const good = r.ok && !r.typos.length;
     $('lsVerdict').className = 'lsVerdict ' + (r.ok ? 'ok' : 'ko');
-    $('lsVerdict').textContent = r.ok ? (good ? pick(['✅ Very good!', '✅ Perfect!', '✅ Excellent!']) : '✅ Good! (presque parfait)') : '❌ Oops! Pas tout à fait…';
+    $('lsVerdict').textContent = hist ? (r.ok ? pick(['✅ Bravo !', '✅ Excellent !', '✅ Parfait !']) : '❌ Raté !') : r.ok ? (good ? pick(['✅ Very good!', '✅ Perfect!', '✅ Excellent!']) : '✅ Good! (presque parfait)') : '❌ Oops! Pas tout à fait…';
     $('lsYou').innerHTML = r.ok ? '' : 'Ta réponse : <s>' + esc(r.picked) + '</s>';
     $('lsAns').textContent = this.q.en;
-    $('lsTip').textContent = r.ok ? (r.typos.length ? '✏️ Attention à l’orthographe : ' + r.typos.map(t => t[0] + ' → ' + t[1]).join(', ') : '👍 Tu peux filer… mais sans courir dans les couloirs !') : '💡 ' + r.hint;
+    $('lsEar').classList.toggle('hidden', hist);
+    $('lsTip').textContent = hist ? (r.ok ? '📚 ' : '💡 ') + this.q.e : r.ok ? (r.typos.length ? '✏️ Attention à l’orthographe : ' + r.typos.map(t => t[0] + ' → ' + t[1]).join(', ') : '👍 Tu peux filer… mais sans courir dans les couloirs !') : '💡 ' + r.hint;
     const box = $('lsLost'); box.innerHTML = '';
     const icons = list => { const d = document.createElement('div'); d.className = 'lsLostI' + (r.ok ? ' gift' : ''); list.forEach(k => { const cv = document.createElement('canvas'); cv.width = 14; cv.height = 14; cv.getContext('2d').drawImage(itemCanvas(k), 0, 0); d.appendChild(cv); }); return d; };
     const line = (cls, t) => { const d = document.createElement('div'); d.className = cls; d.textContent = t; box.appendChild(d); };
     if (!r.ok) { if (lost.length) { line('lsLostT', '🎒 « Et je te confisque tes objets magiques ! »'); box.appendChild(icons(lost)); } else line('lsLostT', '🎒 « Tu n’as aucun objet magique… lucky you! »'); }
+    else if (pet) { line('lsGiftT', '🐾 « Tiens, prends soin de lui ! » ' + this.prof.name + ' te confie : ' + pet.n + ' ' + pet.e + '. Ton compagnon te suit et fera fuir les profs qui t’attrapent (3 fois) !'); const d = document.createElement('div'); d.className = 'lsPet'; d.textContent = pet.e; box.appendChild(d); }
     else if (gift) { line('lsGiftT', '🎁 « Here is a present! » Miss Teacup t’offre : ' + ITEMS[gift].n); box.appendChild(icons([gift])); }
     else line('lsGiftT', '🎁 Miss Teacup voulait t’offrir un objet magique… mais ton sac est plein !');
-    $('lsDone').textContent = r.ok ? 'Thank you, Miss! 🏃' : 'Sorry, Miss… 😔';
+    $('lsDone').textContent = hist ? (r.ok ? 'Merci, Monsieur ! 🏃' : 'Pardon, Monsieur… 😔') : r.ok ? 'Thank you, Miss! 🏃' : 'Sorry, Miss… 😔';
     $('lsAsk').classList.add('hidden'); $('lsType').classList.add('hidden'); $('lsRes').classList.remove('hidden');
     AU.sfx(r.ok ? 'found' : 'fail'); if (gift) AU.sfx('pickup'); if (r.ok) confetti(G.P.x, G.P.y - 10, 24);
-    if (!this.q.toFr && !this.q.toNum) setTimeout(() => { if (this.res) AU.sayEn(this.q.en, PROFS[5]); }, 350);
+    if (!hist && !this.q.toFr && !this.q.toNum) setTimeout(() => { if (this.res) AU.sayEn(this.q.en, PROFS[5]); }, 350);
   },
   close() {
     if (!this.res) return;
     const r = this.res, d = this.done; this.res = null; this.q = null; this.done = null;
     $('sLesson').classList.add('hidden'); AU.sfx('blip');
-    if (d) d(r.ok, r.lost, r.gift);
+    if (d) d(r.ok, r.lost, r.gift, r.pet);
   },
   // partie interrompue (quitter, fin de partie…)
   abort() { this.res = null; this.q = null; this.done = null; const s = $('sLesson'); if (s) s.classList.add('hidden'); if (G.P) G.P.lesson = false; }

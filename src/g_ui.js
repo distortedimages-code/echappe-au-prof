@@ -96,9 +96,11 @@ const $ = id => document.getElementById(id);
 const UI = {
   chars: store.get('nds_chars', []), cur: store.get('nds_cur', 0),
   prog: (() => {
-    const p = Object.assign({ unlocked: 1, stars: [0, 0, 0, 0, 0, 0] }, store.get('nds_prog', {}));
+    const p = Object.assign({ unlocked: 1, stars: [0, 0, 0, 0, 0, 0, 0] }, store.get('nds_prog', {}));
     // v2 : le cours d'anglais s'insère en niveau 4 (le gymnase et la directrice passent en 5 et 6)
     if (!p.v) { const s = p.stars || []; p.stars = [s[0] || 0, s[1] || 0, s[2] || 0, 0, s[3] || 0, s[4] || 0]; if (p.unlocked >= 4) p.unlocked++; p.v = 2; }
+    // v3 : le cours d'histoire-géo s'insère en niveau 5
+    if (p.v === 2) { const s = p.stars || []; p.stars = [s[0] || 0, s[1] || 0, s[2] || 0, s[3] || 0, 0, s[4] || 0, s[5] || 0]; if (p.unlocked >= 5) p.unlocked++; p.v = 3; }
     return p;
   })(),
   editing: null, editIdx: -1, prevDir: 0, prevT: 0, after: 'levels', toastTimer: null, bannerTimer: null, hudSig: null, invSig: null, hudT: 0,
@@ -337,7 +339,7 @@ const UI = {
     const i = G.lvl, pr = G.T.prof, p = $('resPanel'), t = G.time;
     const mm = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
     if (win) {
-      const par = [180, 210, 230, 230, 230, 270][i];
+      const par = [180, 210, 230, 230, 230, 230, 270][i];
       const stars = 1 + (G.spotted <= 1 ? 1 : 0) + (t < par ? 1 : 0);
       this.prog.stars[i] = Math.max(this.prog.stars[i] || 0, stars);
       this.prog.unlocked = Math.max(this.prog.unlocked, Math.min(LEVELS.length, i + 2)); this.save();
@@ -474,6 +476,7 @@ const UI = {
     }
     if (G.mode === 'intro') $('hTasks').classList.add('hidden'); else if (G.tasks.length) $('hTasks').classList.remove('hidden');
     $('hLocks').textContent = teach ? (T.hasKeys ? '🔑 ✔' : '🔑 ✘') : '🔑×' + locksLeft();
+    { const pt = G.P && G.P.pet, txt = pt && pt.leaveT == null ? pt.e + ' ' + '❤'.repeat(Math.max(0, pt.charges)) : ''; const el = $('hPet'); el.classList.toggle('hidden', !txt); if (el.textContent !== txt) el.textContent = txt; }
     const d = dist(T.x, T.y, P.x, P.y) / 16; $('hHeart').textContent = teach ? '🎯' : (T.state === 'chase' || G.alarmT > 0) ? '❤️‍🔥' : d < 4 ? '💓' : d < 8 ? '💗' : '🤍';
     const eff = [];
     if (teach) { if (G.slowT > 0) eff.push('🐢 Ralenti ' + Math.ceil(G.slowT) + 's'); $('hEffects').innerHTML = eff.map(e => `<div>${e}</div>`).join(''); $('hHidden').classList.add('hidden'); return; }

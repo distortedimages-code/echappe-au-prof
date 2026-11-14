@@ -359,7 +359,7 @@ const PROFS = [
     }
   },
   {
-    name: 'Miss Teacup', title: 'la prof d’anglais', english: true,
+    name: 'Miss Teacup', title: 'la prof d’anglais', english: true, lesson: 'en',
     cfg: { skin: 0, hair: 10, hairCol: 3, eyes: 2, mouth: 1, face: 3, top: 3, topCol: 7, bottom: 2, botCol: 7, shoes: 1, acc: 2, accCol: 0 },
     v: { adult: true, extras: ['livre'] }, voice: { pitch: 1.25, rate: 1.0 },
     patrol: 1.8, chase: 3.65, range: 7, fov: 1.0, hear: 1.25, searchN: 3, chatty: true,
@@ -373,6 +373,22 @@ const PROFS = [
       chat: ['Repeat after me: I have a pen!', 'He, she, it… HAS!', 'Where is my cup of tea?', 'Open your books, please!', 'AN eraser, not A eraser!', 'Does she have a ruler? Yes, she does!'],
       caught: 'Got you! Now… English lesson!'
     }
+  },
+  {
+    name: 'M. Silex', title: 'le prof d’histoire-géo', lesson: 'hist',
+    cfg: { skin: 1, hair: 6, hairCol: 6, eyes: 0, mouth: 4, face: 3, top: 6, topCol: 3, bottom: 0, botCol: 1, shoes: 1, acc: 0, accCol: 0 },
+    v: { adult: true, extras: ['moustache', 'livre'] }, voice: { pitch: 0.85, rate: 1.05 },
+    patrol: 1.8, chase: 3.6, range: 7, fov: 1.0, hear: 1.2, searchN: 3, chatty: true,
+    lines: {
+      start: 'Je compte jusqu’à trois… comme à la Préhistoire, sur mes doigts !',
+      spot: ['{n} ! Interrogation surprise !', 'Halte, petit Homo sapiens !', '{n} ! Viens réviser la Préhistoire !'],
+      lost: ['Où se cache {n} ? Dans une grotte ?', 'Même Homo erectus se cachait mieux que ça…', 'Je vais fouiller partout, comme un archéologue !'],
+      heard: ['Un mammouth ?!', 'Qui fait ce bruit ?', 'J’ai entendu quelque chose…'],
+      search: ['Fouillons avec la truelle…', 'Pas de vestige ici…', 'Ni là…', 'Hmm…'],
+      give: ['Bon… je retourne à mes fouilles.', 'Tant pis, je reprends mon cours.'],
+      chat: ['Homo habilis : l’homme habile !', 'La Préhistoire dure 3 millions d’années !', 'Qui a vu ma truelle ?', 'Lucy n’était pas une humaine !', 'Nomade… sédentaire… qui sait ?', 'Paléolithique : la pierre ancienne !'],
+      caught: 'Attrapé·e ! Interro surprise d’histoire !'
+    }
   }
 ];
 const LEVELS = [
@@ -384,6 +400,8 @@ const LEVELS = [
     hints: ['📚 Au CDI, un livre n’est pas comme les autres.', '🪟 La fenêtre de la salle de sciences donne dehors.', '🐭 Un trou de souris dans le local ménage…'] },
   { title: 'Le cours d’anglais', place: 'Couloirs et salles de langues', prof: 5, build: buildL3,
     hints: ['🇬🇧 Si Miss Teacup t’attrape : leçon d’anglais ! Bonne réponse = elle te laisse filer avec un objet magique en cadeau. Faute = elle confisque tes objets. Au bout de 3 leçons : heure de colle !', '🪟 Une fenêtre de salle de classe donne dehors.', '🐭 Un trou de souris dans le local ménage…'] },
+  { title: 'Le cours d’histoire-géo', place: 'Couloirs et salles de classe', prof: 6, build: buildL3,
+    hints: ['🦴 Si M. Silex t’attrape : interro sur la Préhistoire ! Bonne réponse = un animal de compagnie qui fait fuir les profs (3 fois). Faute = il confisque tes objets magiques.', '🪟 Une fenêtre de salle de classe donne dehors.', '🐭 Un trou de souris dans le local ménage…'] },
   { title: 'Le gymnase', place: 'Gymnase et vestiaires', prof: 3, build: buildL4,
     hints: ['🤸 Une trappe secrète est cachée sous des tapis de gym.', '🚨 L’issue de secours du hall… mais l’alarme va sonner !', '🐭 Un petit trou dans le mur du local matériel.'] },
   { title: 'Le bureau de la directrice', place: 'L’étage de la direction', prof: 4, build: buildL5,
