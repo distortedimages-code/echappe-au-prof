@@ -105,16 +105,16 @@ function drawDynamic(c, ox, oy) {
     const px = x * 16 + ox, py = y * 16 + oy; c.fillStyle = 'rgba(255,255,255,0.75)'; c.fillRect(px + 12, py + 1, 3, 1); c.fillRect(px + 13, py, 1, 3);
   });
 }
-function conePath(c) {
-  const T = G.T, pr = T.prof, ex = T.x, ey = T.y - 12, R = pr.range * 16 * 0.92;
+function conePath(c, A) {
+  const T = A || G.T, pr = T.prof, ex = T.x, ey = T.y - 12, R = pr.range * 16 * 0.92;
   c.beginPath(); c.moveTo(ex, ey);
   const n = 30;
   for (let i = 0; i <= n; i++) { const a = T.ang - pr.fov + 2 * pr.fov * i / n, d = castRay(ex, ey, a, R); c.lineTo(ex + Math.cos(a) * d, ey + Math.sin(a) * d); }
   c.closePath();
 }
-function drawCone(c) {
-  const T = G.T, pr = T.prof, ex = T.x, ey = T.y - 12, R = pr.range * 16;
-  conePath(c);
+function drawCone(c, A) {
+  const T = A || G.T, pr = T.prof, ex = T.x, ey = T.y - 12, R = pr.range * 16;
+  conePath(c, T);
   const col = T.state === 'chase' ? '255,60,80' : (T.detect > 0.3 || T.state === 'alert' || T.state === 'investigate') ? '255,160,50' : '255,236,140';
   const g = c.createRadialGradient(ex, ey, 4, ex, ey, R);
   g.addColorStop(0, `rgba(${col},0.38)`); g.addColorStop(0.7, `rgba(${col},0.16)`); g.addColorStop(1, `rgba(${col},0)`);
@@ -222,7 +222,8 @@ function renderGame(dt) {
   ctx.drawImage(V.lo, ci, cj);
   // 3) cône de vision, poussières
   const showT = G.tVis || G.mode === 'caught';
-  if (showT && !['sleep', 'caught', 'count'].includes(T.state)) drawCone(ctx);
+  if (showT && !T.gone && !['sleep', 'caught', 'count', 'evac'].includes(T.state)) drawCone(ctx);
+  G.kids.forEach(k => { if (k.vis && k.isWatcher && !k.gone && k.state !== 'evac') { ctx.globalAlpha = 0.75; drawCone(ctx, k); ctx.globalAlpha = 1; } });
   if (!G.L.outdoor) { for (const mo of FX.motes) { const a = Math.sin(mo.t / mo.life * Math.PI) * (0.35 + 0.25 * Math.sin(G.time * 3 + mo.ph)); ctx.fillStyle = `rgba(255,240,200,${a})`; ctx.fillRect(mo.x, mo.y, 0.8, 0.8); } }
   // 4) entités triées par profondeur
   const ents = [];
@@ -233,11 +234,13 @@ function renderGame(dt) {
     ents.push([k.y, () => {
       const bob = k.beh === 'jump' ? -Math.abs(Math.sin(G.time * 6 + k.ph)) * 5 : 0;
       if (k.beh === 'jump') { const up = Math.sin(G.time * 6 + k.ph) > 0; ctx.strokeStyle = '#e43b44'; ctx.lineWidth = 0.9; ctx.beginPath(); if (up) ctx.ellipse(k.x, k.y - 2, 8, 3, 0, 0.1, Math.PI - 0.1); else ctx.ellipse(k.x, k.y - 22 + bob, 8, 4, 0, Math.PI + 0.1, -0.1); ctx.stroke(); }
-      drawSprite(ctx, k.cfg, null, k, { bob, sy: k.beh === 'jump' && bob > -1 ? 0.9 : 1 });
+      if (k.beh === 'sit') { drawSprite(ctx, k.cfg, null, k, { sy: 0.86, bob: 2, noShadow: true }); return; }
+      drawSprite(ctx, k.cfg, k.v || null, k, { bob, sy: k.beh === 'jump' && bob > -1 ? 0.9 : 1 });
+      if (k.isWatcher && k.markT > 0 && k.mark) txt(ctx, k.mark, k.x, k.y - 40, 9, k.mark === '!' ? '#e43b44' : '#ffd23f');
     }]);
   });
   (G.pigeons || []).forEach(p => { if (p.st === 'gone') return; if (dist(G.eye[0], G.eye[1], p.x, p.y) > G.visR + 10 && p.z < 20) return; ents.push([p.y + (p.z > 4 ? 200 : 0), () => drawPigeon(ctx, p)]); });
-  if (showT) ents.push([T.y, () => drawTeacher(ctx, T)]);
+  if (showT && !T.gone) ents.push([T.y, () => drawTeacher(ctx, T)]);
   FX.ghosts.forEach(g => ents.push([g.y - 0.1, () => drawSprite(ctx, P.cfg, null, { x: g.x, y: g.y, face: g.face, dist: g.dist, moving: true, running: true }, { tint: '#7ff0ff', alpha: 0.45 * (1 - g.t / 0.32), scale: g.small ? 0.5 : 1, noShadow: true, still: true, gait: 'run' })]));
   FX.zips.forEach(zp => ents.push([zp.y1, () => { const t = zp.t, e = t * t; drawSprite(ctx, P.cfg, null, { x: lerp(zp.x0, zp.x1, e), y: lerp(zp.y0, zp.y1, e), face: zp.face, moving: false }, { sx: 1 + t * 0.6, sy: 1 - t * 0.8, scale: zp.small ? 0.5 : 1, alpha: 1 - t * 0.5, still: true }); }]));
   if (!P.hidden && G.pVis !== false) {
@@ -379,6 +382,10 @@ function drawOverlay() {
   if (seeT && T.state === 'stun') { // étoiles d'étourdissement
     for (let i = 0; i < 4; i++) { const a = G.time * 5 + i * Math.PI / 2, x = tsx + Math.cos(a) * 13 * d, y = tsy + 4 * d + Math.sin(a) * 4 * d; txt(c, i % 2 ? '💫' : '⭐', x, y, Math.round((Math.sin(a) > 0 ? 9 : 7) * d), '#ffd23f'); }
   }
+  if (G.inf && G.mode === 'play' && G.time < 6 && !P.hidden) { // « toi » au début
+    const [qx, qy] = toScreen(P.x, P.y - 40), bob = Math.sin(G.time * 7) * 3 * d;
+    txt(c, '▼', qx, qy + bob, Math.round(12 * d), '#3fd06a'); txt(c, 'TOI', qx, qy - 13 * d + bob, Math.round(8 * d), '#ffffff');
+  }
   // bulles des élèves (« C'est pas moi ! »)
   G.kids.forEach(k => {
     if (!k.bub || !k.vis) return;
@@ -465,6 +472,7 @@ function drawOverlay() {
 // ---------- Post-traitement & effets plein écran ----------
 function drawPost() {
   const c = V.ctx, W = V.W, H = V.H, d = V.dpr, T = G.T;
+  if (G.inf && G.inf.alarm && (G.mode === 'play' || G.mode === 'paused')) { c.fillStyle = `rgba(255,40,40,${G.alarmFlash ? 0.16 : 0.05})`; c.fillRect(0, 0, W, H); }
   // vignette rouge en poursuite
   if (G.mode === 'play' && (G.net ? (G.net.role === 'student' && G.alarmT > 0) : T.state === 'chase')) {
     const pulse = 0.2 + Math.sin(G.time * 8) * 0.08;

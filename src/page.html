@@ -124,6 +124,22 @@ ul.hints li{background:rgba(255,255,255,.06);border-radius:6px;padding:5px 8px;l
 #hTasks .tl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #hTasks .tl.ok{opacity:.5;text-decoration:line-through}
 #hTasks.all{border-color:var(--green);animation:blink .5s steps(2) 6}
+.btn.orange{background:#ff8a3a}
+#bPlan{width:44px;height:40px;border:3px solid var(--ink);border-radius:9px;background:#f6efd8;font-size:22px;box-shadow:0 3px 0 var(--ink);pointer-events:auto;animation:tkIn .4s}
+#sPeek{position:absolute;inset:0;z-index:31;display:flex;align-items:flex-start;justify-content:center;padding-top:calc(150px + env(safe-area-inset-top));pointer-events:none}
+.pkPanel{pointer-events:auto;width:min(78vw,330px);background:#2a1a0e;border:3px solid var(--ink);border-radius:16px;box-shadow:0 5px 0 var(--ink);padding:8px;animation:tkIn .3s cubic-bezier(.2,1.6,.4,1)}
+.pkHead{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:'Press Start 2P',ui-monospace,monospace;font-size:8px;color:var(--yel);margin-bottom:6px}
+#pkClose,#plClose{width:34px;height:34px;flex:none;border:3px solid var(--ink);border-radius:8px;background:var(--red);color:#fff;font-size:14px;box-shadow:0 3px 0 var(--ink)}
+#peekCv{width:100%;aspect-ratio:1;display:block;border-radius:10px;background:#000}
+.pkHint{text-align:center;font-size:16px;opacity:.75;margin-top:4px}
+#sPlan{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(10,6,20,.7);padding:12px}
+.plPanel{width:min(96vw,560px);background:var(--panel);border:3px solid var(--ink);border-radius:14px;box-shadow:0 5px 0 var(--ink);padding:10px;animation:tkIn .3s cubic-bezier(.2,1.6,.4,1)}
+.plHead{display:flex;align-items:center;justify-content:space-between;font-family:'Press Start 2P',ui-monospace,monospace;font-size:11px;color:var(--yel);margin-bottom:8px}
+#plTabs{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+#plTabs button{flex:1;min-width:60px;border:3px solid var(--ink);border-radius:8px;background:var(--panel2);color:var(--paper);font-family:'VT323',ui-monospace,monospace;font-size:18px;padding:4px 2px;box-shadow:0 3px 0 var(--ink)}
+#plTabs button.on{background:var(--yel);color:var(--ink)}
+#planCv{width:100%;display:block;border:3px solid var(--ink);border-radius:8px;background:#f6efd8}
+.plLegend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:16px;margin-top:6px;opacity:.9}
 #sTask{position:absolute;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;padding:0 8px calc(8px + env(safe-area-inset-bottom));pointer-events:auto}
 .tkPanel{width:min(100%,440px,calc(56vh * 300 / 210 + 22px));background:var(--panel);border:3px solid var(--ink);border-radius:14px;box-shadow:0 5px 0 var(--ink);padding:8px;animation:tkIn .32s cubic-bezier(.2,1.6,.4,1)}
 @keyframes tkIn{from{transform:translateY(60px) scale(.85);opacity:0}}
@@ -219,13 +235,15 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     <div class="hudTop">
       <button id="bPause" class="hbtn" aria-label="Pause">❚❚</button>
       <div class="hudInfo"><div id="hRoom">📍</div><div id="hStatus" class="chip">Calme</div><div id="hTasks" class="hidden"></div></div>
-      <div class="hudRight"><div id="hTime">0:00</div><div id="hLocks">🔒×3</div><div id="hHeart">🤍</div></div>
+      <div class="hudRight"><div id="hTime">0:00</div><div id="hLocks">🔒×3</div><div id="hHeart">🤍</div><button id="bPlan" class="hidden" aria-label="Plan du collège">🗺️</button></div>
     </div>
     <div id="hEffects"></div>
     <div id="hHidden" class="hidden"></div>
     <div id="toast" class="hidden"></div>
     <div id="banner" class="hidden"></div>
     <div id="hint">Glisse ton doigt pour bouger</div>
+    <div id="sPeek" class="hidden"><div class="pkPanel"><div class="pkHead"><span>👁️ Par le trou de la serrure…</span><button id="pkClose" aria-label="Arrêter de regarder">✖</button></div><canvas id="peekCv" width="300" height="300"></canvas><div class="pkHint">Bouge pour arrêter de regarder</div></div></div>
+    <div id="sPlan" class="hidden"><div class="plPanel"><div class="plHead"><b>🗺️ Plan du collège</b><button id="plClose" aria-label="Fermer le plan">✖</button></div><div id="plTabs"></div><canvas id="planCv" width="440" height="330"></canvas><div class="plLegend"><span>🟢 toi</span><span>🔴 surveillant</span><span>🟠 profs</span><span>⬇️⬆️ escaliers</span><span>🔑 trousseau</span><span>🔥 alarme</span></div></div></div>
     <div id="sTask" class="hidden">
       <div class="tkPanel">
         <div class="tkHead"><div id="tkTitle"></div><button id="tkClose" aria-label="Fermer">✖</button></div>
@@ -248,6 +266,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <div class="sub">Collège Notre-Dame de Sion</div>
       <canvas id="titleCv" width="176" height="56"></canvas>
       <button class="btn big" id="bPlay">▶ Jouer</button>
+      <button class="btn orange" id="bInf">🕵️ Mode infiltration</button>
       <button class="btn pink" id="bMulti">👥 À deux en ligne</button>
       <button class="btn cyan" id="bChars">👕 Mes personnages</button>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>

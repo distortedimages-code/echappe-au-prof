@@ -85,19 +85,23 @@ const UI = {
     tap('bPlay', () => { if (!this.chars.length) this.openCreator(-1, 'levels'); else this.openLevels(); });
     tap('bChars', () => this.openChars('title'));
     tap('bMulti', () => Multi.open());
+    tap('bInf', () => { AU.init(); if (!this.chars.length) this.openCreator(-1, 'inf'); else this.launchInf(); });
+    tap('bPlan', () => this.openPlan());
+    tap('plClose', () => this.closePlan());
+    tap('pkClose', () => { if (G.P && G.P.busy && G.P.busy.peek) G.P.busy = null; });
     tap('bCharsBack', () => this.charsBack === 'levels' ? this.openLevels() : this.charsBack === 'multi' ? Multi.open() : this.openTitle());
     tap('bCharsGo', () => { if (!this.chars.length) this.openCreator(-1, 'levels'); else this.openLevels(); });
     tap('cRand', () => { const n = this.editing.name; this.editing = randomChar(n); this.renderOpts(); });
     tap('cTurn', () => { this.prevDir = (this.prevDir + 1) % 4; this.prevT = 0; });
-    tap('cCancel', () => { if (this.after === 'multi') { if (this.chars.length) Multi.open(); else this.openTitle(); } else if (this.after === 'levels' && this.chars.length) this.openLevels(); else if (this.after === 'levels') this.openTitle(); else this.openChars(this.charsBack); });
+    tap('cCancel', () => { if (this.after === 'inf') { this.openTitle(); return; } if (this.after === 'multi') { if (this.chars.length) Multi.open(); else this.openTitle(); } else if (this.after === 'levels' && this.chars.length) this.openLevels(); else if (this.after === 'levels') this.openTitle(); else this.openChars(this.charsBack); });
     tap('cSave', () => this.saveCreator());
     tap('bWho', () => this.openChars('levels'));
     tap('bLvlBack', () => this.openTitle());
     tap('bGo', () => { if (G.net) { Net.setReady(); return; } G.mode = 'play'; this.show('play'); AU.play('sneak'); FX.iris = { mode: 'in', t: 0, dur: 0.75 }; this.hudSig = null; this.invSig = null; if (G.L.def.prof === 4) G.intercomT = 12; });
     tap('bPause', () => this.pause());
     tap('pResume', () => { if (!G.net) G.mode = this.pausedFrom || 'play'; this.show('play'); });
-    tap('pRestart', () => this.launch(G.lvl, true));
-    tap('pLevels', () => { if (G.net) { Net.close(); G.net = null; G.mode = 'menu'; this.openTitle(); return; } AU.play('menu'); this.openLevels(); G.mode = 'menu'; });
+    tap('pRestart', () => { if (G.inf) this.launchInf(true); else this.launch(G.lvl, true); });
+    tap('pLevels', () => { if (G.inf) { G.inf = null; G.mode = 'menu'; AU.play('menu'); this.openTitle(); return; } if (G.net) { Net.close(); G.net = null; G.mode = 'menu'; this.openTitle(); return; } AU.play('menu'); this.openLevels(); G.mode = 'menu'; });
     document.querySelectorAll('.tog').forEach(b => {
       b.addEventListener('click', () => { AU.init(); const k = b.dataset.k; AU.set[k] = !AU.set[k]; AU.applySet(); this.syncTogs(); if (k === 'crt') bakePost(); if (k === 'music' && AU.set.music && G.mode === 'menu') AU.play('menu'); });
     });
@@ -164,7 +168,7 @@ const UI = {
     $('cName').style.outline = '';
     if (this.editIdx >= 0) this.chars[this.editIdx] = c; else { this.chars.push(c); this.cur = this.chars.length - 1; }
     this.save();
-    if (this.after === 'levels') this.openLevels(); else if (this.after === 'multi') Multi.open(); else this.openChars(this.charsBack);
+    if (this.after === 'levels') this.openLevels(); else if (this.after === 'multi') Multi.open(); else if (this.after === 'inf') this.launchInf(); else this.openChars(this.charsBack);
   },
   tickCreator(dt) {
     if ($('sCreator').classList.contains('hidden')) return;
@@ -194,6 +198,19 @@ const UI = {
     b.innerHTML = `<span class="pi">${on ? '🎲' : '🗺️'}</span><span><b>${on ? 'PLANS SURPRISE' : 'PLANS FIXES'}</b>${on ? 'Un nouveau plan du collège à chaque partie !' : 'Toujours les mêmes plans dessinés à la main.'}</span><span class="sw"></span>`;
     b.onclick = () => { AU.init(); AU.sfx('tick'); store.set('proc', !this.procOn()); this.paintProc(b); };
   },
+  hudInf() {
+    const I = G.inf, el = $('hTasks');
+    const sig = [I.keys, I.plan, I.alarmUsed, !!I.alarm, I.warn, I.hunt, I.cur, I.alarm ? Math.ceil(Math.max(0, I.alarm.dur - I.alarm.t) / 5) : 0].join('|');
+    $('bPlan').classList.toggle('hidden', !I.plan || G.mode !== 'play');
+    if (sig === this.infSig && !el.classList.contains('hidden')) return; this.infSig = sig;
+    el.classList.remove('hidden');
+    const dots = [0, 1, 2].map(i => i < I.warn ? '🟡' : '⚪').join('');
+    const kf = I.plan && !I.keys ? ' (' + INF_FLOOR_META[I.keysFloor].short + ')' : '';
+    const st = (ok, ic) => ok ? '✅' : ic;
+    const al = I.alarm ? `🔥 ${I.alarm.call ? 'fin' : 'appel'} ${Math.ceil(Math.max(0, (I.alarm.call ? I.alarm.dur : 32) - I.alarm.t))} s` : st(I.alarmUsed, '🔥');
+    el.innerHTML = `<div class="hd">${I.hunt ? '🚨 ON TE CHERCHE !' : '⚠️ ' + dots}</div><div class="tl">${st(I.keys, '🔑')}${kf} · ${st(I.plan, '🗺️')} · ${al}</div>`;
+    el.classList.toggle('all', I.keys);
+  },
   launch(i, keepSeed) {
     startLevel(i, this.cfg(), null, { seed: keepSeed && G.seed != null ? G.seed : (this.procOn() ? newSeed() : null) });
     const L = LEVELS[i], pr = PROFS[L.prof];
@@ -217,6 +234,44 @@ const UI = {
     $('toast').classList.add('hidden'); $('banner').classList.add('hidden');
     AU.play('sneak');
   },
+  launchInf(same) {
+    try { infStart(this.cfg(), same && G.inf ? G.inf.seed : null); }
+    catch (e) { console.error(e); this.toast('Oups, le collège n’a pas pu être construit… réessaie !', 2.5); return; }
+    const I = G.inf;
+    $('inNum').textContent = '🕵️ MODE INFILTRATION · 4 ÉTAGES';
+    $('inTitle').textContent = 'La grande évasion';
+    $('inName').textContent = I.maitresseName; $('inRole').textContent = 'Ta maîtresse : elle fait des rondes dans la classe';
+    $('inQuote').textContent = '« Personne ne quitte la classe avant la sonnerie ! »';
+    $('inMission').innerHTML = '<b style="color:var(--yel)">Ta mission :</b> t’échapper du collège ! Tu es au <b>3e étage</b> : descends jusqu’à la <b>cour</b>, puis file par le portail, un trou dans le grillage… ou un passage minuscule.';
+    portrait($('inProf'), I.maitresseCfg || this.cfg(), { adult: true }, 1);
+    const hints = ['⚠️ Si un prof te voit hors de ta classe, il t’avertit. Au bout de 3 avertissements, on te court après !',
+      '🪑 En classe, reste à ta place quand la maîtresse regarde. File quand elle écrit au tableau !',
+      '🪜 Les escaliers sont alternés : à chaque étage, il faut traverser jusqu’à l’autre escalier.',
+      '🔑 Le trousseau du concierge est caché dans le bureau d’un prof. Il ouvre la grille du 1er étage et le portail.',
+      '👁️ Devant une porte fermée, regarde par le trou de la serrure avant d’entrer.',
+      '🗺️ Un plan d’évacuation affiché dans un couloir montre où sont les profs.',
+      '🔥 L’alarme incendie vide les étages… mais il y aura un appel dans la cour !'];
+    $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
+    $('inTips').innerHTML = '🎲 Le collège est différent à chaque partie.<br>👆 Un peu = marcher sans bruit · à fond = courir (ça s’entend !).';
+    G.mode = 'intro'; this.show('sIntro'); this.hudSig = null; this.invSig = null; this.infSig = null; $('bGo').textContent = 'C’est parti !'; $('bGo').disabled = false;
+    $('hint').classList.remove('hidden'); $('hint').style.opacity = 1; Input.used = false;
+    $('toast').classList.add('hidden'); $('banner').classList.add('hidden'); $('bPlan').classList.add('hidden');
+    AU.play('sneak');
+  },
+  openPlan(f) {
+    const I = G.inf; if (!I || !I.plan || G.mode !== 'play') return;
+    AU.sfx('tick'); this.planF = f == null ? I.cur : f; G.overlay = 'plan'; $('sPlan').classList.remove('hidden');
+    $('plTabs').innerHTML = I.floors.map(F => `<button data-f="${F.f}" class="${F.f === this.planF ? 'on' : ''}">${F.f === I.cur ? '📍' : ''}${INF_FLOOR_META[F.f].short}</button>`).reverse().join('');
+    $('plTabs').querySelectorAll('button').forEach(b => b.onclick = () => this.openPlan(+b.dataset.f));
+  },
+  closePlan() { G.overlay = null; $('sPlan').classList.add('hidden'); },
+  tickInf() {
+    const I = G.inf, P = G.P, pk = $('sPeek');
+    const peeking = !!(I && P && P.busy && P.busy.peek && G.mode === 'play');
+    pk.classList.toggle('hidden', !peeking);
+    if (peeking) infDrawPeek($('peekCv'));
+    if (G.overlay === 'plan') { if (!I || G.mode !== 'play') this.closePlan(); else infDrawPlan($('planCv'), this.planF); }
+  },
   pause() {
     if (G.mode !== 'play') return;
     $('pRestart').classList.toggle('hidden', !!G.net); $('pLevels').textContent = G.net ? '🏠 Quitter la partie' : '🏫 Niveaux'; $('pResume').textContent = G.net ? '▶ Continuer (la partie tourne !)' : '▶ Reprendre';
@@ -225,6 +280,7 @@ const UI = {
   },
   // ---------- résultat ----------
   result(win) {
+    if (G.inf) { this.resultInf(win); return; }
     const i = G.lvl, pr = G.T.prof, p = $('resPanel'), t = G.time;
     const mm = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
     if (win) {
@@ -255,6 +311,36 @@ const UI = {
     $('rAgain').onclick = () => { AU.sfx('blip'); this.launch(i, !win); };
     if ($('rNew')) $('rNew').onclick = () => { AU.sfx('blip'); this.launch(i); };
     $('rLv').onclick = () => { AU.sfx('blip'); this.openLevels(); };
+    this.show('sResult');
+  },
+  resultInf(win) {
+    const I = G.inf, p = $('resPanel'), t = G.time, pr = G.T.prof;
+    const mm = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+    if (win) {
+      const stars = 1 + (!I.chased ? 1 : 0) + (I.warn <= 1 ? 1 : 0);
+      const best = store.get('infBest', 0); if (!best || t < best) store.set('infBest', t);
+      p.innerHTML = `<div class="bigtitle" style="color:var(--green)">LIBRE !<br>TU AS QUITTÉ<br>LE COLLÈGE !</div>
+        <div class="stars">${[0, 1, 2].map(k => `<span class="${k < stars ? '' : 'off'}">⭐</span>`).join('')}</div>
+        <div class="stats"><span>⏱️ ${mm}</span><span>⚠️ ${I.warn}/3</span><span>${I.keys ? '🔑' : ''}${I.plan ? '🗺️' : ''}${I.alarmUsed ? '🔥' : ''}</span></div>
+        <div class="tips" style="text-align:center">⭐ évadé·e · ⭐ jamais poursuivi·e · ⭐ 1 avertissement max</div>
+        <button class="btn big green" id="rAgain">🎲 Un autre collège</button>
+        <div class="row"><button class="btn" id="rSame">↻ Même collège</button><button class="btn ghost" id="rLv">🏠 Menu</button></div>`;
+      $('rAgain').onclick = () => { AU.sfx('blip'); this.launchInf(false); };
+      $('rSame').onclick = () => { AU.sfx('blip'); this.launchInf(true); };
+    } else {
+      p.innerHTML = `<div class="bigtitle" style="color:var(--red)">RETOUR<br>EN CLASSE !</div>
+        <div class="prof"><canvas id="rProf" width="20" height="34"></canvas><div class="quote"></div></div>
+        <div class="stats"><span>⏱️ ${mm}</span><span>📍 ${INF_FLOOR_META[I.cur].name}</span></div>
+        <div class="tips">💡 ${esc(pick(['Regarde par la serrure avant d’ouvrir une porte !', 'File quand la maîtresse écrit au tableau : elle te tourne le dos.', 'Le plan d’évacuation montre où sont tous les profs.', 'L’alarme incendie vide les étages… sois dans le rang au moment de l’appel !', 'Le trousseau ouvre la grille du 1er étage ET le portail.', 'Cache-toi dans un casier quand le surveillant approche.']))}</div>
+        <button class="btn big green" id="rAgain">↻ Réessayer (même collège)</button>
+        <button class="btn" id="rNew">🎲 Un autre collège</button>
+        <button class="btn ghost" id="rLv">🏠 Menu</button>`;
+      portrait($('rProf'), pr.cfg, pr.v, 1);
+      p.querySelector('.quote').textContent = '« ' + (pr.lines.caught || 'En retenue !') + ' »';
+      $('rAgain').onclick = () => { AU.sfx('blip'); this.launchInf(true); };
+      $('rNew').onclick = () => { AU.sfx('blip'); this.launchInf(false); };
+    }
+    $('rLv').onclick = () => { AU.sfx('blip'); G.inf = null; G.mode = 'menu'; AU.play('menu'); this.openTitle(); };
     this.show('sResult');
   },
   toast(text, dur) {
@@ -296,7 +382,8 @@ const UI = {
     }
     this.hudT -= dt; if (this.hudT > 0) return; this.hudT = 0.12;
     const VA = viewerA(), teach = G.net && G.net.role === 'teacher';
-    const [tx, ty] = tileOf(VA); $('hRoom').textContent = '📍 ' + (G.m.roomAt(tx, ty) || '…');
+    const [tx, ty] = tileOf(VA); $('hRoom').textContent = '📍 ' + (G.inf ? INF_FLOOR_META[G.inf.cur].short + ' · ' : '') + (G.m.roomAt(tx, ty) || '…');
+    if (G.inf) this.hudInf();
     $('inv').style.visibility = teach ? 'hidden' : '';
     const st = $('hStatus'); let s = '😌 Calme', cls = '';
     if (G.net) {
@@ -308,7 +395,10 @@ const UI = {
         else if (T.state === 'sleep') { s = '💤 Dodo !'; cls = 'cool'; } else if (T.state === 'stun') { s = '😵 Le prof est sonné !'; cls = 'cool'; } else if (T.state === 'check') { s = '🔎 Fouille une cachette'; cls = 'warn'; }
         else if (T.state === 'keys' || T.state === 'unlock') { s = '🔑 Prend ses clés'; cls = 'cool'; } else if (T.running) { s = '🏃 Le prof court !'; cls = 'warn'; } else s = '👀 Le prof te cherche';
       }
-    } else switch (T.state) {
+    } else switch (T.gone ? 'gone' : T.state) {
+      case 'gone': s = '🔥 Étage vide !'; cls = 'cool'; break;
+      case 'evac': s = '🔥 Évacuation !'; cls = 'cool'; break;
+      case 'warn': s = '☝️ Avertissement !'; cls = 'warn'; break;
       case 'count': s = '⏳ Ça compte… file !'; cls = 'warn'; break;
       case 'alert': case 'investigate': s = '🤨 Méfiance…'; cls = 'warn'; break;
       case 'search': case 'check': s = '🔎 Fouille les cachettes'; cls = 'warn'; break;
@@ -323,7 +413,7 @@ const UI = {
     const t = G.net ? Math.max(0, Net.timeLeft) : G.time, ht = $('hTime');
     ht.textContent = (G.net ? '⏰ ' : '⏱ ') + Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
     ht.style.color = G.net && t < 30 ? '#ff8a96' : '';
-    if (G.tasks !== this.taskRef || (teach ? 'T' + (G.tasksRemote || 0) : G.tasks.map(t => t.done ? 1 : 0).join('')) !== this.taskSig) {
+    if (G.inf) { /* objectifs gérés par hudInf */ } else if (G.tasks !== this.taskRef || (teach ? 'T' + (G.tasksRemote || 0) : G.tasks.map(t => t.done ? 1 : 0).join('')) !== this.taskSig) {
       this.taskRef = G.tasks; this.taskSig = teach ? 'T' + (G.tasksRemote || 0) : G.tasks.map(t => t.done ? 1 : 0).join('');
       const el = $('hTasks'), n = G.tasks.length; el.classList.toggle('hidden', !n || G.mode === 'intro');
       if (teach) { const r = G.tasksRemote || 0; el.innerHTML = `<div class="hd">TÂCHES DE L’ÉLÈVE</div><div class="tl">📋 ${r}/${n} ${r >= n ? '😱 SORTIES OUVERTES' : '· sorties 🔒'}</div>`; el.classList.toggle('all', r >= n); }
@@ -375,8 +465,8 @@ function loop(ts) {
   const dt = Math.min(0.05, (ts - lastT) / 1000 || 0.016); lastT = ts;
   try {
     FX.update(dt);
-    if (['play', 'escape', 'caught', 'timeup'].includes(G.mode)) update(dt);
-    TaskUI.tick(dt);
+    if (['play', 'escape', 'caught', 'timeup'].includes(G.mode) && !G.overlay) update(dt);
+    TaskUI.tick(dt); UI.tickInf();
     if (G.P && ['play', 'intro', 'paused', 'escape', 'caught', 'timeup', 'result'].includes(G.mode)) renderGame(dt);
     else { V.ctx.setTransform(1, 0, 0, 1, 0, 0); V.ctx.fillStyle = '#22163f'; V.ctx.fillRect(0, 0, V.W, V.H); }
     UI.hud(dt); UI.tickCreator(dt); Title.draw(dt);

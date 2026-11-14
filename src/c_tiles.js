@@ -93,6 +93,9 @@ function drawWallDecor(c, px, py, d, i) {
     case 'screen': R(0, 4, 16, 8, '#e8eef8'); R(0, 4, 16, 1, '#555'); R(3, 6, 10, 1, '#9fb4d8'); R(3, 8, 7, 1, '#9fb4d8'); break;
     case 'map': R(2, 4, 12, 9, '#f6e7c1'); R(4, 6, 4, 3, '#63c74d'); R(9, 7, 3, 4, '#63c74d'); R(2, 4, 12, 1, '#7a4b2a'); break;
     case 'sign': R(3, 5, 10, 5, d.col || '#3d7bff'); R(4, 7, 8, 1, '#ffffff'); break;
+    case 'alarm': R(4, 4, 8, 9, '#1a1028'); R(5, 5, 6, 7, '#e43b44'); R(6, 6, 4, 3, '#ffffff'); R(7, 7, 2, 1, '#e43b44'); R(6, 10, 4, 1, '#ff9fa8'); R(5, 5, 6, 1, '#ff6b74'); break;
+    case 'evac': R(1, 3, 14, 11, '#1a6b3a'); R(2, 4, 12, 9, '#f6f2e0'); R(3, 5, 4, 3, '#9ad0a0'); R(8, 5, 4, 3, '#9ad0a0'); R(3, 9, 9, 1, '#63c74d'); R(11, 9, 1, 3, '#e43b44'); R(10, 11, 3, 1, '#e43b44'); break;
+    case 'stairsign': R(3, 4, 10, 8, '#2f9e5a'); R(4, 5, 8, 6, '#3fc070'); R(6, 6, 1, 4, '#ffffff'); R(6, 9, 4, 1, '#ffffff'); R(9, 6, 1, 3, '#ffffff'); break;
   }
 }
 function drawFurniture(c, k, px, py, tx, ty, m, L) {
@@ -182,6 +185,12 @@ function drawFurniture(c, k, px, py, tx, ty, m, L) {
 function drawFloorDecor(c, d) {
   const px = d.x * 16, py = d.y * 16;
   switch (d.t) {
+    case 'assembly': {
+      c.strokeStyle = '#ffd23f'; c.lineWidth = 2; c.setLineDash([5, 4]); c.strokeRect(px + 2, py + 2, d.w * 16 - 4, d.h * 16 - 4); c.setLineDash([]);
+      for (let i = 0; i < d.w; i += 2) { c.fillStyle = 'rgba(255,210,63,0.18)'; c.fillRect(px + i * 16 + 4, py + 4, 8, d.h * 16 - 8); }
+      c.fillStyle = '#2f9e5a'; c.fillRect(px + (d.w * 8) - 14, py - 9, 28, 10); c.fillStyle = '#ffffff'; c.fillRect(px + (d.w * 8) - 10, py - 6, 20, 1); c.fillRect(px + (d.w * 8) - 10, py - 3, 14, 1);
+      break;
+    }
     case 'court': c.fillStyle = '#f2f2f2';
       c.fillRect(px + 2, py + 2, d.w * 16 - 4, 1); c.fillRect(px + 2, py + d.h * 16 - 3, d.w * 16 - 4, 1);
       c.fillRect(px + 2, py + 2, 1, d.h * 16 - 4); c.fillRect(px + d.w * 16 - 3, py + 2, 1, d.h * 16 - 4);
