@@ -199,11 +199,12 @@ function drawFog() {
     fx.closePath(); fx.fill(); fx.globalCompositeOperation = 'source-over';
     return;
   }
-  fx.fillStyle = G.L.outdoor ? 'rgba(18,12,46,0.56)' : 'rgba(14,8,34,0.74)'; fx.fillRect(0, 0, V.lw, V.lh);
+  if (easyOn()) return;   // mode facile : pas de brouillard
+  fx.fillStyle = G.L.outdoor ? 'rgba(18,12,46,0.5)' : 'rgba(14,8,34,0.68)'; fx.fillRect(0, 0, V.lw, V.lh);
   fx.globalCompositeOperation = 'destination-out';
   const [ex, ey] = G.eye, R = G.visR, sx = ex + ox, sy = ey + oy;
-  const g = fx.createRadialGradient(sx, sy, R * 0.3, sx, sy, R);
-  g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.7, 'rgba(0,0,0,0.93)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  const g = fx.createRadialGradient(sx, sy, R * 0.4, sx, sy, R);
+  g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.72, 'rgba(0,0,0,0.95)'); g.addColorStop(1, 'rgba(0,0,0,0)');
   fx.fillStyle = g; fx.beginPath();
   const n = 200;
   for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, d = castRay(ex, ey, a, R), px = sx + Math.cos(a) * d, py = sy + Math.sin(a) * d; if (i) fx.lineTo(px, py); else fx.moveTo(px, py); }
@@ -371,7 +372,7 @@ function renderGame(dt) {
   ctx.imageSmoothingEnabled = true; ctx.drawImage(V.fog, ci, cj); ctx.imageSmoothingEnabled = false;
   {
     const [ex, ey] = G.eye, R = G.visR;
-    if (R > 0) { ctx.globalAlpha = G.L.outdoor ? 0.07 : 0.09; ctx.imageSmoothingEnabled = true; ctx.drawImage(glowSprite(), ex - R, ey - R, R * 2, R * 2); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; }
+    if (R > 0 && R < 2000) { ctx.globalAlpha = G.L.outdoor ? 0.07 : 0.09; ctx.imageSmoothingEnabled = true; ctx.drawImage(glowSprite(), ex - R, ey - R, R * 2, R * 2); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; }
   }
   if (G.inf) drawStairsSigns(ctx);
   if (G.reveal > 0) {

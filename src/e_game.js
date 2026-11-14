@@ -34,6 +34,8 @@ function los(ax, ay, bx, by) {
   }
   return true;
 }
+// mode facile (réglage) : seulement là où il n'y a pas d'adversaire humain
+function easyOn() { return !!AU.set.easy && (!G.net || !!(G.inf && G.inf.coop)); }
 function castRay(ox, oy, ang, maxD) {
   const dx = Math.cos(ang), dy = Math.sin(ang);
   let mx = Math.floor(ox / 16), my = Math.floor(oy / 16);
@@ -948,9 +950,12 @@ function update(dt) {
       else G.eye = [hx, hy];
       G.visR = hs.peek * 16;
     }
-    else { G.eye = [P.x, P.y - 7]; G.visR = (G.L.outdoor ? 9 : 7.5) * 16 * (P.small > 0 ? 0.85 : 1); }
+    else { G.eye = [P.x, P.y - 7]; G.visR = (G.L.outdoor ? 12 : 10) * 16 * (P.small > 0 ? 0.85 : 1); }
+    if (easyOn()) { G.visR = 9999; G.tVis = !T.gone; G.kids.forEach(k => k.vis = !k.gone); }
+    else {
     G.tVis = !T.gone && dist(G.eye[0], G.eye[1], T.x, T.y - 12) < G.visR && los(G.eye[0], G.eye[1], T.x, T.y - 12);
     G.kids.forEach(k => k.vis = !k.gone && dist(G.eye[0], G.eye[1], k.x, k.y - 10) < G.visR && los(G.eye[0], G.eye[1], k.x, k.y - 10));
+    }
     }
   }
 }

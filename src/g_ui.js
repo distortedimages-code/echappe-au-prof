@@ -149,7 +149,7 @@ const UI = {
     this.waveTitle(); this.openTitle();
   },
   waveTitle() { document.querySelectorAll('.logo span').forEach((sp, j) => { const t = sp.textContent; sp.innerHTML = [...t].map((ch, i) => `<i style="animation-delay:${(i * 0.08 + j * 0.3).toFixed(2)}s">${ch === ' ' ? '&nbsp;' : ch}</i>`).join(''); }); },
-  syncTogs() { document.querySelectorAll('.tog').forEach(b => b.classList.toggle('off', !AU.set[b.dataset.k])); },
+  syncTogs() { document.querySelectorAll('.tog').forEach(b => b.classList.toggle('off', !AU.set[b.dataset.k])); this.paintEasy($('bEasy')); this.paintEasy($('pEasy')); },
   openTitle() { G.mode = 'menu'; this.show('sTitle'); AU.play('menu'); },
   // ---------- liste des persos ----------
   openChars(back) {
@@ -228,6 +228,12 @@ const UI = {
     });
   },
   procOn() { return store.get('proc', true) !== false; },
+  // mode facile : pas de brouillard, on voit tout le collège (solo et en équipe)
+  paintEasy(b) {
+    if (!b) return; const on = !!AU.set.easy; b.classList.toggle('on', on);
+    b.innerHTML = `<span class="pi">${on ? '👀' : '🌫️'}</span><span><b>${on ? 'MODE FACILE : TOUT VOIR' : 'CHAMP DE VISION'}</b>${on ? 'Pas de brouillard : tu vois tout le collège et les profs.' : 'Tu ne vois que ce qui est autour de toi. Touche pour tout voir.'}</span><span class="sw"></span>`;
+    b.onclick = () => { AU.init(); AU.sfx('tick'); AU.set.easy = !AU.set.easy; AU.applySet(); this.paintEasy($('bEasy')); this.paintEasy($('pEasy')); };
+  },
   paintProc(b) {
     if (!b) return; const on = this.procOn(); b.classList.toggle('on', on);
     b.innerHTML = `<span class="pi">${on ? '🎲' : '🗺️'}</span><span><b>${on ? 'PLANS SURPRISE' : 'PLANS FIXES'}</b>${on ? 'Un nouveau plan du collège à chaque partie !' : 'Toujours les mêmes plans dessinés à la main.'}</span><span class="sw"></span>`;

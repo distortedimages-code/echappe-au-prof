@@ -332,6 +332,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <button class="btn pink" id="bMulti">👥 À deux en ligne</button>
       <button class="btn cyan" id="bChars">👕 Mes personnages</button>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
+      <button class="procTog easyTog" id="bEasy"></button>
       <div class="panel howto">
         <b>Le but :</b> échapper au prof et trouver <b>une des 3 sorties secrètes</b> de chaque niveau.<br>
         👆 Glisse ton doigt : <b>un peu</b> = marcher sans bruit, <b>à fond</b> = courir (ça s’entend !).<br>
@@ -412,6 +413,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <button class="btn" id="pRestart">↻ Recommencer</button>
       <button class="btn ghost" id="pLevels">🏫 Niveaux</button>
       <div class="toggles"><button class="tog" data-k="music">🎵</button><button class="tog" data-k="sfx">🔊</button><button class="tog" data-k="voice">🗣️</button><button class="tog" data-k="crt">📺</button></div>
+      <button class="procTog easyTog" id="pEasy"></button>
       <div class="tips">👣 traces orange = pas du prof · 🔊 bulle en pointillés = tu l’entends sans le voir · cône jaune = ce que le prof voit.</div>
     </div>
   </div>
@@ -449,7 +451,7 @@ function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.fl
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const AU = {
   ctx: null, out: null, sfxG: null, musG: null, noiseBuf: null, song: null, songName: null, step: 0, nextT: 0, timer: null,
-  set: Object.assign({ music: true, sfx: true, voice: true, crt: true }, store.get('nds_settings', {})),
+  set: Object.assign({ music: true, sfx: true, voice: true, crt: true, easy: false }, store.get('nds_settings', {})),
   frVoice: null, _unlocked: false,
   init() {
     try {
@@ -4667,6 +4669,8 @@ function los(ax, ay, bx, by) {
   }
   return true;
 }
+// mode facile (réglage) : seulement là où il n'y a pas d'adversaire humain
+function easyOn() { return !!AU.set.easy && (!G.net || !!(G.inf && G.inf.coop)); }
 function castRay(ox, oy, ang, maxD) {
   const dx = Math.cos(ang), dy = Math.sin(ang);
   let mx = Math.floor(ox / 16), my = Math.floor(oy / 16);
@@ -5581,9 +5585,12 @@ function update(dt) {
       else G.eye = [hx, hy];
       G.visR = hs.peek * 16;
     }
-    else { G.eye = [P.x, P.y - 7]; G.visR = (G.L.outdoor ? 9 : 7.5) * 16 * (P.small > 0 ? 0.85 : 1); }
+    else { G.eye = [P.x, P.y - 7]; G.visR = (G.L.outdoor ? 12 : 10) * 16 * (P.small > 0 ? 0.85 : 1); }
+    if (easyOn()) { G.visR = 9999; G.tVis = !T.gone; G.kids.forEach(k => k.vis = !k.gone); }
+    else {
     G.tVis = !T.gone && dist(G.eye[0], G.eye[1], T.x, T.y - 12) < G.visR && los(G.eye[0], G.eye[1], T.x, T.y - 12);
     G.kids.forEach(k => k.vis = !k.gone && dist(G.eye[0], G.eye[1], k.x, k.y - 10) < G.visR && los(G.eye[0], G.eye[1], k.x, k.y - 10));
+    }
     }
   }
 }
@@ -6293,11 +6300,12 @@ function drawFog() {
     fx.closePath(); fx.fill(); fx.globalCompositeOperation = 'source-over';
     return;
   }
-  fx.fillStyle = G.L.outdoor ? 'rgba(18,12,46,0.56)' : 'rgba(14,8,34,0.74)'; fx.fillRect(0, 0, V.lw, V.lh);
+  if (easyOn()) return;   // mode facile : pas de brouillard
+  fx.fillStyle = G.L.outdoor ? 'rgba(18,12,46,0.5)' : 'rgba(14,8,34,0.68)'; fx.fillRect(0, 0, V.lw, V.lh);
   fx.globalCompositeOperation = 'destination-out';
   const [ex, ey] = G.eye, R = G.visR, sx = ex + ox, sy = ey + oy;
-  const g = fx.createRadialGradient(sx, sy, R * 0.3, sx, sy, R);
-  g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.7, 'rgba(0,0,0,0.93)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  const g = fx.createRadialGradient(sx, sy, R * 0.4, sx, sy, R);
+  g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.72, 'rgba(0,0,0,0.95)'); g.addColorStop(1, 'rgba(0,0,0,0)');
   fx.fillStyle = g; fx.beginPath();
   const n = 200;
   for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, d = castRay(ex, ey, a, R), px = sx + Math.cos(a) * d, py = sy + Math.sin(a) * d; if (i) fx.lineTo(px, py); else fx.moveTo(px, py); }
@@ -6465,7 +6473,7 @@ function renderGame(dt) {
   ctx.imageSmoothingEnabled = true; ctx.drawImage(V.fog, ci, cj); ctx.imageSmoothingEnabled = false;
   {
     const [ex, ey] = G.eye, R = G.visR;
-    if (R > 0) { ctx.globalAlpha = G.L.outdoor ? 0.07 : 0.09; ctx.imageSmoothingEnabled = true; ctx.drawImage(glowSprite(), ex - R, ey - R, R * 2, R * 2); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; }
+    if (R > 0 && R < 2000) { ctx.globalAlpha = G.L.outdoor ? 0.07 : 0.09; ctx.imageSmoothingEnabled = true; ctx.drawImage(glowSprite(), ex - R, ey - R, R * 2, R * 2); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; }
   }
   if (G.inf) drawStairsSigns(ctx);
   if (G.reveal > 0) {
@@ -6919,7 +6927,7 @@ const UI = {
     this.waveTitle(); this.openTitle();
   },
   waveTitle() { document.querySelectorAll('.logo span').forEach((sp, j) => { const t = sp.textContent; sp.innerHTML = [...t].map((ch, i) => `<i style="animation-delay:${(i * 0.08 + j * 0.3).toFixed(2)}s">${ch === ' ' ? '&nbsp;' : ch}</i>`).join(''); }); },
-  syncTogs() { document.querySelectorAll('.tog').forEach(b => b.classList.toggle('off', !AU.set[b.dataset.k])); },
+  syncTogs() { document.querySelectorAll('.tog').forEach(b => b.classList.toggle('off', !AU.set[b.dataset.k])); this.paintEasy($('bEasy')); this.paintEasy($('pEasy')); },
   openTitle() { G.mode = 'menu'; this.show('sTitle'); AU.play('menu'); },
   // ---------- liste des persos ----------
   openChars(back) {
@@ -6998,6 +7006,12 @@ const UI = {
     });
   },
   procOn() { return store.get('proc', true) !== false; },
+  // mode facile : pas de brouillard, on voit tout le collège (solo et en équipe)
+  paintEasy(b) {
+    if (!b) return; const on = !!AU.set.easy; b.classList.toggle('on', on);
+    b.innerHTML = `<span class="pi">${on ? '👀' : '🌫️'}</span><span><b>${on ? 'MODE FACILE : TOUT VOIR' : 'CHAMP DE VISION'}</b>${on ? 'Pas de brouillard : tu vois tout le collège et les profs.' : 'Tu ne vois que ce qui est autour de toi. Touche pour tout voir.'}</span><span class="sw"></span>`;
+    b.onclick = () => { AU.init(); AU.sfx('tick'); AU.set.easy = !AU.set.easy; AU.applySet(); this.paintEasy($('bEasy')); this.paintEasy($('pEasy')); };
+  },
   paintProc(b) {
     if (!b) return; const on = this.procOn(); b.classList.toggle('on', on);
     b.innerHTML = `<span class="pi">${on ? '🎲' : '🗺️'}</span><span><b>${on ? 'PLANS SURPRISE' : 'PLANS FIXES'}</b>${on ? 'Un nouveau plan du collège à chaque partie !' : 'Toujours les mêmes plans dessinés à la main.'}</span><span class="sw"></span>`;

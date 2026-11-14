@@ -25,7 +25,7 @@ function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.fl
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const AU = {
   ctx: null, out: null, sfxG: null, musG: null, noiseBuf: null, song: null, songName: null, step: 0, nextT: 0, timer: null,
-  set: Object.assign({ music: true, sfx: true, voice: true, crt: true }, store.get('nds_settings', {})),
+  set: Object.assign({ music: true, sfx: true, voice: true, crt: true, easy: false }, store.get('nds_settings', {})),
   frVoice: null, _unlocked: false,
   init() {
     try {
