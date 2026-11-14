@@ -43,6 +43,19 @@ function los(ax, ay, bx, by) {
   return true;
 }
 // mode facile (réglage) : seulement là où il n'y a pas d'adversaire humain
+// champ de vision de l'élève : un grand cône devant lui + un petit cercle tout autour (on « sent » ce qui est juste derrière)
+const VIS_FOV = 1.05, VIS_SOFT = 0.4, VIS_NEAR = 2.5 * 16, FACE_ANG = [Math.PI / 2, -Math.PI / 2, 0, Math.PI];
+function visRAt(a) {
+  if (!G.visCone) return G.visR;
+  const d = Math.abs(angDiff(a, G.visAng)), near = Math.min(G.visR, VIS_NEAR);
+  if (d <= VIS_FOV) return G.visR;
+  if (d >= VIS_FOV + VIS_SOFT) return near;
+  const t = (d - VIS_FOV) / VIS_SOFT; return G.visR + (near - G.visR) * t * t * (3 - 2 * t);
+}
+function playerViewAng(P) {
+  if (P.vang == null || (!P.moving && faceFromAng(P.vang + (P.lookOff || 0)) !== P.face)) { P.vang = FACE_ANG[P.face] || 0; P.lookOff = 0; P.lookTo = 0; }
+  return P.vang + (P.lookOff || 0);
+}
 function playerEye(P) { return [P.x, sightY(P.x, P.y - 7)]; }
 function easyOn() { return !!AU.set.easy && (!G.net || !!(G.inf && G.inf.coop)); }
 function castRay(ox, oy, ang, maxD) {
@@ -638,7 +651,8 @@ function updatePlayer(dt) {
   if (want) { P.idleT = 0; P.tapping = false; } else if (!P.hidden && !P.busy) {
     P.idleT = (P.idleT || 0) + dt;
     P.tapping = P.idleT > 3.5 && ((P.idleT * 2.5) | 0) % 2 === 1;
-    if (P.idleT > 6) { P.lookT = (P.lookT || 0) - dt; if (P.lookT <= 0) { P.lookT = rand(1, 2); P.face = pick([0, 0, 2, 3]); } }
+    if (P.idleT > 6) { P.lookT = (P.lookT || 0) - dt; if (P.lookT <= 0) { P.lookT = rand(1.2, 2.4); P.lookTo = pick([-0.6, 0.6, 0, 0]); } }
+    if (P.vang != null) { P.lookOff = (P.lookOff || 0) + ((P.lookTo || 0) - (P.lookOff || 0)) * Math.min(1, dt * 5); P.face = faceFromAng(P.vang + P.lookOff); }
   }
   if (inp.mag > 0.08) {
     const run = inp.mag > 0.62;
@@ -654,7 +668,7 @@ function updatePlayer(dt) {
     if (P.running) { P.runT = (P.runT || 0) + dt; P.lastDir = [nx, ny]; if (Math.abs(nx) > 0.5 && Math.random() < dt * 16) part(P.x - nx * 7 + rand(-3, 3), P.y - rand(5, 24), 'streak', { vx: -nx * 50, vy: -ny * 50, life: 0.22, col: '#ffffff' }); }
     else P.runT = 0;
     if (P.slip > 0 && P.running) { FX.ghostT -= dt; if (FX.ghostT <= 0) { FX.ghostT = 0.05; FX.ghosts.push({ x: P.x, y: P.y, face: P.face, dist: P.dist, small: P.small > 0, t: 0 }); } }
-    P.face = faceFromAng(Math.atan2(ny, nx)); P.anim += dt * (run ? 1.5 : 0.9) * (P.moving ? 1 : 0);
+    P.vang = Math.atan2(ny, nx); P.lookOff = 0; P.lookTo = 0; P.face = faceFromAng(P.vang); P.anim += dt * (run ? 1.5 : 0.9) * (P.moving ? 1 : 0);
     if (blocked && !P.moving) { P.bumpT -= dt; if (P.bumpT <= 0) { P.bumpT = 0.6; AU.sfx('bump'); squash(P, -4); if (run) { for (let i = 0; i < 4; i++) part(P.x + nx * 6, P.y - 18, 'star', { vx: rand(-30, 30), vy: rand(-40, -10), g: 60, life: 0.6, col: '#ffd23f' }); cue(P.x, P.y - 34, 'word', 'BONK', { col: '#ffd23f', pop: true, small: true, life: 0.7 }); } } }
     if (P.running) {
       P.stepT -= dt;
@@ -958,7 +972,7 @@ function update(dt) {
     const T = G.T;
     if (G.net && G.net.role === 'teacher') {
       const pr = T.prof, R = Math.max(7.5, pr.range) * 16, fov = Math.max(1.0, pr.fov);
-      G.eye = [T.x, sightY(T.x, T.y - 12)]; G.visR = T.state === 'count' ? 0 : R; G.tVis = true;
+      G.eye = [T.x, sightY(T.x, T.y - 12)]; G.visR = T.state === 'count' ? 0 : R; G.tVis = true; G.visCone = false;
       let vis = false;
       if (!P.hidden && T.state !== 'count') {
         const px = P.x, py = P.y - (P.small > 0 ? 3 : 7), d = Math.hypot(px - G.eye[0], py - G.eye[1]);
@@ -972,13 +986,18 @@ function update(dt) {
       const hs = P.hidden, hx = hs.x * 16 + 8, hy = hs.y * 16 + 8;
       if (KP[hs.k] && KP[hs.k].opaque && P.hideFrom) { const fx = P.hideFrom[0] - hx, fy = P.hideFrom[1] - 7 - hy, fl = Math.hypot(fx, fy) || 1; G.eye = [hx + fx / fl * 10, hy + fy / fl * 10]; G.eye[1] = sightY(G.eye[0], G.eye[1]); }
       else G.eye = [hx, sightY(hx, hy)];
-      G.visR = hs.peek * 16;
+      G.visR = hs.peek * 16; G.visCone = false;
     }
-    else { G.eye = playerEye(P); G.visR = (G.L.outdoor ? 12 : 10) * 16 * (P.small > 0 ? 0.85 : 1); }
+    else {
+      G.eye = playerEye(P); G.visR = (G.L.outdoor ? 12 : 10) * 16 * (P.small > 0 ? 0.85 : 1);
+      const va = playerViewAng(P); if (G.visP !== P || G.visAng == null) { G.visP = P; G.visAng = va; }
+      G.visAng += angDiff(va, G.visAng) * Math.min(1, dt * 10); G.visCone = true;
+    }
     if (easyOn()) { G.visR = 9999; G.tVis = !T.gone; G.kids.forEach(k => k.vis = !k.gone); }
     else {
-    G.tVis = !T.gone && dist(G.eye[0], G.eye[1], T.x, T.y - 12) < G.visR && los(G.eye[0], G.eye[1], T.x, T.y - 12);
-    G.kids.forEach(k => k.vis = !k.gone && dist(G.eye[0], G.eye[1], k.x, k.y - 10) < G.visR && los(G.eye[0], G.eye[1], k.x, k.y - 10));
+    const [ex, ey] = G.eye, seen = (x, y) => Math.hypot(x - ex, y - ey) < visRAt(Math.atan2(y - ey, x - ex)) && los(ex, ey, x, y);
+    G.tVis = !T.gone && seen(T.x, T.y - 12);
+    G.kids.forEach(k => k.vis = !k.gone && seen(k.x, k.y - 10));
     }
     }
   }

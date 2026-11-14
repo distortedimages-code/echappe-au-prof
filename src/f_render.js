@@ -205,10 +205,32 @@ function drawFog() {
   const [ex, ey] = G.eye, R = G.visR, sx = ex + ox, sy = ey + oy;
   const g = fx.createRadialGradient(sx, sy, R * 0.4, sx, sy, R);
   g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.72, 'rgba(0,0,0,0.95)'); g.addColorStop(1, 'rgba(0,0,0,0)');
-  fx.fillStyle = g; fx.beginPath();
-  const n = 200;
-  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, d = castRay(ex, ey, a, R), px = sx + Math.cos(a) * d, py = sy + Math.sin(a) * d; if (i) fx.lineTo(px, py); else fx.moveTo(px, py); }
-  fx.closePath(); fx.fill();
+  const n = 240, ray = FX.rays || (FX.rays = new Float32Array(n));
+  for (let i = 0; i < n; i++) ray[i] = castRay(ex, ey, i / n * Math.PI * 2, R);
+  if (!G.visCone) {
+    fx.fillStyle = g; fx.beginPath();
+    for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, d = ray[i], px = sx + Math.cos(a) * d, py = sy + Math.sin(a) * d; if (i) fx.lineTo(px, py); else fx.moveTo(px, py); }
+    fx.closePath(); fx.fill();
+  } else {
+    // le cône devant (avec une pénombre sur les bords), puis le petit cercle autour de soi
+    const fan = (fov, soft, alpha) => {
+      fx.globalAlpha = alpha; fx.fillStyle = g; fx.beginPath(); fx.moveTo(sx, sy);
+      const TAU = Math.PI * 2, i0 = Math.floor((((G.visAng - fov - soft) % TAU) + TAU) % TAU / TAU * n), cnt = Math.ceil(2 * (fov + soft) / TAU * n) + 1;
+      for (let k = 0; k <= cnt; k++) {
+        const i = (i0 + k) % n, a = i / n * TAU, d = Math.abs(angDiff(a, G.visAng)); if (d > fov + soft) continue;
+        const t = d <= fov ? 0 : (d - fov) / soft, r = Math.min(ray[i], R * (1 - 0.75 * t * t * (3 - 2 * t)));
+        fx.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r);
+      }
+      fx.closePath(); fx.fill();
+    };
+    fan(VIS_FOV + VIS_SOFT, 0.35, 0.45); fan(VIS_FOV, VIS_SOFT, 1);
+    fx.globalAlpha = 1;
+    const nr = Math.min(R, VIS_NEAR) * 1.35, g2 = fx.createRadialGradient(sx, sy, nr * 0.45, sx, sy, nr);
+    g2.addColorStop(0, 'rgba(0,0,0,1)'); g2.addColorStop(1, 'rgba(0,0,0,0)');
+    fx.fillStyle = g2; fx.beginPath();
+    for (let i = 0; i < n; i += 4) { const a = i / n * Math.PI * 2, d = Math.min(ray[i], nr), px = sx + Math.cos(a) * d, py = sy + Math.sin(a) * d; if (i) fx.lineTo(px, py); else fx.moveTo(px, py); }
+    fx.closePath(); fx.fill();
+  }
   fx.globalCompositeOperation = 'source-over';
   if (G.P.hidden) { const g2 = fx.createRadialGradient(sx, sy, R * 0.6, sx, sy, Math.max(V.lw, V.lh) * 0.7); g2.addColorStop(0, 'rgba(12,8,28,0)'); g2.addColorStop(1, 'rgba(12,8,28,0.5)'); fx.fillStyle = g2; fx.fillRect(0, 0, V.lw, V.lh); }
 }
@@ -216,6 +238,7 @@ function updateCamera(dt) {
   const P = viewerA(), m = G.m, lw = V.lw - 2, lh = V.lh - 2;
   let tx = P.x + clamp(P.vx || 0, -90, 90) * 0.35 - lw / 2, ty = P.y - 10 + clamp(P.vy || 0, -90, 90) * 0.3 - lh * 0.45;
   if (G.net && G.net.role === 'teacher' && !P.moving) { tx += Math.cos(P.ang) * 22; ty += Math.sin(P.ang) * 18; }
+  else if (G.visCone && G.visAng != null && P === G.P) { tx += Math.cos(G.visAng) * 18; ty += Math.sin(G.visAng) * 14; }
   if (G.mode === 'caught') { tx = (P.x + G.T.x) / 2 - lw / 2; ty = (P.y + G.T.y) / 2 - 10 - lh * 0.45; }
   const mw = m.w * 16, mh = m.h * 16;
   tx = mw < lw ? (mw - lw) / 2 : clamp(tx, -8, mw - lw + 8);
