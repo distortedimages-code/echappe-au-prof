@@ -446,7 +446,9 @@ const UI = {
     }
     this.hudT -= dt; if (this.hudT > 0) return; this.hudT = 0.12;
     const VA = viewerA(), teach = G.net && G.net.role === 'teacher';
-    const [tx, ty] = tileOf(VA); $('hRoom').textContent = '📍 ' + (G.inf ? INF_FLOOR_META[G.inf.cur].short + ' · ' : '') + (G.m.roomAt(tx, ty) || '…');
+    const [tx, ty] = tileOf(VA); let rn = G.m.roomAt(tx, ty) || '…';
+    if (G.inf && /^Escalier [AB]$/.test(rn)) { const k = stairKind(rn.slice(-1)), to = k === 'up' ? G.inf.cur + 1 : G.inf.cur - 1; rn += k === 'down' ? ' ⬇ descend ' + (to === 0 ? 'au RDC' : 'au ' + INF_FLOOR_META[to].short) : k === 'up' ? ' ⬆ monte au ' + INF_FLOOR_META[to].short : k === 'locked' ? ' 🔒 grille fermée' : ' 🚧 fermé'; }
+    const rt = '📍 ' + (G.inf ? INF_FLOOR_META[G.inf.cur].short + ' · ' : '') + rn; if ($('hRoom').textContent !== rt) $('hRoom').textContent = rt;
     if (G.inf) this.hudInf(); else { $('bDiv').classList.add('hidden'); $('bPing').classList.add('hidden'); }
     $('inv').style.visibility = teach ? 'hidden' : '';
     const st = $('hStatus'); let s = '😌 Calme', cls = '';
@@ -527,8 +529,9 @@ const Title = {
 // ================= BOUCLE PRINCIPALE =================
 let lastT = 0;
 function loop(ts) {
-  const dt = Math.min(0.05, (ts - lastT) / 1000 || 0.016); lastT = ts;
+  const raw = (ts - lastT) / 1000 || 0.016, dt = Math.min(0.05, raw); lastT = ts;
   try {
+    Perf.tick(raw);
     FX.update(dt);
     if (['play', 'escape', 'caught', 'timeup'].includes(G.mode) && !G.overlay) update(dt);
     TaskUI.tick(dt); UI.tickInf();

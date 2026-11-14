@@ -1,4 +1,17 @@
 // ================= RENDU (rétro moderne) =================
+// qualité d'affichage : si le téléphone peine, on baisse un peu la résolution (le jeu est en pixel art)
+const Q_LEVELS = [2, 1.6, 1.3, 1];
+const Perf = {
+  q: Math.min(Q_LEVELS.length - 1, Math.max(0, +(store.get('nds_q', 0)) || 0)), acc: 0, n: 0, lowered: false, good: 0,
+  tick(dt) {
+    if (G.mode !== 'play' || document.hidden) { this.acc = 0; this.n = 0; return; }
+    this.acc += dt; this.n++;
+    if (this.acc < 2) return;
+    const avg = this.acc / this.n; this.acc = 0; this.n = 0;
+    if (avg > 0.0215 && this.q < Q_LEVELS.length - 1 && (window.devicePixelRatio || 1) > Q_LEVELS[this.q + 1]) { this.q++; this.lowered = true; this.good = 0; store.set('nds_q', this.q); resizeView(); }
+    else if (avg < 0.0175 && this.q > 0 && !this.lowered) { if (++this.good >= 6) { this.good = 0; this.q--; store.set('nds_q', this.q); resizeView(); } }
+  }
+};
 const V = { cv: null, ctx: null, lo: null, lx: null, fog: null, fx: null, S: 3, lw: 0, lh: 0, dpr: 1, camX: 0, camY: 0, W: 0, H: 0, a: 1, e: 0, f: 0, post: null };
 function setupView() {
   V.cv = document.getElementById('game'); V.ctx = V.cv.getContext('2d');
@@ -6,13 +19,19 @@ function setupView() {
   resizeView(); addEventListener('resize', resizeView);
 }
 function resizeView() {
-  const dpr = Math.min(2, window.devicePixelRatio || 1), w = innerWidth, h = innerHeight;
+  const dpr = Math.min(Q_LEVELS[Perf.q], window.devicePixelRatio || 1), w = innerWidth, h = innerHeight;
   V.dpr = dpr; V.W = Math.round(w * dpr); V.H = Math.round(h * dpr); V.cv.width = V.W; V.cv.height = V.H;
   V.S = Math.max(2, Math.round(Math.min(w, h) / (12 * 16) * dpr));
   V.lw = Math.ceil(V.W / V.S) + 2; V.lh = Math.ceil(V.H / V.S) + 2;
   V.lo.width = V.lw; V.lo.height = V.lh; V.fog.width = V.lw; V.fog.height = V.lh;
   V.lx.imageSmoothingEnabled = false; V.ctx.imageSmoothingEnabled = false;
   bakePost();
+}
+// halo de lumière chaude, dessiné une seule fois
+let GLOW = null;
+function glowSprite() {
+  if (GLOW) return GLOW; const [c, x] = mkCanvas(64, 64), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(255,214,150,1)'); g.addColorStop(1, 'rgba(255,214,150,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return (GLOW = c);
 }
 function bakePost() {
   const [c, x] = mkCanvas(V.W, V.H);
@@ -223,6 +242,51 @@ function drawSixSeven(c, k, dy) {
     c.fillStyle = '#1a1028'; c.fillRect(hx - 2.5, hy - 1.5, 5, 3); c.fillStyle = skin; c.fillRect(hx - 2, hy - 1, 4, 2);
   });
 }
+// ---------- escaliers : on voit tout de suite s'ils montent, descendent ou sont fermés ----------
+function stairKind(s) {
+  const I = G.inf, st = I.floors[I.cur].stairs[s];
+  if (st.down) return st.locked && !I.keys && !I.alarm ? 'locked' : 'down';
+  return st.up ? 'up' : 'closed';
+}
+const STAIR_COL = { down: '63,200,110', up: '80,150,255', closed: '228,59,68', locked: '247,140,40' };
+function drawStairsMarks(c) {
+  const I = G.inf, L = G.L; if (!L.stairs) return;
+  ['A', 'B'].forEach(s => {
+    const pt = L.stairs[s]; if (!pt) return;
+    const x0 = (pt[0] - 1) * 16, y0 = (pt[1] - 1) * 16, w = 48, h = 48, k = stairKind(s), col = STAIR_COL[k];
+    c.fillStyle = `rgba(${col},0.28)`; c.fillRect(x0, y0, w, h);
+    c.strokeStyle = `rgba(${col},0.9)`; c.lineWidth = 1.5; c.strokeRect(x0 + 0.75, y0 + 0.75, w - 1.5, h - 1.5);
+    if (k === 'down' || k === 'up') {
+      // chevrons qui défilent dans le sens de l'escalier
+      const dir = k === 'down' ? 1 : -1, ph = ((G.time * 14) % 16) * dir;
+      c.save(); c.beginPath(); c.rect(x0, y0, w, h); c.clip();
+      c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 2.2; c.lineJoin = 'round'; c.lineCap = 'round';
+      for (let i = -1; i < 4; i++) {
+        const yy = y0 + 8 + i * 16 + ph, a = Math.max(0, Math.min(1, 1 - Math.abs(yy - (y0 + h / 2)) / 26));
+        c.globalAlpha = a; c.beginPath(); c.moveTo(x0 + 13, yy - 5 * dir); c.lineTo(x0 + 24, yy + 5 * dir); c.lineTo(x0 + 35, yy - 5 * dir); c.stroke();
+      }
+      c.globalAlpha = 1; c.restore();
+    } else if (k === 'closed') {
+      c.save(); c.beginPath(); c.rect(x0, y0, w, h); c.clip();
+      for (let i = -3; i < 6; i++) { c.fillStyle = i % 2 ? 'rgba(255,255,255,0.75)' : 'rgba(228,59,68,0.85)'; c.beginPath(); c.moveTo(x0 + i * 10, y0 + 20); c.lineTo(x0 + i * 10 + 10, y0 + 20); c.lineTo(x0 + i * 10 + 18, y0 + 28); c.lineTo(x0 + i * 10 + 8, y0 + 28); c.fill(); }
+      c.restore();
+    } else {
+      c.fillStyle = 'rgba(40,30,50,0.85)'; for (let x = x0 + 4; x < x0 + w; x += 7) c.fillRect(x, y0 + 2, 2, h - 4);
+      c.fillRect(x0 + 2, y0 + 10, w - 4, 2); c.fillRect(x0 + 2, y0 + h - 12, w - 4, 2);
+    }
+  });
+}
+function drawStairsSigns(c) {
+  const I = G.inf, L = G.L; if (!L.stairs) return;
+  ['A', 'B'].forEach(s => {
+    const pt = L.stairs[s]; if (!pt) return;
+    const k = stairKind(s), x = pt[0] * 16 + 8, y = (pt[1] - 1) * 16 - 7;
+    const to = k === 'up' ? I.cur + 1 : I.cur - 1, nm = to === 0 ? 'RDC' : to >= 0 && to <= INF_TOP ? INF_FLOOR_META[to].short : '';
+    const label = k === 'down' ? '⬇ DESCENDRE · ' + nm : k === 'up' ? '⬆ MONTER · ' + nm : k === 'locked' ? '🔒 GRILLE FERMÉE' : '🚧 FERMÉ';
+    const col = k === 'down' ? '#7dff9e' : k === 'up' ? '#9cc4ff' : k === 'locked' ? '#ffb070' : '#ff8a96';
+    txt(c, label, x, y + Math.sin(G.time * 3) * 0.8, 6, col);
+  });
+}
 function renderGame(dt) {
   const { lx, lw, lh, ctx, S } = V, P = G.P, T = G.T;
   updateCamera(dt || 0.016);
@@ -238,6 +302,7 @@ function renderGame(dt) {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#120c1e'; ctx.fillRect(0, 0, V.W, V.H);
   ctx.setTransform(V.a, 0, 0, V.a, V.e, V.f); ctx.imageSmoothingEnabled = false;
   ctx.drawImage(V.lo, ci, cj);
+  if (G.inf) drawStairsMarks(ctx);
   // 3) cône de vision, poussières
   const showT = G.tVis || G.mode === 'caught';
   if (showT && !T.gone && !['sleep', 'caught', 'count', 'evac'].includes(T.state)) drawCone(ctx);
@@ -306,10 +371,9 @@ function renderGame(dt) {
   ctx.imageSmoothingEnabled = true; ctx.drawImage(V.fog, ci, cj); ctx.imageSmoothingEnabled = false;
   {
     const [ex, ey] = G.eye, R = G.visR;
-    const g = ctx.createRadialGradient(ex, ey, 0, ex, ey, R);
-    g.addColorStop(0, G.L.outdoor ? 'rgba(255,230,170,0.16)' : 'rgba(255,200,120,0.2)'); g.addColorStop(1, 'rgba(255,200,120,0)');
-    ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = g; ctx.fillRect(ex - R, ey - R, R * 2, R * 2); ctx.globalCompositeOperation = 'source-over';
+    if (R > 0) { ctx.globalAlpha = G.L.outdoor ? 0.07 : 0.09; ctx.imageSmoothingEnabled = true; ctx.drawImage(glowSprite(), ex - R, ey - R, R * 2, R * 2); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; }
   }
+  if (G.inf) drawStairsSigns(ctx);
   if (G.reveal > 0) {
     const blink = G.reveal > 2 || (G.time * 6 | 0) % 2;
     if (blink && !G.tVis) { drawCone(ctx); drawTeacher(ctx, T, { tint: '#c8b0ff', alpha: 0.8 }); }
