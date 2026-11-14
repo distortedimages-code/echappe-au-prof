@@ -110,6 +110,12 @@ const AU = {
       case 'bump': T.tone(140, 0.06, { vol: 0.06, to: 90 }); break;
       case 'flap': for (let i = 0; i < 6; i++) T.noise(0.05, { vol: 0.12 * v, freq: 600 + i * 90, q: 1.2, at: i * 0.045 }); break;
       case 'skid': T.noise(0.28, { vol: 0.16 * v, freq: 2600, q: 3, to: 900 }); T.tone(900, 0.2, { type: 'sawtooth', vol: 0.03 * v, to: 400 }); break;
+      case 'squish': // on presse le squishy : pchhh + pouic
+        T.noise(0.2, { vol: 0.24 * v, freq: 1400, to: 300, q: 1.8, type: 'lowpass' });
+        T.tone(560 + Math.random() * 80, 0.15, { type: 'sine', vol: 0.13 * v, to: 1500, at: 0.04 });
+        T.tone(1500, 0.1, { type: 'sine', vol: 0.06 * v, to: 900, at: 0.19 });
+        break;
+      case 'kawaii': [88, 91, 95, 100].forEach((m, i) => T.tone(mtof(m), 0.18, { type: 'triangle', vol: 0.08 * v, at: i * 0.06 })); T.tone(mtof(103), 0.5, { type: 'sine', vol: 0.06 * v, at: 0.26, to: mtof(98) }); break;
       case 'boing': T.tone(220, 0.25, { type: 'triangle', vol: 0.1 * v, to: 660 }); break;
       case 'crunch': T.noise(0.18, { vol: 0.2, freq: 1500, q: 1 }); T.noise(0.15, { vol: 0.15, freq: 1100, q: 1, at: 0.2 }); break;
     }
@@ -140,7 +146,7 @@ const AU = {
     if (!this.set.voice || !window.speechSynthesis || vol < 0.05) return;
     try {
       speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text.replace(/[«»]/g, ''));
+      const u = new SpeechSynthesisUtterance(text.replace(/[«»]/g, '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F\u200D]/gu, ''));
       const en = prof && prof.english; u.lang = en ? 'en-GB' : 'fr-FR'; if (en ? this.enVoice : this.frVoice) u.voice = en ? this.enVoice : this.frVoice;
       u.pitch = prof && prof.voice ? prof.voice.pitch : 1; u.rate = prof && prof.voice ? prof.voice.rate : 1.1;
       u.volume = clamp(vol, 0, 1); speechSynthesis.speak(u);

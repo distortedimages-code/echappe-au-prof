@@ -162,7 +162,7 @@ const Net = {
     if (G.inf && G.inf.coop && coopRecv(d)) return;
     if (G.inf && G.inf.guard && guardRecv(d)) return;
     switch (d.t) {
-      case 's': if (this.role === 'teacher') { if (G.inf) infRecvPos(P, d); else P.net = d; } break;
+      case 's': if (this.role === 'teacher') { P.sqN = d.sq || 0; P.sqId = d.sqi || 0; if (G.inf) infRecvPos(P, d); else P.net = d; } break;
       case 'T': if (this.role === 'student') { if (G.inf) infRecvPos(T, d); else T.net = d; } break;
       case 'k': if (G.inf) { if (d.fl === G.inf.cur && !infAuth()) d.a.forEach(a => { const k = G.kids[a[0]]; if (k) k.net = a.slice(1); }); break; }
         if (!this.isHost) { d.a.forEach((a, i) => { const k = G.kids[i]; if (k) k.net = a; }); if (G.ball && d.b) { G.ball.from = d.b[0]; G.ball.to = d.b[1]; G.ball.t = d.b[2]; } } break;
@@ -170,6 +170,7 @@ const Net = {
       case 'item': if (G.inf) { const arr = infFloorOf(d).items, j = arr.findIndex(i => i.id === d.id); if (j >= 0) arr.splice(j, 1); } else G.items = G.items.filter(i => i.id !== d.id); break;
       case 'apple': if (G.inf && d.fl !== G.inf.cur) { infFloorOf(d).apples.push({ id: d.id, x: d.x, y: d.y, eaten: false }); break; } G.apples.push({ id: d.id, x: d.x, y: d.y, eaten: false }); break;
       case 'eat': { const a = G.apples.find(a => a.id === d.id); if (a) { a.eaten = true; G.apples = G.apples.filter(b => b !== a); } AU.sfx('crunch', 0.6); break; }
+      case 'sqUse': squishyRecv(d); break;
       case 'slow': G.slowT = d.d; FX.flash = 0.6; FX.flashCol = '140,190,255'; AU.sfx('slow'); toast('⏱️ La montre du Lapin blanc ! Tu avances au ralenti…', 2.2); break;
       case 'pouf': if (G.inf && d.fl !== G.inf.cur) break; puff(d.x, d.y - 6, 16, '#c8b0ff'); AU.sfx('pouf', 0.6); if (dist(d.x, d.y, T.x, T.y) < 12 * 16) cue(d.x, d.y - 20, 'word', 'POUF !', { col: '#c8b0ff', pop: true }); break;
       case 'noise': if (G.inf && d.fl !== G.inf.cur) break; if (this.role === 'teacher') { const dd = dist(T.x, T.y, d.x, d.y) / 16; if (dd < d.r * 1.8 && !G.pVis) cue(d.x, d.y - 8, 'word', d.w || '?!', { col: '#ffb347', pop: true, life: 1.2 }); } break;
@@ -207,7 +208,7 @@ const Net = {
     if (this.sendT <= 0) {
       this.sendT = 0.05;
       const P = G.P, T = G.T;
-      if (this.role === 'student') this.send({ t: 's', fl: G.inf ? G.inf.cur : undefined, x: +P.x.toFixed(1), y: +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0 });
+      if (this.role === 'student') this.send({ t: 's', fl: G.inf ? G.inf.cur : undefined, x: +P.x.toFixed(1), y: +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0, sq: squishyCount(P), sqi: P.sqIds && P.sqIds.length ? P.sqIds[0] : 0 });
       else this.send({ t: 'T', fl: G.inf ? G.inf.cur : undefined, x: +T.x.toFixed(1), y: +T.y.toFixed(1), a: +T.ang.toFixed(2), f: T.face, m: T.moving ? 1 : 0, r: T.running ? 1 : 0, st: T.state, k: T.hasKeys ? 1 : 0 });
     }
     if (G.inf && G.inf.guard) guardNetTick(dt);
@@ -344,7 +345,7 @@ function doActionT(a) {
       const w = a.who; hop(T, 60); AU.sfx('whistle', 0.4); T.ang = Math.atan2(w.y - T.y, w.x - T.x); T.face = faceFromAng(T.ang);
       cue(w.x, w.y - 30, 'word', 'ATTRAPÉ ?!', { col: '#ffd23f', pop: true, life: 0.9 });
       if (w.isFug) guardTry(w, 'grab');
-      else if (w === P) { if (!P.hidden && dist(T.x, T.y, P.x, P.y) < 30) { Net.send({ t: 'caught', r: 'chase' }); caught('chase', true); } }
+      else if (w === P) { if (!P.hidden && dist(T.x, T.y, P.x, P.y) < 30) { if (P.sqN > 0) { P.sqN = 0; Net.send({ t: 'sqUse' }); squishyOnMe(P.sqId); } else { Net.send({ t: 'caught', r: 'chase' }); caught('chase', true); } } }
       else grabFail(G.kids.indexOf(w));
       break;
     }
@@ -353,7 +354,7 @@ function doActionT(a) {
       T.ang = Math.atan2(spot.y * 16 + 8 - T.y, spot.x * 16 + 8 - T.x); T.face = faceFromAng(T.ang);
       for (let i = 0; i < 7; i++) part(spot.x * 16 + 8, spot.y * 16 + 4, 'junk', { vx: rand(-45, 45), vy: rand(-80, -30), g: 200, life: 0.9, col: pick(['#ffffff', '#ff6f91', '#fec43a', '#9fd7ff', '#63c74d']), size: 2 });
       Net.send({ t: 'tcheck', i: spot.idx });
-      T.busy = { label: 'Je fouille…', dur: 0.9, t: 0, done: () => { const fh = G.inf && G.inf.guard && G.inf.fugs.find(f => f.fl === G.inf.cur && f.st === 'hide' && f.hide === spot.idx); if (fh) { guardTry(fh, 'found'); return; } if (P.hidden === spot) { Net.send({ t: 'caught', r: 'found' }); caught('found', true); } else { AU.sfx('fail'); toast(pick(['Personne…', 'Vide !', 'Raté, pas ici !', 'Juste de la poussière…']), 1.2); } } };
+      T.busy = { label: 'Je fouille…', dur: 0.9, t: 0, done: () => { const fh = G.inf && G.inf.guard && G.inf.fugs.find(f => f.fl === G.inf.cur && f.st === 'hide' && f.hide === spot.idx); if (fh) { guardTry(fh, 'found'); return; } if (P.hidden === spot) { if (P.sqN > 0) { P.sqN = 0; Net.send({ t: 'sqUse' }); squishyOnMe(P.sqId); } else { Net.send({ t: 'caught', r: 'found' }); caught('found', true); } } else { AU.sfx('fail'); toast(pick(['Personne…', 'Vide !', 'Raté, pas ici !', 'Juste de la poussière…']), 1.2); } } };
       break;
     }
     case 'tkeys': T.state = 'keys'; AU.sfx('keys'); T.busy = { label: 'Je prends les clés…', dur: 1.3, t: 0, done: () => { T.hasKeys = true; Net.send({ t: 'keys' }); toast('🔑 Tu as les clés : tu peux ouvrir les portes fermées !', 2.2); } }; break;

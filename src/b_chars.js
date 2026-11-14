@@ -236,7 +236,9 @@ function faceFront(R, H, eyes, c, sk, hd, ex) {
     case 3: R(7, ey + 1, 2, 1, E); R(11, ey + 1, 2, 1, E); break;
     case 4: R(7, ey - 1, 2, 3, E); R(11, ey - 1, 2, 3, E); R(7, ey - 1, 1, 1, '#fff'); R(11, ey - 1, 1, 1, '#fff'); R(8, ey + 1, 1, 1, '#9fd7ff'); R(12, ey + 1, 1, 1, '#9fd7ff'); break;
     case 5: R(7, ey, 2, 2, E); R(7, ey, 1, 1, '#fff'); R(11, ey + 1, 2, 1, E); R(13, ey, 1, 1, E); break;
+    case 6: [8, 12].forEach(x => { R(x, ey - 1, 1, 3, '#ffd23f'); R(x - 1, ey, 3, 1, '#ffd23f'); R(x, ey, 1, 1, '#ffffff'); }); R(6, ey + 2, 1, 1, '#ff8fb0'); R(13, ey + 2, 1, 1, '#ff8fb0'); break;
   }
+  if (eyes === 6) { R(8, my - 1, 4, 2, M); R(9, my, 2, 1, '#ff6b8a'); if (ex.includes('moustache')) R(8, my - 2, 4, 1, hd); return; }   // bouche toute émerveillée, pas de lunettes devant les étoiles
   switch (c.mouth) {
     case 0: R(9, my, 2, 1, M); R(8, my - 1, 1, 1, M); R(11, my - 1, 1, 1, M); break;
     case 1: R(8, my - 1, 4, 2, M); R(9, my - 1, 2, 1, '#fff'); break;
@@ -262,6 +264,7 @@ function faceSide(R, H, eyes, c, sk, hd, ex) {
     case 2: R(11, ey + 1, 1, 1, E); R(12, ey, 1, 1, E); R(13, ey + 1, 1, 1, E); break;
     case 3: R(12, ey + 1, 2, 1, E); break;
     case 4: R(12, ey - 1, 2, 3, E); R(12, ey - 1, 1, 1, '#fff'); break;
+    case 6: R(13, ey - 1, 1, 3, '#ffd23f'); R(12, ey, 3, 1, '#ffd23f'); R(13, ey, 1, 1, '#ffffff'); break;
     default: R(12, ey, 2, 2, E); R(12, ey, 1, 1, '#fff');
   }
   switch (c.mouth) {
@@ -367,6 +370,7 @@ const ITEMS = {
   mirror: { n: 'Miroir magique', d: 'Montre où est le prof et les sorties pendant 8 s.', short: 'Voir' },
   watch: { n: 'Montre du Lapin blanc', d: 'Le prof avance au ralenti pendant 8 s.', short: 'Ralenti' },
   key: { n: 'Petite clé', d: 'Elle ouvre une porte fermée à clé.', short: 'Clé' },
+  squishy: { n: 'Squishy kawaii', d: 'Ta seconde chance : si un prof t’attrape, il sort tout seul… SPLOTCH ! Il explose à sa figure et l’aveugle 10 s.', short: 'Squishy' },
   disguise: { n: 'Déguisement', d: 'Perruque + fausse moustache : tu changes d’apparence pour toute la partie ! Fais-le quand le prof ne te voit pas.', short: 'Déguise' },
 };
 const ITEM_KEYS = Object.keys(ITEMS).filter(k => k !== 'disguise' && k !== 'key');
@@ -383,6 +387,15 @@ function itemCanvas(kind) {
     case 'apple': R(2, 4, 8, 7, '#d6243a'); R(1, 5, 10, 5, '#d6243a'); R(3, 5, 2, 2, '#ff7a8a'); R(5, 1, 1, 3, '#6b4220'); R(6, 1, 3, 2, '#3e8948'); R(8, 8, 2, 2, '#a3162a'); R(3, 11, 6, 1, '#a3162a'); break;
     case 'mirror': R(3, 0, 6, 9, '#f2c14e'); R(2, 1, 8, 7, '#f2c14e'); R(4, 1, 4, 7, '#bfe4ff'); R(3, 2, 6, 5, '#bfe4ff'); R(4, 2, 1, 3, '#ffffff'); R(5, 9, 2, 2, '#c99a2e'); R(3, 11, 6, 1, '#c99a2e'); break;
     case 'disguise': R(1, 2, 10, 1, '#3a2414'); R(1, 4, 4, 3, '#1d1626'); R(7, 4, 4, 3, '#1d1626'); R(2, 5, 2, 1, '#9fd7ff'); R(8, 5, 2, 1, '#9fd7ff'); R(5, 5, 2, 1, '#1d1626'); R(5, 6, 2, 3, '#f6a0a0'); R(2, 9, 8, 2, '#4a2a14'); R(1, 10, 2, 1, '#4a2a14'); R(9, 10, 2, 1, '#4a2a14'); break;
+    case 'squishy': { // petit chat-guimauve tout doux
+      const B = '#ffb3d6', BD = '#ec86b6', BL = '#ffe0ef';
+      R(2, 2, 2, 2, B); R(8, 2, 2, 2, B); R(3, 3, 1, 1, '#ff7fb0'); R(8, 3, 1, 1, '#ff7fb0');
+      R(2, 4, 8, 1, B); R(1, 5, 10, 5, B); R(2, 10, 8, 1, BD); R(1, 9, 10, 1, BD);
+      R(3, 5, 2, 1, BL); R(2, 6, 1, 1, BL);
+      R(4, 6, 1, 2, '#1d1626'); R(7, 6, 1, 2, '#1d1626'); R(4, 6, 1, 1, '#ffffff'); R(7, 6, 1, 1, '#ffffff');
+      R(3, 8, 1, 1, '#ff6f9a'); R(8, 8, 1, 1, '#ff6f9a'); R(5, 8, 1, 1, '#7a2836'); R(6, 8, 1, 1, '#7a2836');
+      break;
+    }
     case 'watch': R(2, 3, 8, 8, '#f2c14e'); R(1, 4, 10, 6, '#f2c14e'); R(3, 4, 6, 6, '#fff8e0'); R(2, 5, 8, 4, '#fff8e0'); R(5, 5, 1, 3, '#2a2230'); R(6, 7, 2, 1, '#2a2230'); R(5, 1, 2, 2, '#c99a2e'); R(7, 0, 4, 1, '#c99a2e'); R(10, 1, 1, 2, '#c99a2e'); break;
   }
   outlinePass(cv, c);

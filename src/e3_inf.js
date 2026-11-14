@@ -89,8 +89,8 @@ function infSetupFloor(F, R, itemPlan) {
   // objets magiques (2 par étage, posés hors de la salle de départ)
   const spots = L.itemSpots.filter(([x, y]) => !(I.startRoom && F.f === INF_TOP && x >= I.startRoom.x && y >= I.startRoom.y && x < I.startRoom.x + I.startRoom.w && y < I.startRoom.y + I.startRoom.h));
   R.sh(spots); const chosen = [];
-  for (const s of spots) { if (chosen.length >= 2) break; if (chosen.every(c => Math.abs(c[0] - s[0]) + Math.abs(c[1] - s[1]) >= 8)) chosen.push(s); }
-  G.items = chosen.map((s, i) => ({ id: F.f * 10 + i, x: s[0] * 16 + 8, y: s[1] * 16 + 12, kind: itemPlan[(F.f * 2 + i) % itemPlan.length], ph: Math.random() * 6 }));
+  for (const s of spots) { if (chosen.length >= 3) break; if (chosen.every(c => Math.abs(c[0] - s[0]) + Math.abs(c[1] - s[1]) >= 8)) chosen.push(s); }
+  G.items = chosen.map((s, i) => ({ id: F.f * 10 + i, x: s[0] * 16 + 8, y: s[1] * 16 + 12, kind: i === 2 ? 'squishy' : itemPlan[(F.f * 2 + i) % itemPlan.length], ph: Math.random() * 6 }));   // + un squishy par étage
   // élèves assis et profs dans les classes
   G.kids = [];
   const used = new Set(); let pi = 0;
@@ -716,6 +716,16 @@ function coopUpdate(dt) {
 // ---------- attrapé : direction la salle de colle ----------
 function coopCaught(who, reason) {
   const I = G.inf, T = G.T, eng = T.prof && T.prof.lesson;
+  // un squishy dans le sac : SPLOTCH, seconde chance
+  { const mine = who === (I.me || G.P);
+    if (mine ? squishyCount(who) > 0 : (who.sqN || 0) > 0) {
+      let id; if (mine) id = squishyTake(who); else { id = who.sqId || 0; who.sqN--; Net.send({ t: 'sqUse' }); }
+      if (mine && who.hidden) { const s = who.hidden; who.hidden = null; const st = s.stand[0]; who.x = st[0] * 16 + 8; who.y = st[1] * 16 + 12; }
+      const text = squishyBlast(T, who, id, true);
+      Net.send({ t: 'sqFx', fl: I.cur, id, me: mine ? 1 : 0, text });
+      if (mine) squishyToast(T, id); else toast('🧸 SPLOTCH ! Le squishy de ' + (who.cfg && who.cfg.name || 'ton équipier') + ' explose à la figure de ' + T.prof.name + ' !', 2.8);
+      return;
+    } }
   // le compagnon fait fuir le prof
   if (who.pet && who.pet.charges > 0 && who.pet.leaveT == null) { const remote = who !== (I.me || G.P); petScare(T, who, remote); if (remote) Net.send({ t: 'petUse' }); return; }
   if (eng) {
@@ -825,7 +835,7 @@ function coopRecv(d) {
     case 's': {
       const was = Q.fl; if (d.jail && !Q.jail) I.colles = (I.colles || 0) + 1; Q.out = !!d.out; Q.jail = !!d.jail; Q.pg = !!d.pg;
       if (Q.out) { Q.fl = d.fl; Q.x = -9999; Q.y = -9999; Q.net = null; Q.away = true; Q.last = null; if (!P.out) coopTakeAuth(); return true; }
-      Q.hidF = d.h >= 0; Q.lesson = !!d.ls;
+      Q.hidF = d.h >= 0; Q.lesson = !!d.ls; Q.sqN = d.sq || 0; Q.sqId = d.sqi || 0;
       if (d.pk >= 0 && d.pc > 0) { if (!Q.pet || Q.pet.i !== d.pk) Q.pet = { i: d.pk, e: PETS[d.pk].e, n: PETS[d.pk].n, charges: d.pc, x: Q.x, y: Q.y, t: 0 }; else Q.pet.charges = d.pc; } else Q.pet = null;
       infRecvPos(Q, d); if (d.jail) Q.jailMove = 0;
       if (was === I.cur && Q.fl !== I.cur && !P.out) coopTakeAuth();   // il est parti : je reprends la main
@@ -850,6 +860,7 @@ function coopRecv(d) {
     case 'caughtYou': if (!P.jail && !P.out && !P.lesson) { if (d.eng && (G.lessons || 0) < LESSON_MAX) lessonStart(d.r); else coopJail(); } return true;
     case 'lessonDone': toast(d.ok ? '✅ ' + (Q.cfg.name || 'Ton coéquipier') + ' a bien répondu à ' + (d.who || 'la prof') + ' !' : '❌ ' + (Q.cfg.name || 'Ton coéquipier') + ' s’est trompé·e… objets magiques confisqués !', 2.4); return true;
     case 'petUse': if (P.pet) petUsed(P, G.T); return true;
+    case 'sqUse': case 'sqFx': squishyRecv(d); return true;
     case 'freed': if (P.jail) { P.jail = false; P.jailT = 0; UI.banner('🔓 ' + (Q.cfg.name || 'Ton coéquipier') + ' t’a libéré·e ! File !'); AU.sfx('found'); } return true;
     case 'ping': I.ping = { x: d.x, y: d.y, fl: d.fl, t: 0, room: '', who: Q.cfg.name }; AU.sfx('ding', 0.4); if (d.fl !== I.cur) toast('📍 ' + (Q.cfg.name || 'Ton coéquipier') + ' t’appelle (' + INF_FLOOR_META[d.fl].name + ')', 1.8); return true;
     case 'gateDone': { const ex = G.L.exits && G.L.exits.find(e => e.gate); if (I.cur === 0 && ex && P.busy && P.busy.ex === ex) { P.busy = null; escape(ex, ex.x, ex.y); } return true; }
@@ -867,7 +878,7 @@ function coopNetTick(dt) {
   if (N.sendT <= 0) {
     N.sendT = 0.05;
     const pg = P.busy && P.busy.ex && P.busy.ex.gate ? 1 : 0;
-    N.send({ t: 's', fl: I.cur, x: P.out ? -9999 : +P.x.toFixed(1), y: P.out ? -9999 : +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0, out: P.out ? 1 : 0, jail: P.jail ? 1 : 0, pg, ls: P.lesson ? 1 : 0, pk: P.pet && P.pet.leaveT == null ? P.pet.i : -1, pc: P.pet ? P.pet.charges : 0 });
+    N.send({ t: 's', fl: I.cur, x: P.out ? -9999 : +P.x.toFixed(1), y: P.out ? -9999 : +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0, out: P.out ? 1 : 0, jail: P.jail ? 1 : 0, pg, ls: P.lesson ? 1 : 0, pk: P.pet && P.pet.leaveT == null ? P.pet.i : -1, pc: P.pet ? P.pet.charges : 0, sq: squishyCount(P), sqi: P.sqIds && P.sqIds.length ? P.sqIds[0] : 0 });
     if (I.auth && Q.fl === I.cur && T) N.send({ t: 'ai', x: +T.x.toFixed(1), y: +T.y.toFixed(1), a: +T.ang.toFixed(2), f: T.face, m: T.moving ? 1 : 0, r: T.running ? 1 : 0, st: T.state, g: T.gone ? 1 : 0, dm: +((T.det && T.det.them) || 0).toFixed(2) });
   }
   if (N.kidsT <= 0) {

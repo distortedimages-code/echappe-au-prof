@@ -114,7 +114,7 @@ const UI = {
   show(id) {
     Input.reset();
     if (['sTitle', 'sLevels', 'sResult', 'sMulti', 'sIntro', 'sChars', 'sCreator'].includes(id)) Lesson.abort();
-    ['sTitle', 'sChars', 'sCreator', 'sLevels', 'sIntro', 'sPause', 'sResult', 'sMulti'].forEach(s => $(s).classList.toggle('hidden', s !== id));
+    ['sTitle', 'sChars', 'sCreator', 'sLevels', 'sIntro', 'sPause', 'sResult', 'sMulti', 'sSquish'].forEach(s => $(s).classList.toggle('hidden', s !== id));
     $('hud').classList.toggle('hidden', !['play'].includes(id) && !['sIntro', 'sPause', 'sResult'].includes(id));
     if (id === 'sIntro') this.introPages();
   },
@@ -172,6 +172,7 @@ const UI = {
     const tap = (id, f) => $(id).addEventListener('click', e => { AU.init(); AU.sfx('blip'); f(e); });
     tap('bPlay', () => { if (!this.chars.length) this.openCreator(-1, 'levels'); else this.openLevels(); });
     tap('bChars', () => this.openChars('title'));
+    tap('bSquish', () => SqAlbum.open('title')); tap('bSqBack', () => this.openTitle());
     tap('bMulti', () => Multi.open());
     tap('bInf', () => { AU.init(); if (!this.chars.length) this.openCreator(-1, 'inf'); else this.launchInf(); });
     tap('bPlan', () => this.openPlan());
@@ -208,7 +209,7 @@ const UI = {
   },
   waveTitle() { document.querySelectorAll('.logo span').forEach((sp, j) => { const t = sp.textContent; sp.innerHTML = [...t].map((ch, i) => `<i style="animation-delay:${(i * 0.08 + j * 0.3).toFixed(2)}s">${ch === ' ' ? '&nbsp;' : ch}</i>`).join(''); }); },
   syncTogs() { document.querySelectorAll('.tog').forEach(b => b.classList.toggle('off', !AU.set[b.dataset.k])); this.paintEasy($('bEasy')); this.paintEasy($('pEasy')); },
-  openTitle() { G.mode = 'menu'; this.show('sTitle'); AU.play('menu'); },
+  openTitle() { G.mode = 'menu'; this.show('sTitle'); AU.play('menu'); $('bSquish').textContent = '🧸 Mes squishies (' + SqCol.count() + '/' + SQUISHIES.length + ')'; },
   // ---------- liste des persos ----------
   openChars(back) {
     this.charsBack = back || 'title'; this.show('sChars');
@@ -349,7 +350,7 @@ const UI = {
     $('inMission').innerHTML = '<b style="color:var(--yel)">Ta mission :</b> faire tes <b>3 tâches</b>, puis trouver <b>UNE</b> des 3 sorties secrètes.';
     portrait($('inProf'), pr.cfg, pr.v, 1);
     $('inHints').innerHTML = ''; $('inHints').dataset.title = '🚪 Les 3 sorties secrètes'; L.hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
-    const extra = ['📋 D’abord, fais tes <b>3 tâches rigolotes</b> (cercles jaunes ⭐ sur la carte), puis file vers une sortie !', '🥸 Un <b>déguisement</b> est caché dans certains meubles : fouille !'];
+    const extra = ['📋 D’abord, fais tes <b>3 tâches rigolotes</b> (cercles jaunes ⭐ sur la carte), puis file vers une sortie !', '🥸 Un <b>déguisement</b> est caché dans certains meubles : fouille !', '🧸 Un <b>squishy</b> est caché dans le niveau : si le prof t’attrape, il explose à sa figure et l’aveugle 10 s !'];
     if (pr.tires) extra.push('💨 Il court vite… mais il s’essouffle !');
     if (pr.chatty) extra.push('🗣️ Elle parle tout le temps : écoute où elle est !');
     if (pr.hasKeys) extra.push('🔑 Elle a TOUTES les clés et connaît les petites cachettes.');
@@ -380,7 +381,8 @@ const UI = {
       '🗺️ Un plan d’évacuation affiché dans un couloir montre où sont les profs.',
       '🔥 L’alarme incendie vide les étages… mais il y aura un appel dans la cour !',
       '🇬🇧 Au 2e, Miss Teacup ne t’envoie pas en colle : elle te fait une leçon d’anglais ! Bonne réponse = un objet magique en cadeau.',
-      '🦴 Au 1er, M. Silex fait passer une interro d’histoire : bonne réponse = un animal de compagnie qui fait fuir les profs !'];
+      '🦴 Au 1er, M. Silex fait passer une interro d’histoire : bonne réponse = un animal de compagnie qui fait fuir les profs !',
+      '🧸 Un squishy à collectionner est caché à chaque étage : si un prof t’attrape, SPLOTCH ! Il l’aveugle 10 s.'];
     $('inHints').innerHTML = ''; $('inHints').dataset.title = '💡 Comment jouer'; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     $('inTips').innerHTML = '🎲 Le collège est différent à chaque partie.<br>👆 Un peu = marcher sans bruit · à fond = courir (ça s’entend !).';
     G.mode = 'intro'; this.show('sIntro'); this.hudSig = null; this.invSig = null; this.infSig = null; $('bGo').textContent = 'C’est parti !'; $('bGo').disabled = false;
@@ -501,13 +503,13 @@ const UI = {
         b.innerHTML = `<span class="ai">${a.icon}</span>${esc(a.label)}${a.sub ? `<span class="as">${esc(a.sub)}</span>` : ''}${a.progress != null ? `<span class="pg" style="width:${Math.round(a.progress * 100)}%"></span>` : ''}`;
       });
     }
-    const isig = P.inv.join(',');
+    const isig = P.inv.join(',') + '|' + (P.sqIds || []).join(',');
     if (isig !== this.invSig) {
       this.invSig = isig; const inv = $('inv'); inv.innerHTML = '';
       for (let i = 0; i < 3; i++) {
         const k = P.inv[i]; if (!k) continue;   // pas de cases vides : moins d'encombrement
         const b = document.createElement('button'); b.className = 'slot'; b.dataset.i = i;
-        if (k) { const cv = document.createElement('canvas'); cv.width = 14; cv.height = 14; cv.getContext('2d').drawImage(itemCanvas(k), 0, 0); b.appendChild(cv); const s = document.createElement('span'); s.textContent = ITEMS[k].short; b.appendChild(s); b.setAttribute('aria-label', ITEMS[k].n); }
+        if (k) { const cv = document.createElement('canvas'); cv.width = 14; cv.height = 14; cv.getContext('2d').drawImage(k === 'squishy' ? squishyCanvas(squishyAt(P, i)) : itemCanvas(k), 0, 0); b.appendChild(cv); const s = document.createElement('span'); s.textContent = ITEMS[k].short; b.appendChild(s); b.setAttribute('aria-label', ITEMS[k].n); }
         inv.appendChild(b);
       }
     }
@@ -541,6 +543,7 @@ const UI = {
       case 'eat': s = '🍎 Miam, une pomme !'; cls = 'cool'; break;
       case 'sleep': s = '💤 Dodo !'; cls = 'cool'; break;
       case 'caught': s = '😱 Oh non !'; cls = 'alarm'; break;
+      case 'blind': s = '🙈 Aveuglé par le squishy !'; cls = 'cool'; break;
     }
     st.textContent = s; st.className = 'chip ' + cls;
     const t = G.net ? Math.max(0, Net.timeLeft) : G.time, ht = $('hTime');

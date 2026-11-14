@@ -296,6 +296,25 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
 #bInPrev{flex:none;width:58px;padding-left:0;padding-right:0}
 #bInNext,#bGo{flex:1}
 .inNav .hidden{display:none!important}
+
+/* collection de squishies */
+.sqBtn{background:#ffb3d6}
+.sqHead{display:flex;align-items:center;gap:10px;font-family:'Press Start 2P',ui-monospace,monospace;font-size:12px;color:#ffe0ef}
+.sqProg{flex:1;height:12px;border:2px solid var(--ink);border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden}
+.sqProg i{display:block;height:100%;background:linear-gradient(90deg,#ff9fd8,#ffd23f);width:0}
+.sqLegend{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;font-family:'Press Start 2P',ui-monospace,monospace;font-size:7px}
+.sqLegend span{padding:4px 6px;border-radius:5px;border:2px solid currentColor}
+.sqLegend .r0,.sqCard.r0{color:#c9c2e6}.sqLegend .r1,.sqCard.r1{color:#5fb8ff}.sqLegend .r2,.sqCard.r2{color:#c77dff}.sqLegend .r3,.sqCard.r3{color:#ffd23f}
+.sqInfo{min-height:24px;text-align:center;font-size:19px;line-height:1.1;color:#e6e0ff}
+.sqGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sqCard{position:relative;border:3px solid currentColor;border-radius:10px;background:rgba(255,255,255,.06);padding:6px 2px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:0 3px 0 var(--ink)}
+.sqCard canvas{width:56px;height:56px;image-rendering:pixelated}
+.sqCard .nm{font-family:'VT323',ui-monospace,monospace;font-size:14px;line-height:1;color:#fff;text-align:center;min-height:28px;display:flex;align-items:center}
+.sqCard .nb{position:absolute;top:2px;right:4px;font-family:'Press Start 2P',ui-monospace,monospace;font-size:7px;color:#fff}
+.sqCard.unk{background:rgba(0,0,0,.25);border-style:dashed}
+.sqCard.unk .nm{color:#8a80b0}
+.sqCard.r3:not(.unk){animation:sqShine 1.6s ease-in-out infinite}
+@keyframes sqShine{0%,100%{box-shadow:0 3px 0 var(--ink),0 0 0 rgba(255,210,63,0)}50%{box-shadow:0 3px 0 var(--ink),0 0 14px rgba(255,210,63,.8)}}
 </style>
 </head>
 <body>
@@ -362,6 +381,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <button class="btn orange" id="bInf">🕵️ Mode infiltration</button>
       <button class="btn pink" id="bMulti">👥 À deux en ligne</button>
       <button class="btn cyan" id="bChars">👕 Mes personnages</button>
+      <button class="btn sqBtn" id="bSquish">🧸 Mes squishies</button>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
       <div class="panel howto">
@@ -370,7 +390,8 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
         🙈 Cache-toi sous les bureaux, dans les armoires, derrière les portes…<br>
         👣 Les <b>traces orange</b> et les « CLAC ! » te montrent où le prof fait du bruit.<br>
         🔒 Ferme des portes à clé : le prof devra aller chercher ses clés !<br>
-        ✨ Ramasse les objets magiques des contes (gâteau, lampe, pomme…).
+        ✨ Ramasse les objets magiques des contes (gâteau, lampe, pomme…).<br>
+        🧸 Trouve les <b>squishies</b> : si un prof t’attrape, SPLOTCH ! Seconde chance. Collectionne les 40 !
       </div>
       <div class="tiny">Musique 🎵 · Bruitages 🔊 · Voix des profs 🗣️ · Effet télé 📺 (tape pour couper)</div>
     </div>
@@ -420,6 +441,19 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <button class="procTog" id="bProc"></button>
       <div id="lvlList" style="display:flex;flex-direction:column;gap:12px"></div>
       <button class="btn ghost" id="bLvlBack">◀ Accueil</button>
+    </div>
+  </div>
+
+  <!-- Collection de squishies -->
+  <div id="sSquish" class="screen hidden">
+    <div class="wrap">
+      <h2 class="px" style="text-align:center;color:#ff9fd8">🧸 Mes squishies</h2>
+      <div class="sqHead"><span id="sqCount">0 / 40</span><div class="sqProg"><i id="sqBar"></i></div></div>
+      <div class="sqLegend"><span class="r0">Commun</span><span class="r1">Rare</span><span class="r2">Super rare</span><span class="r3">Légendaire</span></div>
+      <div class="sqInfo" id="sqInfo"></div>
+      <div class="sqGrid" id="sqGrid"></div>
+      <div class="tiny" style="text-align:center">Un squishy t’attend dans chaque niveau (et à chaque étage en infiltration). Si un prof t’attrape, il explose à sa figure : c’est ta seconde chance !</div>
+      <button class="btn ghost" id="bSqBack">◀ Retour</button>
     </div>
   </div>
 

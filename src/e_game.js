@@ -164,7 +164,7 @@ function startLevel(idx, cfg, setup, opts) {
 }
 function spawnItems() {
   const L = G.L, spots = shuffle(L.itemSpots.slice());
-  const kinds = ['cake'].concat(shuffle(ITEM_KEYS.filter(k => k !== 'cake')).slice(0, 3));
+  const kinds = ['cake', 'squishy'].concat(shuffle(ITEM_KEYS.filter(k => k !== 'cake' && k !== 'squishy')).slice(0, 2));   // un squishy à collectionner par niveau
   const chosen = [];
   for (const s of spots) { if (chosen.length >= kinds.length) break; if (chosen.every(c => Math.abs(c[0] - s[0]) + Math.abs(c[1] - s[1]) >= 8)) chosen.push(s); }
   G.items = chosen.map((s, i) => ({ id: i, x: s[0] * 16 + 8, y: s[1] * 16 + 12, kind: kinds[i], ph: Math.random() * 6 }));
@@ -251,7 +251,7 @@ function npcChatter(dt) {
 function perceive(dt) {
   const T = G.T, P = G.P, pr = T.prof;
   let sees = false;
-  if (T.gone || ['sleep', 'eat', 'caught', 'count', 'evac', 'gone'].includes(T.state)) { T.seeNow = false; T.detect = 0; return false; }
+  if (T.gone || ['sleep', 'eat', 'caught', 'count', 'evac', 'gone', 'blind'].includes(T.state)) { T.seeNow = false; T.detect = 0; return false; }
   if (!P.hidden && G.mode === 'play') {
     const ex = T.x, ey = T.y - 12, px = P.x, py = P.y - (P.small > 0 ? 3 : 7);
     const d = Math.hypot(px - ex, py - ey), range = pr.range * 16 * (P.small > 0 ? 0.55 : 1);
@@ -323,6 +323,8 @@ function updateTeacher(dt) {
   if (T.state === 'release') { T.st -= dt; T.moving = false; if (T.st <= 0) { T.state = 'patrol'; T.path = null; T.detect = 0; } return; }
   // un compagnon lui a sauté dessus : il s'enfuit
   if (T.state === 'scared') { teacherScared(T, dt); return; }
+  // un squishy lui a explosé à la figure : il ne voit plus rien
+  if (T.state === 'blind') { teacherBlind(T, dt); return; }
   if (T.state === 'count') {
     T.st -= dt; T.moving = false;
     const n = 3 - Math.ceil(T.st - 0.3);
@@ -689,8 +691,9 @@ function updatePlayer(dt) {
     if (dist(it.x, it.y, P.x, P.y) < 11) {
       if (it.kind === 'key') { P.keys = (P.keys || 0) + 1; G.items.splice(i, 1); if (G.net) Net.send({ t: 'item', id: it.id }); AU.sfx('keys'); sparkle(it.x, it.y - 6, 14); hop(P, 110); toast('🗝️ Une petite clé ! Elle ouvre une porte fermée à clé.', 2.6); UI.hudSig = null; continue; }
       if (P.inv.length >= 3) { if (G.msgCD <= 0) { toast('Ton sac est plein ! (3 objets max)', 1.6); G.msgCD = 2.5; } continue; }
-      P.inv.push(it.kind); G.items.splice(i, 1); if (G.net) Net.send({ t: 'item', id: it.id }); AU.sfx('pickup'); sparkle(it.x, it.y - 6, 12); hop(P, 110); FX.flyers.push({ kind: it.kind, slot: P.inv.length - 1, wx: it.x, wy: it.y - 10, t: 0 });
-      toast('✨ ' + ITEMS[it.kind].n + ' : ' + ITEMS[it.kind].d, 3.2);
+      P.inv.push(it.kind); G.items.splice(i, 1); if (G.net) Net.send({ t: 'item', id: it.id }); AU.sfx('pickup'); sparkle(it.x, it.y - 6, 12); hop(P, 110);
+      const sid = it.kind === 'squishy' ? squishyGot(P) : null; FX.flyers.push({ kind: it.kind, sid, slot: P.inv.length - 1, wx: it.x, wy: it.y - 10, t: 0 });
+      if (sid == null) toast('✨ ' + ITEMS[it.kind].n + ' : ' + ITEMS[it.kind].d, 3.2);
     }
   }
   // trou de souris
@@ -825,7 +828,7 @@ function doAction(a) {
             else { G.disguiseAt.delete(key); P.inv.push('disguise'); AU.sfx('pickup'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 16); hop(P, 100); FX.flyers.push({ kind: 'disguise', slot: P.inv.length - 1, wx: a.tx * 16 + 8, wy: a.ty * 16, t: 0 }); toast('🥸 Un déguisement ! ' + ITEMS.disguise.d, 3.4); }
           } else if (Math.random() < 0.18 && G.found < 2 && P.inv.length < 3) {
             G.found++; const kd = pick(ITEM_KEYS); P.inv.push(kd); AU.sfx('pickup'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 12);
-            toast('😮 Tu trouves : ' + ITEMS[kd].n + ' ! ' + ITEMS[kd].d, 3.2);
+            if (kd === 'squishy') squishyGot(P); else toast('😮 Tu trouves : ' + ITEMS[kd].n + ' ! ' + ITEMS[kd].d, 3.2);
           } else { AU.sfx('fail'); toast(pick(SEARCH_MSG) + (ex ? ' Pas de passage ici…' : ''), 1.8); }
         }
       };
@@ -885,6 +888,7 @@ function useItem(i) {
       break;
     }
     case 'mirror': G.reveal = 8; FX.flash = 0.7; FX.flashCol = '220,240,255'; AU.sfx('magic'); toast('🪞 Miroir, gentil miroir : montre-moi le prof… et les sorties !', 2.4); break;
+    case 'squishy': { const q = SQUISHIES[squishyAt(P, i)] || SQUISHIES[0]; toast('🧸 « ' + q.n + ' » (' + SQ_RARITY[q.r].n.toLowerCase() + ') : il sort tout seul si un prof t’attrape !', 2.4); used = false; break; }
     case 'watch': G.slowT = 8; if (G.net) Net.send({ t: 'slow', d: 8 }); FX.flash = 0.6; FX.flashCol = '140,190,255'; AU.sfx('slow'); toast('⏱️ Tic… tac… Le prof est au ralenti !', 2); break;
   }
   if (used) P.inv.splice(i, 1);
@@ -902,6 +906,8 @@ function caught(reason, fromNet) {
   if (G.mode !== 'play') return;
   if (G.inf && G.inf.coop && !fromNet) { coopCaught(G.P, reason); return; }
   const P = G.P, T = G.T;
+  // un squishy dans le sac : seconde chance, il explose à la figure du prof
+  if (!G.net && squishyCount(P) > 0 && squishySave(T, P)) return;
   // le compagnon fait fuir le prof (3 fois)
   if (!G.net && P.pet && P.pet.charges > 0 && P.pet.leaveT == null) { petScare(T, P); return; }
   // Miss Teacup / M. Silex : une leçon au lieu de l'heure de colle (3 fois maximum)
@@ -935,7 +941,7 @@ function update(dt) {
     if (AU.songName === 'chase' && G.T.state !== 'chase' && !['tired'].includes(G.T.state)) AU.play('sneak');
     if (AU.songName == null || AU.songName === 'menu') AU.play('sneak');
     }
-    if (G.mode === 'play') npcChatter(dt);
+    if (G.mode === 'play') { npcChatter(dt); cuteTick(dt); }
   } else if (G.mode === 'escape') {
     G.escT += dt; const P = G.P, t = Math.min(1, G.escT / 0.8);
     const ex0 = P.x, ey0 = P.y; P.x = lerp(G.escFrom[0], G.escTo[0], t); P.y = lerp(G.escFrom[1], G.escTo[1], t); P.moving = t < 1; P.running = true; P.dist = (P.dist || 0) + Math.hypot(P.x - ex0, P.y - ey0) + dt * 30; P.skidT = 0;
@@ -972,14 +978,14 @@ function update(dt) {
     const T = G.T;
     if (G.net && G.net.role === 'teacher') {
       const pr = T.prof, R = Math.max(7.5, pr.range) * 16, fov = Math.max(1.0, pr.fov);
-      G.eye = [T.x, sightY(T.x, T.y - 12)]; G.visR = T.state === 'count' ? 0 : R; G.tVis = true; G.visCone = false;
+      const blind = isBlind(T); G.eye = [T.x, sightY(T.x, T.y - 12)]; G.visR = T.state === 'count' || blind ? 0 : R; G.tVis = true; G.visCone = false;
       let vis = false;
-      if (!P.hidden && T.state !== 'count') {
+      if (!P.hidden && T.state !== 'count' && !blind) {
         const px = P.x, py = P.y - (P.small > 0 ? 3 : 7), d = Math.hypot(px - G.eye[0], py - G.eye[1]);
         if (d < R * (P.small > 0 ? 0.6 : 1)) { let inC = d < 28; if (!inC) inC = Math.abs(angDiff(Math.atan2(py - G.eye[1], px - G.eye[0]), T.ang)) < fov; if (inC && los(G.eye[0], G.eye[1], px, py)) vis = true; }
       }
       G.pVis = vis || (G.mode !== 'play' && G.mode !== 'paused');
-      G.kids.forEach(k => { const d = Math.hypot(k.x - G.eye[0], k.y - 10 - G.eye[1]); let v = false; if (T.state !== 'count' && d < R) { let inC = d < 28; if (!inC) inC = Math.abs(angDiff(Math.atan2(k.y - 10 - G.eye[1], k.x - G.eye[0]), T.ang)) < fov; v = inC && los(G.eye[0], G.eye[1], k.x, k.y - 10); } k.vis = v; });
+      G.kids.forEach(k => { const d = Math.hypot(k.x - G.eye[0], k.y - 10 - G.eye[1]); let v = false; if (T.state !== 'count' && !blind && d < R) { let inC = d < 28; if (!inC) inC = Math.abs(angDiff(Math.atan2(k.y - 10 - G.eye[1], k.x - G.eye[0]), T.ang)) < fov; v = inC && los(G.eye[0], G.eye[1], k.x, k.y - 10); } k.vis = v; });
     } else {
     G.pVis = true;
     if (P.hidden) {

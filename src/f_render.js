@@ -174,6 +174,7 @@ function drawParts(c) {
       case 'junk': { c.save(); c.translate(x, y); c.rotate(p.t * 10); c.fillRect(-1.5, -1, 3, 2); c.restore(); break; }
       case 'feather': { c.save(); c.translate(x, y); c.rotate(Math.sin(p.t * 6) * 0.8); c.fillRect(-1.5, -0.5, 3, 1); c.restore(); break; }
       case 'crumb': c.fillRect(x, y, 1, 1); break;
+      case 'heart': c.fillRect(x - 2, y - 1, 2, 1); c.fillRect(x + 1, y - 1, 2, 1); c.fillRect(x - 2, y, 5, 1); c.fillRect(x - 1, y + 1, 3, 1); c.fillRect(x, y + 2, 1, 1); break;
       case 'streak': { c.save(); c.translate(x, y); c.rotate(Math.atan2(p.vy, p.vx)); c.fillRect(-4 * a, -0.35, 8 * a, 0.7); c.restore(); break; }
       default: c.fillRect(x, y, p.size, p.size);
     }
@@ -329,7 +330,7 @@ function renderGame(dt) {
   if (G.inf) drawStairsMarks(ctx);
   // 3) cône de vision, poussières
   const showT = G.tVis || G.mode === 'caught';
-  if (showT && !T.gone && !['sleep', 'caught', 'count', 'evac'].includes(T.state)) drawCone(ctx);
+  if (showT && !T.gone && !['sleep', 'caught', 'count', 'evac'].includes(T.state) && !isBlind(T)) drawCone(ctx);
   G.kids.forEach(k => { if (k.vis && k.isWatcher && !k.gone && k.state !== 'evac') { ctx.globalAlpha = 0.75; drawCone(ctx, k); ctx.globalAlpha = 1; } });
   if (!G.L.outdoor) { for (const mo of FX.motes) { const a = Math.sin(mo.t / mo.life * Math.PI) * (0.35 + 0.25 * Math.sin(G.time * 3 + mo.ph)); ctx.fillStyle = `rgba(255,240,200,${a})`; ctx.fillRect(mo.x, mo.y, 0.8, 0.8); } }
   // 4) entités triées par profondeur
@@ -387,7 +388,7 @@ function renderGame(dt) {
   if (P.hidden && viewerA() === P) drawEyes(ctx, P.hidden);
   if (G.inf && G.inf.guard) { const Q2 = G.T2; if (Q2 && Q2.fl === G.inf.cur && Q2.x > -9000) { txt(ctx, Q2.prof.name, Q2.x, Q2.y - 44, 6, '#7ff0ff'); if (Q2.bubble) txt(ctx, Q2.bubble.text, Q2.x, Q2.y - 52, 6, '#ffffff'); } G.inf.fugs.forEach(f => { if (f.vis && f.bub) txt(ctx, f.bub.text, f.x, f.y - 30, 6, '#ffe6a0'); }); }
   if (Q && G.inf && G.inf.coop && !Q.out && Q.x > -9000) { const hs = Q.hidden; if (hs) txt(ctx, '🫣', hs.x * 16 + 8, hs.y * 16 - 6 + Math.sin(G.time * 4) * 1.5, 9, '#fff'); else txt(ctx, (Q.jail ? '🔒 ' : '') + (Q.cfg.name || ''), Q.x, Q.y - (Q.small > 0 ? 22 : 36), 6, '#7ff0ff'); }
-  drawParts(ctx);
+  drawParts(ctx); drawSquishFly(ctx);
   // feuilles qui tombent
   for (const l of FX.leaves) { ctx.globalAlpha = l.rest > 0 ? Math.max(0, 1 - l.rest / 3) : 1; ctx.fillStyle = l.col; ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.rest > 0 ? 0.4 : Math.sin(l.t * 4 + l.ph) * 0.9); ctx.fillRect(-1.5, -0.6, 3, 1.3); ctx.restore(); }
   ctx.globalAlpha = 1;
@@ -427,7 +428,9 @@ function drawTeacher(c, T, extra) {
   if (T.state === 'tired') { o.sy = (o.sy || 1) * (0.86 + Math.sin(G.time * 10) * 0.03); o.rot = 0.12 * (T.face === 3 ? -1 : 1); }
   if (T.state === 'check') o.dx = Math.sin(G.time * 30) * 0.8;
   if (T.state === 'count') o.dx = Math.sin(G.time * 20) * 0.3;
+  const bl = isBlind(T); if (bl) { v = Object.assign({}, pr.v, { eyes: 6 }); Object.assign(o, { face: 0, noBlink: true, rot: Math.sin(G.time * 5) * 0.12, hz: Math.abs(Math.sin(G.time * 6)) * 1.2 }); }
   drawSprite(c, pr.cfg, v, T, o);
+  if (bl) drawBlindGoo(c, T);
   if (G.slowT > 0) { c.fillStyle = 'rgba(140,190,255,0.25)'; c.beginPath(); c.ellipse(T.x, T.y - 14, 9, 17, 0, 0, 7); c.fill(); }
 }
 // ---------- Calque écran : textes, bulles, flèches ----------
@@ -626,7 +629,7 @@ function drawOverlay() {
     const r = slot.getBoundingClientRect(), tx = (r.left + r.width / 2) * d, ty = (r.top + r.height / 2) * d;
     if (f.sx == null) { [f.sx, f.sy] = toScreen(f.wx, f.wy); }
     const t = f.t, e = t * t * (3 - 2 * t), x = lerp(f.sx, tx, e), y = lerp(f.sy, ty, e) - Math.sin(Math.PI * t) * 90 * d, s = (1 + Math.sin(Math.PI * t) * 0.8) * 3 * d;
-    c.save(); c.translate(x, y); c.rotate(t * 6.28); c.drawImage(itemCanvas(f.kind), -7 * s, -7 * s, 14 * s, 14 * s); c.restore();
+    c.save(); c.translate(x, y); c.rotate(t * 6.28); c.drawImage(f.kind === 'squishy' && f.sid != null ? squishyCanvas(f.sid) : itemCanvas(f.kind), -7 * s, -7 * s, 14 * s, 14 * s); c.restore();
     c.fillStyle = 'rgba(255,246,160,0.8)'; for (let i = 1; i < 4; i++) { const tt = Math.max(0, t - i * 0.06), ee = tt * tt * (3 - 2 * tt); c.fillRect(lerp(f.sx, tx, ee) - 2 * d, lerp(f.sy, ty, ee) - Math.sin(Math.PI * tt) * 90 * d - 2 * d, 4 * d / i, 4 * d / i); }
   });
 }

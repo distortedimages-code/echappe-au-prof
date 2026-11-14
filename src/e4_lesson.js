@@ -362,7 +362,7 @@ const Lesson = {
     const P = G.P, hist = !!this.q.hist; let lost = [], gift = null, pet = null;
     if (!r.ok) { lost = (P.inv || []).filter(k => k !== 'key'); P.inv = (P.inv || []).filter(k => k === 'key'); }
     else if (hist) pet = petGive(P);
-    else if ((P.inv || []).length < 3) { gift = pick(ITEM_KEYS); P.inv.push(gift); }
+    else if ((P.inv || []).length < 3) { gift = pick(ITEM_KEYS); P.inv.push(gift); if (gift === 'squishy') squishyGot(P, true); }
     UI.invSig = null; r.lost = lost; r.gift = gift; r.pet = pet;
     const good = r.ok && !r.typos.length;
     $('lsVerdict').className = 'lsVerdict ' + (r.ok ? 'ok' : 'ko');
