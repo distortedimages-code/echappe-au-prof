@@ -51,7 +51,7 @@ const TaskUI = {
     $('tkTitle').textContent = d.icon + ' ' + d.name; $('tkHint').textContent = d.hint;
     const dpr = Math.min(2, window.devicePixelRatio || 1); this.cv.width = this.W * dpr; this.cv.height = this.H * dpr; this.cx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.st = task.st || this.setup(d); task.st = null; this.st.pops = []; if (this.st.grab) this.st.grab = null; if (this.st.holding) this.st.holding = false; this.noiseT = 0.6; $('tkWarn').classList.add('hidden');
-    $('sTask').classList.remove('hidden'); G.P.taskOpen = task; AU.sfx('blip');
+    $('sTask').classList.remove('hidden'); Input.reset(); G.P.taskOpen = task; AU.sfx('blip');
   },
   close() { $('sTask').classList.add('hidden'); if (G.P) G.P.taskOpen = null; if (this.task && this.st && !this.st.won) this.task.st = this.st; this.task = null; this.st = null; this.ptr = null; },
   setup(d) {

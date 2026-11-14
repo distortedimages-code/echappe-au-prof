@@ -1,6 +1,12 @@
 // ================= ENTRÉES (joystick + clavier) =================
 const Input = {
-  jx: 0, jy: 0, mag: 0, pid: null, ox: 0, oy: 0, keys: {}, used: false,
+  jx: 0, jy: 0, mag: 0, pid: null, ox: 0, oy: 0, keys: {}, used: false, pending: null, el: null, joyEl: null,
+  // relâche le joystick (doigt perdu, écran qui change, appli en arrière-plan…)
+  reset() {
+    if (this.pid !== null && this.el) { try { this.el.releasePointerCapture(this.pid); } catch (er) { } }
+    this.pid = null; this.pending = null; this.mag = 0; this.jx = this.jy = 0;
+    if (this.joyEl) this.joyEl.classList.add('hidden');
+  },
   get() {
     let x = 0, y = 0; const k = this.keys;
     if (k.ArrowLeft || k.KeyA || k.KeyQ) x -= 1; if (k.ArrowRight || k.KeyD) x += 1;
@@ -10,7 +16,7 @@ const Input = {
   },
   init() {
     const t = document.getElementById('touch'), joy = document.getElementById('joy'), knob = document.getElementById('joyKnob'), lbl = document.getElementById('joyLbl');
-    const R = 58;
+    const R = 58; this.el = t; this.joyEl = joy;
     const upd = (cx, cy) => {
       let dx = cx - this.ox, dy = cy - this.oy; const d = Math.hypot(dx, dy);
       if (d > R) { this.ox += dx / d * (d - R); this.oy += dy / d * (d - R); joy.style.left = this.ox + 'px'; joy.style.top = this.oy + 'px'; dx = cx - this.ox; dy = cy - this.oy; }
@@ -19,17 +25,35 @@ const Input = {
       lbl.textContent = this.mag > 0.62 ? 'COURSE !' : this.mag > 0.08 ? 'chut…' : '';
       lbl.style.color = this.mag > 0.62 ? '#ff8a96' : '#b8f0a8';
     };
+    const begin = (id, x, y) => {
+      this.pid = id; this.pending = null; this.ox = x; this.oy = y; this.mag = 0; this.jx = this.jy = 0;
+      joy.style.left = this.ox + 'px'; joy.style.top = this.oy + 'px'; joy.classList.remove('hidden'); knob.style.transform = 'translate(0,0)'; lbl.textContent = '';
+      try { t.setPointerCapture(id); } catch (er) { }
+    };
     t.addEventListener('pointerdown', e => {
-      if (this.pid !== null) return; AU.init();
-      this.pid = e.pointerId; this.ox = e.clientX; this.oy = e.clientY;
-      joy.style.left = this.ox + 'px'; joy.style.top = this.oy + 'px'; joy.classList.remove('hidden'); knob.style.transform = 'translate(0,0)';
-      try { t.setPointerCapture(e.pointerId); } catch (er) { }
+      AU.init(); e.preventDefault();
+      if (this.pid !== null) {
+        // un doigt est déjà sur le joystick… sauf si son « lâcher » s'est perdu (geste système, écran qui a changé…)
+        if (e.pointerType === 'touch' && e.pointerId !== this.pid) { this.pending = { id: e.pointerId, x: e.clientX, y: e.clientY }; return; }
+        this.reset();
+      }
+      begin(e.pointerId, e.clientX, e.clientY);
       if (!this.used) { this.used = true; const h = document.getElementById('hint'); h.style.opacity = 0; setTimeout(() => h.classList.add('hidden'), 500); }
-      e.preventDefault();
     });
-    t.addEventListener('pointermove', e => { if (e.pointerId !== this.pid) return; upd(e.clientX, e.clientY); e.preventDefault(); });
-    const end = e => { if (e.pointerId !== this.pid) return; this.pid = null; this.mag = 0; this.jx = this.jy = 0; joy.classList.add('hidden'); };
+    const move = e => { if (e.pointerId === this.pid) { upd(e.clientX, e.clientY); e.preventDefault(); } else if (this.pending && e.pointerId === this.pending.id) { this.pending.x = e.clientX; this.pending.y = e.clientY; } };
+    t.addEventListener('pointermove', move);
+    const end = e => { if (this.pending && e.pointerId === this.pending.id) this.pending = null; if (e.pointerId !== this.pid) return; this.reset(); };
     t.addEventListener('pointerup', end); t.addEventListener('pointercancel', end); t.addEventListener('lostpointercapture', end);
+    // filets de sécurité : les vrais doigts sur l'écran font foi
+    document.addEventListener('pointerup', end, true); document.addEventListener('pointercancel', end, true);
+    document.addEventListener('touchstart', e => {
+      // le seul doigt posé est le nouveau : l'ancien a disparu sans prévenir -> le nouveau prend le joystick
+      if (this.pending && e.touches.length === 1) { const p = this.pending; this.reset(); begin(p.id, p.x, p.y); }
+    }, { capture: true, passive: true });
+    const allUp = e => { if (e.touches.length === 0 && (this.pid !== null || this.pending)) this.reset(); };
+    document.addEventListener('touchend', allUp, { capture: true, passive: true }); document.addEventListener('touchcancel', allUp, { capture: true, passive: true });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { this.reset(); this.keys = {}; } });
+    addEventListener('pagehide', () => { this.reset(); this.keys = {}; });
     addEventListener('keydown', e => {
       if (e.target && e.target.tagName === 'INPUT') return;
       this.keys[e.code] = true;
@@ -42,7 +66,7 @@ const Input = {
       }
     });
     addEventListener('keyup', e => { this.keys[e.code] = false; });
-    addEventListener('blur', () => { this.keys = {}; this.mag = 0; this.jx = this.jy = 0; });
+    addEventListener('blur', () => { this.keys = {}; this.reset(); });
     // pincer pour zoomer : bloqué… sauf si on est déjà zoomé (pour pouvoir dézoomer)
     document.addEventListener('gesturestart', e => { if (!(window.visualViewport && visualViewport.scale > 1.02)) e.preventDefault(); });
     this.antiZoom();
@@ -76,6 +100,7 @@ const UI = {
   save() { store.set('nds_chars', this.chars); store.set('nds_cur', this.cur); store.set('nds_prog', this.prog); },
   cfg() { return this.chars[this.cur] || this.chars[0]; },
   show(id) {
+    Input.reset();
     ['sTitle', 'sChars', 'sCreator', 'sLevels', 'sIntro', 'sPause', 'sResult', 'sMulti'].forEach(s => $(s).classList.toggle('hidden', s !== id));
     $('hud').classList.toggle('hidden', !['play'].includes(id) && !['sIntro', 'sPause', 'sResult'].includes(id));
   },
@@ -281,7 +306,7 @@ const UI = {
   },
   openPlan(f) {
     const I = G.inf; if (!I || !I.plan || G.mode !== 'play') return;
-    AU.sfx('tick'); this.planF = f == null ? I.cur : f; this.planOpen = true; G.overlay = G.net ? null : 'plan'; $('sPlan').classList.remove('hidden');
+    AU.sfx('tick'); Input.reset(); this.planF = f == null ? I.cur : f; this.planOpen = true; G.overlay = G.net ? null : 'plan'; $('sPlan').classList.remove('hidden');
     $('plTabs').innerHTML = I.floors.map(F => `<button data-f="${F.f}" class="${F.f === this.planF ? 'on' : ''}">${F.f === I.cur ? '📍' : ''}${INF_FLOOR_META[F.f].short}</button>`).reverse().join('');
     $('plTabs').querySelectorAll('button').forEach(b => b.onclick = () => this.openPlan(+b.dataset.f));
   },
