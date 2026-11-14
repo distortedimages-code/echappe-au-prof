@@ -159,12 +159,12 @@ function guardCaughtFx(f, how, by) {
   const I = G.inf, mine = by === guardName(G.T);
   if (f.fl === I.cur) { puff(f.x, f.y - 10, 18, '#ffffff'); cue(f.x, f.y - 34, 'word', how === 'found' ? 'TROUVÉ !' : 'ATTRAPÉ !', { col: '#ffd23f', pop: true, life: 1.4 }); }
   AU.sfx('caught', 0.7); G.shake = 0.3; FX.punch(0.12);
-  UI.banner((mine ? '🎉 Bien joué ! ' : '🎉 ' + by + ' a ') + (mine ? 'Un fugueur attrapé' : 'attrapé un fugueur') + ' ! (' + I.caughtN + '/2) — direction la salle de colle !');
+  UI.banner((mine ? '🎉 Bien joué ! ' : '🎉 ' + by + ' a ') + (mine ? 'Un fugueur attrapé' : 'attrapé un fugueur') + ' ! (' + I.caughtN + '/2) Direction : la colle.');
   UI.hudSig = null;
 }
 function guardOutFx(f) {
   const I = G.inf; AU.sfx('fail'); G.shake = 0.2;
-  UI.banner('😱 Un fugueur s’est échappé du collège ! (' + I.outN + ' évadé' + (I.outN > 1 ? 's' : '') + ')'); UI.hudSig = null;
+  UI.banner('😱 Un fugueur s’est fait la malle ! (' + I.outN + ' évadé' + (I.outN > 1 ? 's' : '') + ')'); UI.hudSig = null;
 }
 function guardAlert(text, fl) { Net.send({ t: 'gAlert', text, fl }); guardAlertFx(text, fl); }
 function guardAlertFx(text, fl) { UI.banner(text); AU.sfx('ding', 0.5); const I = G.inf; I.ping = { x: -1, y: -1, fl, t: 0, room: '', who: 'rumeur' }; }

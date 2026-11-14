@@ -190,9 +190,9 @@ function lessonEnd(ok, lost, gift, pet, prof) {
   if (!G.net) G.mode = 'play';
   UI.hudSig = null; UI.invSig = null;
   if (lost && lost.length) toast('🎒 ' + (prof ? prof.name : 'La prof') + ' a confisqué : ' + lost.map(k => ITEMS[k].n).join(', '), 3);
-  if (pet) { UI.banner(pet.e + ' ' + pet.n + ' te suit partout et fera fuir les profs qui t’attrapent (3 fois) !'); sparkle(P.x, P.y - 14, 18); UI.hudSig = null; }
-  if (gift) { toast('🎁 Cadeau de ' + (prof ? prof.name : 'Miss Teacup') + ' : ' + ITEMS[gift].n + ' ! ' + ITEMS[gift].d, 3.4); FX.flyers.push({ kind: gift, slot: P.inv.length - 1, wx: P.x, wy: P.y - 20, t: 0 }); sparkle(P.x, P.y - 14, 14); }
-  if (G.lessons >= LESSON_MAX) setTimeout(() => toast('⚠️ Plus de leçon de rattrapage : la prochaine fois, c’est l’heure de colle !', 3), 1200);
+  if (pet) { UI.banner(pet.e + ' ' + pet.n + ' te protège : 3 profs effrayés offerts !'); sparkle(P.x, P.y - 14, 18); UI.hudSig = null; }
+  if (gift) { toast('🎁 Cadeau de ' + (prof ? prof.name : 'Miss Teacup') + ' : ' + ITEMS[gift].n + ' !', 2.6); FX.flyers.push({ kind: gift, slot: P.inv.length - 1, wx: P.x, wy: P.y - 20, t: 0 }); sparkle(P.x, P.y - 14, 14); }
+  if (G.lessons >= LESSON_MAX) setTimeout(() => toast('⚠️ Fini les leçons. La prochaine fois : colle !', 2.6), 1200);
 }
 
 // ---------- les jours de la semaine (questions fabriquées à la volée) ----------

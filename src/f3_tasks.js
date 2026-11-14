@@ -30,8 +30,8 @@ function completeTask(t) {
   t.done = true; G.tasksDone = G.tasks.filter(x => x.done).length;
   const P = G.P; AU.sfx('found'); confetti(P.x, P.y - 12, 26); hop(P, 100);
   if (G.net) Net.send({ t: 'task', n: G.tasksDone });
-  if (G.tasksDone >= G.tasks.length) { UI.banner('🎉 Toutes les tâches sont faites ! File vers une sortie !'); FX.flash = 0.6; FX.flashCol = '200,255,200'; AU.sfx('win'); }
-  else toast('✅ Tâche réussie ! (' + G.tasksDone + '/' + G.tasks.length + ')', 2);
+  if (G.tasksDone >= G.tasks.length) { UI.banner('🎉 Tâches finies ! Maintenant : la sortie.'); FX.flash = 0.6; FX.flashCol = '200,255,200'; AU.sfx('win'); }
+  else toast('✅ Tâche faite ! (' + G.tasksDone + '/' + G.tasks.length + ')', 2);
 }
 const tasksLeft = () => G.tasks ? G.tasks.filter(t => !t.done).length : 0;
 const TaskUI = {

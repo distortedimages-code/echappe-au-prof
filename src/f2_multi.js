@@ -100,22 +100,22 @@ const Multi = {
     $('inTitle').textContent = role === 'student' ? 'Tu es l’élève !' : 'Tu es ' + pr.name + ' !';
     if (role === 'student') { portrait($('inProf'), st, null, 1); $('inName').textContent = st.name; $('inRole').textContent = 'Le prof (' + pr.name + ') est joué par ' + them + '.'; $('inQuote').textContent = '« Je dois trouver une sortie avant la sonnerie ! »'; }
     else { portrait($('inProf'), pr.cfg, pr.v, 1); $('inName').textContent = pr.name; $('inRole').textContent = 'L’élève, c’est ' + st.name + ' (joué par ' + them + ').'; $('inQuote').textContent = '« ' + st.name + ', je vais t’attraper avant la sonnerie ! »'; }
-    $('inMission').innerHTML = role === 'student' ? '<b style="color:var(--yel)">Ta mission :</b> faire tes <b>3 tâches</b>, puis trouver <b>UNE</b> des 3 sorties secrètes avant la sonnerie.' : '<b style="color:var(--yel)">Ta mission :</b> repérer <b>' + esc(st.name) + '</b> parmi les faux élèves et l’attraper avant la sonnerie.';
-    const hints = role === 'student' ? ['🎭 Nouvelle apparence secrète à chaque manche : le prof ne sait pas à quoi tu ressembles !', '📋 Fais tes 3 tâches rigolotes (cercles jaunes) : sans elles, les sorties restent fermées !', '🤖 Des faux élèves se promènent comme des robots : imite-les (marche, pauses) pour te fondre dans la masse !', '🥸 Un déguisement est caché dans un meuble : fouille, il change ton look pour toute la partie !'].concat(L.hints.slice(0, 2)) : [
-      '🎭 L’élève a un nouveau look secret à chaque manche : fie-toi à sa façon de bouger !',
-      '🤖 Attention : plein de faux élèves ! Ils marchent comme des robots, d’un point à un autre, avec des pauses régulières.',
-      '✋ Approche-toi et appuie sur « Attraper ! ». Si tu te trompes, ta tête tourne 3 secondes.',
-      '📋 L’élève doit faire 3 tâches avant de pouvoir sortir : surveille le compteur !',
-      '🥸 L’élève peut trouver un déguisement… et ressembler à un faux élève !',
-      '👀 Tu ne vois que devant toi (le cône de lumière).',
-      '👣 Les traces orange : l’élève qui court. Les « CLAC ! » : une porte qui s’ouvre.',
-      '🔍 Approche-toi d’une cachette et fouille-la : s’il est dedans, c’est gagné !',
+    $('inMission').innerHTML = role === 'student' ? '<b style="color:var(--yel)">Ta mission :</b> 3 <b>tâches</b>, puis <b>une</b> sortie. Avant la sonnerie. 😏' : '<b style="color:var(--yel)">Ta mission :</b> trouver <b>' + esc(st.name) + '</b> parmi les faux élèves et l’attraper avant la sonnerie.';
+    const hints = role === 'student' ? ['🎭 Look secret à chaque manche. Le prof ne sait pas qui tu es.', '📋 3 tâches (les ⭐ jaunes), sinon sorties fermées.', '🤖 Les faux élèves marchent comme des robots. Imite-les.', '🥸 Un déguisement traîne dans un meuble. Fouille.'].concat(L.hints.slice(0, 2)) : [
+      '🎭 L’élève change de look. Regarde comment il bouge.',
+      '🤖 Les faux élèves marchent comme des robots. Le vrai, non.',
+      '✋ Approche et « Attraper ! ». Si tu te trompes : tête qui tourne.',
+      '📋 Il doit faire 3 tâches avant de sortir. Surveille le compteur.',
+      '🥸 Il peut se déguiser en faux élève. Fourbe.',
+      '👀 Tu ne vois que devant toi.',
+      '👣 Traces orange = il court. « CLAC ! » = une porte.',
+      '🔍 Fouille les cachettes. S’il est dedans : gagné.',
       '🔑 Porte fermée à clé ? Va prendre les clés au tableau à clés.',
       '🔑 Porte fermée ? Va prendre les clés au tableau à clés.'].slice(0, 7);
     $('inHints').innerHTML = ''; $('inHints').dataset.title = '💡 Comment jouer'; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     $('inTips').innerHTML = role === 'student'
-      ? '⏰ Trouve une sortie en moins de 3 minutes !<br>👆 Un peu = marcher sans bruit · à fond = courir (le prof voit tes traces !).'
-      : '⏰ Si la sonnerie sonne (3 minutes), tu gagnes !<br>🙈 Au début, tu fermes les yeux 3 secondes.';
+      ? '⏰ 3 minutes chrono.<br>👆 Un peu = discret · à fond = bruyant (et ça laisse des traces).'
+      : '⏰ Sonnerie (3 min) = tu gagnes.<br>🙈 Au début, tu comptes jusqu’à 3. Pas de triche.';
     $('bGo').textContent = 'Prêt !'; $('bGo').disabled = false;
     G.mode = 'intro'; UI.show('sIntro'); UI.hudSig = null; UI.invSig = null;
     $('toast').classList.add('hidden'); $('banner').classList.add('hidden');
@@ -128,26 +128,26 @@ const Multi = {
     if (role === 'student') {
       portrait($('inProf'), st, null, 1); $('inName').textContent = st.name; $('inRole').textContent = 'Le surveillant est joué par ' + them + '.';
       $('inQuote').textContent = '« Personne ne me reconnaîtra ! »';
-      $('inMission').innerHTML = '<b style="color:var(--yel)">Ta mission :</b> sortir de ta classe du 3e étage et t’échapper par la <b>cour</b> avant la sonnerie (6 min), sans te faire attraper par le surveillant.';
+      $('inMission').innerHTML = '<b style="color:var(--yel)">Ta mission :</b> du 3e jusqu’à la <b>cour</b>, en 6 min. Sans te faire choper. 😏';
     } else {
       portrait($('inProf'), pr.cfg, pr.v, 1); $('inName').textContent = 'Tu es ' + pr.name; $('inRole').textContent = 'L’élève (' + st.name + ') est joué par ' + them + '.';
       $('inQuote').textContent = '« ' + st.name + ' ne sortira pas de ce collège ! »';
-      $('inMission').innerHTML = '<b style="color:var(--yel)">Ta mission :</b> retrouver <b>' + esc(st.name) + '</b> et l’attraper avant la sonnerie (6 min). Tu ne sais pas à quoi il/elle ressemble !';
+      $('inMission').innerHTML = '<b style="color:var(--yel)">Ta mission :</b> attraper <b>' + esc(st.name) + '</b> en 6 min. Sans savoir à quoi il/elle ressemble. Bonne chance.';
     }
     const hints = role === 'student' ? [
-      '🎭 Choisis ton apparence ci-dessous : le surveillant ne la connaît pas.',
-      '🪑 Sors de ta classe quand la maîtresse écrit au tableau.',
-      '🤖 Des élèves circulent dans les couloirs : marche comme eux pour passer inaperçu·e.',
-      '⚠️ Les profs dans les classes t’avertissent… et préviennent le surveillant !',
-      '🔑 Le trousseau (dans le bureau d’un prof) ouvre la grille du 1er et le portail.',
-      '🔥 L’alarme incendie vide les étages… mais il y a un appel dans la cour.'
+      '🎭 Choisis ton look : le surveillant ne le connaît pas.',
+      '🪑 Elle écrit au tableau ? File.',
+      '🤖 Marche comme les autres élèves. Ni vu ni connu.',
+      '⚠️ Les profs en classe te balancent au surveillant.',
+      '🔑 Le trousseau ouvre la grille du 1er et le portail.',
+      '🔥 L’alarme vide les étages. Mais gare à l’appel.'
     ] : [
-      '🚶 Tu commences au 1er étage. Tu peux aller dans tous les couloirs et tous les étages.',
-      '📢 Quand un prof voit un élève hors de sa classe, il te prévient (❗ sur ton écran et sur ton plan).',
-      '🤖 Des élèves circulent dans les couloirs : repère celui qui ne bouge pas comme les autres.',
+      '🚶 Tu commences au 1er. Tous les étages sont à toi.',
+      '📢 Les profs te signalent les élèves hors de classe (❗).',
+      '🤖 Repère celui qui ne marche pas comme les autres.',
       '✋ Approche-toi et appuie sur « Attraper ! ». Si tu te trompes, ta tête tourne 3 secondes.',
-      '🗺️ Tu as le plan du collège dès le début (bouton 🗺️).',
-      '👁️ Regarde par les serrures, fouille les cachettes, et passe la grille avec ton passe.'
+      '🗺️ Tu as le plan dès le début (🗺️).',
+      '👁️ Serrures, cachettes, grille : tu as le passe.'
     ];
     $('inHints').innerHTML = ''; $('inHints').dataset.title = '💡 Comment jouer'; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     if (role === 'student') {
@@ -168,14 +168,14 @@ const Multi = {
     $('inTitle').textContent = 'Rattrapez les fugueurs !';
     portrait($('inProf'), pr.cfg, pr.v, 1); $('inName').textContent = pr.name; $('inRole').textContent = 'Ton coéquipier : ' + guardName(Q) + ' (il commence ' + (Q.fl === 0 ? 'au rez-de-chaussée' : 'au ' + INF_FLOOR_META[Q.fl].name) + ')';
     $('inQuote').textContent = '« Personne ne quitte ce collège sans autorisation ! »';
-    $('inMission').innerHTML = '<b style="color:var(--yel)">Votre mission :</b> deux élèves de la classe de ' + esc(I.maitresseName) + ' (3e étage) vont tenter de s’échapper. Attrapez-les <b>tous les deux</b> avant qu’ils ne sortent du collège (6 min).';
+    $('inMission').innerHTML = '<b style="color:var(--yel)">Votre mission :</b> deux élèves du 3e veulent s’évader. Attrapez-les <b>tous les deux</b> en 6 min.';
     const hints = [
-      '🧒 Les fugueurs ressemblent à tous les autres élèves… sauf qu’ils ne restent pas en classe !',
-      '❗ Quand ils te voient, ils sursautent et filent se cacher : fouille les cachettes (🔍).',
-      '✋ Attention : attraper un élève innocent te donne le tournis 3 secondes.',
-      '🔔 Pour descendre au rez-de-chaussée, ils doivent crocheter la grille du 1er étage : c’est long et ça fait du bruit !',
-      '📢 De temps en temps, quelqu’un les aperçoit : écoute les rumeurs.',
-      '📍 Appelle ton coéquipier et partagez-vous les étages. 🗺️ Le plan montre où il est.'
+      '🧒 Les fugueurs ressemblent aux autres. Sauf qu’ils sèchent.',
+      '❗ Ils te voient ? Ils filent se cacher. Fouille (🔍).',
+      '✋ Attraper un innocent = tournis 3 s. Bien fait.',
+      '🔔 Pour descendre, ils crochètent la grille du 1er. Long et bruyant.',
+      '📢 Écoute les rumeurs : quelqu’un les voit parfois.',
+      '📍 Partagez-vous les étages. 🗺️ montre ton coéquipier.'
     ];
     $('inHints').innerHTML = ''; $('inHints').dataset.title = '💡 Comment jouer'; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     $('inTips').innerHTML = '🎲 Nouveau collège à chaque partie · 🕐 6 minutes<br>👆 Un peu = marcher · à fond = courir.';
@@ -207,15 +207,15 @@ const Multi = {
     $('inTitle').textContent = 'Évasion à deux !';
     portrait($('inProf'), me, null, 1); $('inName').textContent = me.name; $('inRole').textContent = 'Ton équipier : ' + (Q.cfg.name || them) + ' (assis·e à côté de toi)';
     $('inQuote').textContent = '« On sort ensemble… ou pas du tout ! »';
-    $('inMission').innerHTML = '<b style="color:var(--yel)">Votre mission :</b> sortir de la classe de ' + esc(I.maitresseName) + ' (3e étage) et vous échapper du collège <b>tous les deux</b> avant la sonnerie (8 min).'
+    $('inMission').innerHTML = '<b style="color:var(--yel)">Votre mission :</b> vous évader <b>tous les deux</b> du 3e jusqu’à la cour. 8 min. Pas de jaloux.'
       + '<div class="looks"><button class="btn cyan" id="bLook">🎲 Changer d’apparence</button><button class="btn ghost" id="bMine">😀 Mon perso</button></div>';
     const hints = [
-      '⚠️ Les avertissements comptent pour l’équipe : 3, et les profs vous courent après !',
-      '🥁 Diversion : un gros BADABOUM attire les profs… pendant que l’autre file.',
-      '✊ « Toc toc » à une porte : le prof vient ouvrir… cache-toi vite !',
-      '🔒 Attrapé·e ? Direction la salle de colle (1er étage). Ton équipier peut te libérer (sinon 60 s et retour en classe).',
-      '🚧 Le vieux portail de la cour : il faut le pousser à deux ! (le trou du grillage, chacun son tour)',
-      '📍 Appelle ton équipier : il voit où tu es. 🗺️ Le plan montre aussi où il est.'
+      '⚠️ Avertissements partagés : à 3, ça court pour vous deux.',
+      '🥁 BADABOUM attire les profs. Pendant ce temps, l’autre file.',
+      '✊ « Toc toc » : le prof vient ouvrir. Cache-toi vite.',
+      '🔒 Attrapé·e ? Salle de colle (1er). Ton équipier peut te libérer.',
+      '🚧 Le vieux portail se pousse à deux. Le grillage : chacun son tour.',
+      '📍 Appelle ton équipier. 🗺️ montre où il est.'
     ];
     $('inHints').innerHTML = ''; $('inHints').dataset.title = '💡 Comment jouer'; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     $('inTips').innerHTML = '🎲 Nouveau collège à chaque partie · 🕐 8 minutes<br>👆 Un peu = marcher sans bruit · à fond = courir (ça s’entend !).';

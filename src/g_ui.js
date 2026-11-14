@@ -127,10 +127,12 @@ const UI = {
     const tips = $('inTips').innerHTML.split(/<br\s*\/?>/i).map(x => x.trim()).filter(Boolean);
     const groups = [[$('inHints').dataset.title || '💡 Comment jouer', hints, ''], ['🎒 Bon à savoir', tips, 'tip']];
     groups.forEach(([title, list, cls]) => {
-      const nP = Math.ceil(list.length / 3), per = Math.ceil(list.length / Math.max(1, nP));   // pages équilibrées (pas une carte toute seule)
+      const nP = Math.ceil(list.length / 4);   // 4 cartes max, réparties équitablement
+      let at = 0;
       for (let p = 0; p < nP; p++) {
+        const cnt = Math.floor(list.length / nP) + (p < list.length % nP ? 1 : 0);
         const sec = document.createElement('section'); sec.className = 'inPage gen';
-        sec.innerHTML = `<div class="inBody"><h3>${title}${nP > 1 ? ' ' + (p + 1) + '/' + nP : ''}</h3>${list.slice(p * per, p * per + per).map(h => card(h, cls)).join('')}</div>`;
+        sec.innerHTML = `<div class="inBody"><h3>${title}${nP > 1 ? ' ' + (p + 1) + '/' + nP : ''}</h3>${list.slice(at, at + cnt).map(h => card(h, cls)).join('')}</div>`; at += cnt;
         tr.appendChild(sec);
       }
     });
@@ -347,17 +349,17 @@ const UI = {
     $('inTitle').textContent = L.title;
     $('inName').textContent = pr.name; $('inRole').textContent = pr.title.charAt(0).toUpperCase() + pr.title.slice(1);
     $('inQuote').textContent = '« ' + pr.lines.start + ' »';
-    $('inMission').innerHTML = '<b style="color:var(--yel)">Ta mission :</b> faire tes <b>3 tâches</b>, puis trouver <b>UNE</b> des 3 sorties secrètes.';
+    $('inMission').innerHTML = '<b style="color:var(--yel)">Mission :</b> 3 <b>tâches</b> débiles, puis <b>une</b> sortie secrète. Facile. 😏';
     portrait($('inProf'), pr.cfg, pr.v, 1);
     $('inHints').innerHTML = ''; $('inHints').dataset.title = '🚪 Les 3 sorties secrètes'; L.hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
-    const extra = ['📋 D’abord, fais tes <b>3 tâches rigolotes</b> (cercles jaunes ⭐ sur la carte), puis file vers une sortie !', '🥸 Un <b>déguisement</b> est caché dans certains meubles : fouille !', '🧸 Un <b>squishy</b> est caché dans le niveau : si le prof t’attrape, il explose à sa figure et l’aveugle 10 s !'];
-    if (pr.tires) extra.push('💨 Il court vite… mais il s’essouffle !');
-    if (pr.chatty) extra.push('🗣️ Elle parle tout le temps : écoute où elle est !');
-    if (pr.hasKeys) extra.push('🔑 Elle a TOUTES les clés et connaît les petites cachettes.');
-    if (pr.hear > 1.2) extra.push('👂 Très bonne oreille : avance doucement !');
-    if (i === 0) extra.push('🧒 Les autres élèves jouent dans la cour, ils ne te dénonceront pas.');
-    if (G.seed != null) extra.unshift('🎲 <b>Plan surprise</b> : le collège n’est jamais le même ! Les indices des sorties restent vrais.');
-    $('inTips').innerHTML = (extra.length ? extra.join('<br>') + '<br>' : '') + '👆 Un peu = marcher sans bruit · à fond = courir.';
+    const extra = ['📋 Les <b>tâches</b> = les ⭐ jaunes. Ensuite seulement, la sortie.', '🥸 Un <b>déguisement</b> traîne dans un meuble. Fouille.', '🧸 Un <b>squishy</b> est caché : ton joker anti-prof.'];
+    if (pr.tires) extra.push('💨 Rapide… mais vite essoufflé.');
+    if (pr.chatty) extra.push('🗣️ Parle non-stop. Pratique pour la repérer.');
+    if (pr.hasKeys) extra.push('🔑 A TOUTES les clés. Et connaît toutes les cachettes.');
+    if (pr.hear > 1.2) extra.push('👂 Oreille de chauve-souris. Marche doucement.');
+    if (i === 0) extra.push('🧒 Les autres élèves ne balancent pas. Normalement.');
+    if (G.seed != null) extra.unshift('🎲 <b>Plan surprise</b> : collège différent à chaque fois. Les indices restent vrais.');
+    $('inTips').innerHTML = (extra.length ? extra.join('<br>') + '<br>' : '') + '👆 Un peu = discret · à fond = bruyant.';
     G.mode = 'intro'; this.show('sIntro'); this.hudSig = null; this.invSig = null; $('bGo').textContent = 'C’est parti !'; $('bGo').disabled = false;
     $('hint').classList.remove('hidden'); $('hint').style.opacity = 1; Input.used = false;
     $('toast').classList.add('hidden'); $('banner').classList.add('hidden');
@@ -369,22 +371,22 @@ const UI = {
     const I = G.inf;
     $('inNum').textContent = '🕵️ MODE INFILTRATION · 4 ÉTAGES';
     $('inTitle').textContent = 'La grande évasion';
-    $('inName').textContent = I.maitresseName; $('inRole').textContent = 'Ta maîtresse : elle fait des rondes dans la classe';
+    $('inName').textContent = I.maitresseName; $('inRole').textContent = 'Ta maîtresse. Elle a des yeux partout.';
     $('inQuote').textContent = '« Personne ne quitte la classe avant la sonnerie ! »';
-    $('inMission').innerHTML = '<b style="color:var(--yel)">Ta mission :</b> t’échapper du collège ! Tu es au <b>3e étage</b> : descends jusqu’à la <b>cour</b>, puis file par le portail, un trou dans le grillage… ou un passage minuscule.';
+    $('inMission').innerHTML = '<b style="color:var(--yel)">Mission :</b> t’évader. Tu es au <b>3e</b>. Descends jusqu’à la <b>cour</b> et sors. Simple, non ? 😏';
     portrait($('inProf'), I.maitresseCfg || this.cfg(), { adult: true }, 1);
-    const hints = ['⚠️ Si un prof te voit hors de ta classe, il t’avertit. Au bout de 3 avertissements, on te court après !',
-      '🪑 En classe, reste à ta place quand la maîtresse regarde. File quand elle écrit au tableau !',
-      '🪜 Les escaliers sont alternés : à chaque étage, il faut traverser jusqu’à l’autre escalier.',
-      '🔑 Le trousseau du concierge est caché dans le bureau d’un prof. Il ouvre la grille du 1er étage et le portail.',
-      '👁️ Devant une porte fermée, regarde par le trou de la serrure avant d’entrer.',
-      '🗺️ Un plan d’évacuation affiché dans un couloir montre où sont les profs.',
-      '🔥 L’alarme incendie vide les étages… mais il y aura un appel dans la cour !',
-      '🇬🇧 Au 2e, Miss Teacup ne t’envoie pas en colle : elle te fait une leçon d’anglais ! Bonne réponse = un objet magique en cadeau.',
-      '🦴 Au 1er, M. Silex fait passer une interro d’histoire : bonne réponse = un animal de compagnie qui fait fuir les profs !',
-      '🧸 Un squishy à collectionner est caché à chaque étage : si un prof t’attrape, SPLOTCH ! Il l’aveugle 10 s.'];
+    const hints = ['⚠️ Vu hors de classe = avertissement. À 3, ça court.',
+      '🪑 Elle écrit au tableau ? C’est le moment de filer.',
+      '🪜 Escaliers alternés : traverse chaque étage. Merci l’architecte.',
+      '🔑 Le trousseau (bureau d’un prof) ouvre la grille du 1er et le portail.',
+      '👁️ Porte fermée ? Regarde par la serrure d’abord.',
+      '🗺️ Un plan dans un couloir montre où sont les profs.',
+      '🔥 L’alarme vide les étages. Mais gare à l’appel !',
+      '🇬🇧 2e : Miss Teacup donne des leçons d’anglais. Bonne réponse = cadeau.',
+      '🦴 1er : interro d’histoire avec M. Silex. Bonne réponse = un garde du corps à poils.',
+      '🧸 Un squishy par étage. Si on t’attrape : SPLOTCH.'];
     $('inHints').innerHTML = ''; $('inHints').dataset.title = '💡 Comment jouer'; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
-    $('inTips').innerHTML = '🎲 Le collège est différent à chaque partie.<br>👆 Un peu = marcher sans bruit · à fond = courir (ça s’entend !).';
+    $('inTips').innerHTML = '🎲 Collège différent à chaque partie.<br>👆 Un peu = discret · à fond = bruyant.';
     G.mode = 'intro'; this.show('sIntro'); this.hudSig = null; this.invSig = null; this.infSig = null; $('bGo').textContent = 'C’est parti !'; $('bGo').disabled = false;
     $('hint').classList.remove('hidden'); $('hint').style.opacity = 1; Input.used = false;
     $('toast').classList.add('hidden'); $('banner').classList.add('hidden'); $('bPlan').classList.add('hidden'); $('bDiv').classList.add('hidden'); $('bPing').classList.add('hidden');

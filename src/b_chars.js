@@ -363,15 +363,15 @@ function headAccSide(R, acc, H, ac, ad, ex) {
 
 // ================= OBJETS MAGIQUES =================
 const ITEMS = {
-  cake: { n: 'Gâteau « Mange-moi »', d: 'Tu rétrécis ! Passe sous les portes fermées et dans les trous de souris.', short: 'Rétrécir' },
-  lamp: { n: 'Lampe magique', d: 'Pouf ! Le génie t’envoie dans une cachette loin du prof.', short: 'Génie' },
-  slipper: { n: 'Pantoufle de verre', d: 'Cours plus vite et sans aucun bruit pendant 10 s.', short: 'Silence' },
-  apple: { n: 'Pomme dormeuse', d: 'Pose-la par terre : le prof la croque et s’endort.', short: 'Dodo' },
-  mirror: { n: 'Miroir magique', d: 'Montre où est le prof et les sorties pendant 8 s.', short: 'Voir' },
-  watch: { n: 'Montre du Lapin blanc', d: 'Le prof avance au ralenti pendant 8 s.', short: 'Ralenti' },
-  key: { n: 'Petite clé', d: 'Elle ouvre une porte fermée à clé.', short: 'Clé' },
-  squishy: { n: 'Squishy kawaii', d: 'Ta seconde chance : si un prof t’attrape, il sort tout seul… SPLOTCH ! Il explose à sa figure et l’aveugle 10 s.', short: 'Squishy' },
-  disguise: { n: 'Déguisement', d: 'Perruque + fausse moustache : tu changes d’apparence pour toute la partie ! Fais-le quand le prof ne te voit pas.', short: 'Déguise' },
+  cake: { n: 'Gâteau « Mange-moi »', d: 'Rétrécis et passe sous les portes.', short: 'Rétrécir' },
+  lamp: { n: 'Lampe magique', d: 'Le génie te planque loin du prof.', short: 'Génie' },
+  slipper: { n: 'Pantoufle de verre', d: '10 s de course rapide et muette.', short: 'Silence' },
+  apple: { n: 'Pomme dormeuse', d: 'Pose-la : le prof la croque et ronfle.', short: 'Dodo' },
+  mirror: { n: 'Miroir magique', d: 'Révèle le prof et les sorties (8 s).', short: 'Voir' },
+  watch: { n: 'Montre du Lapin blanc', d: 'Prof en mode escargot (8 s).', short: 'Ralenti' },
+  key: { n: 'Petite clé', d: 'Ouvre une porte fermée à clé.', short: 'Clé' },
+  squishy: { n: 'Squishy kawaii', d: 'Si on t’attrape : SPLOTCH ! Le prof voit flou 10 s.', short: 'Squishy' },
+  disguise: { n: 'Déguisement', d: 'Perruque + moustache : nouveau look. (Pas devant le prof.)', short: 'Déguise' },
 };
 const ITEM_KEYS = Object.keys(ITEMS).filter(k => k !== 'disguise' && k !== 'key');
 const ITEM_CACHE = {};

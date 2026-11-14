@@ -622,8 +622,8 @@ function updatePlayer(dt) {
     P.trem = 0;
     if (!P.hidden && dT < 4.5 && danger) { P.trem = 0.5; P.sweatT = (P.sweatT || 0) - dt; if (P.sweatT <= 0) { P.sweatT = 0.45; part(P.x + (Math.random() < 0.5 ? -6 : 6), P.y - 27, 'drop', { vx: rand(-12, 12), vy: -22, g: 160, life: 0.6, col: '#7fd0ff' }); } }
     if (P.hidden && dT < 3 && T.state !== 'sleep') { P.hidden.shake = Math.max(P.hidden.shake || 0, 0.06); P.glupT = (P.glupT || 0) - dt; if (P.glupT <= 0) { P.glupT = rand(2.5, 4); cue(P.hidden.x * 16 + 8, P.hidden.y * 16 - 4, 'word', pick(['glups…', 'gloups', '*tremble*']), { col: '#bfe4ff', small: true, life: 1 }); } } }
-  if (P.small > 0) { const was = P.small; P.small -= dt; if (P.small <= 0) unshrink(); else if (was > 3 && P.small <= 3) toast('⏳ Le gâteau ne fait bientôt plus effet !', 1.6); }
-  if (P.slip > 0) { P.slip -= dt; if (P.slip <= 0) toast('La pantoufle a perdu sa magie.', 1.4); }
+  if (P.small > 0) { const was = P.small; P.small -= dt; if (P.small <= 0) unshrink(); else if (was > 3 && P.small <= 3) toast('⏳ Le gâteau s’épuise…', 1.6); }
+  if (P.slip > 0) { P.slip -= dt; if (P.slip <= 0) toast('Pantoufle : plus de magie.', 1.4); }
   if (P.hidden) {
     P.moving = false; P.running = false;
     if (inp.mag > 0.6) { P.unhideT += dt; if (P.unhideT > 0.18) unhide(); } else P.unhideT = 0;
@@ -689,30 +689,30 @@ function updatePlayer(dt) {
   } else { P.moving = false; P.running = false; P.runT = 0; }
   gaitFx(P, true);
   // petite porte : astuce
-  if (P.small > 0 && !G.smallDoorTip) { const [tx, ty] = tileOf(P); const d = doorAt(tx, ty); if (d && d.locked) { G.smallDoorTip = true; toast('Hihi ! En mini-taille, tu passes sous la porte fermée !', 2); } }
+  if (P.small > 0 && !G.smallDoorTip) { const [tx, ty] = tileOf(P); const d = doorAt(tx, ty); if (d && d.locked) { G.smallDoorTip = true; toast('Mini-toi passe sous les portes. Pratique.', 2); } }
   // ramassage
   for (let i = G.items.length - 1; i >= 0; i--) {
     const it = G.items[i];
     if (dist(it.x, it.y, P.x, P.y) < 11) {
-      if (it.kind === 'key') { P.keys = (P.keys || 0) + 1; G.items.splice(i, 1); if (G.net) Net.send({ t: 'item', id: it.id }); AU.sfx('keys'); sparkle(it.x, it.y - 6, 14); hop(P, 110); toast('🗝️ Une petite clé ! Elle ouvre une porte fermée à clé.', 2.6); UI.hudSig = null; continue; }
-      if (P.inv.length >= 3) { if (G.msgCD <= 0) { toast('Ton sac est plein ! (3 objets max)', 1.6); G.msgCD = 2.5; } continue; }
+      if (it.kind === 'key') { P.keys = (P.keys || 0) + 1; G.items.splice(i, 1); if (G.net) Net.send({ t: 'item', id: it.id }); AU.sfx('keys'); sparkle(it.x, it.y - 6, 14); hop(P, 110); toast('🗝️ Petite clé : une porte fermée de moins !', 2.2); UI.hudSig = null; continue; }
+      if (P.inv.length >= 3) { if (G.msgCD <= 0) { toast('Sac plein ! (3 objets, pas plus)', 1.6); G.msgCD = 2.5; } continue; }
       P.inv.push(it.kind); G.items.splice(i, 1); if (G.net) Net.send({ t: 'item', id: it.id }); AU.sfx('pickup'); sparkle(it.x, it.y - 6, 12); hop(P, 110);
       const sid = it.kind === 'squishy' ? squishyGot(P) : null; FX.flyers.push({ kind: it.kind, sid, slot: P.inv.length - 1, wx: it.x, wy: it.y - 10, t: 0 });
       if (sid == null) toast('✨ ' + ITEMS[it.kind].n + ' : ' + ITEMS[it.kind].d, 3.2);
     }
   }
   // trou de souris
-  if (P.small > 0) { for (const e of G.L.exits) if (e.type === 'small') { if (Math.abs(P.x - (e.x * 16 + 8)) < 13 && Math.abs(P.y - 6 - (e.y * 16 + 8)) < 13) { if (tasksLeft() > 0) { if (G.msgCD <= 0) { G.msgCD = 3; toast('🔒 Finis d’abord tes tâches (' + G.tasksDone + '/' + G.tasks.length + ') !', 2); } } else { escape(e, e.x, e.y); return; } } } }
+  if (P.small > 0) { for (const e of G.L.exits) if (e.type === 'small') { if (Math.abs(P.x - (e.x * 16 + 8)) < 13 && Math.abs(P.y - 6 - (e.y * 16 + 8)) < 13) { if (tasksLeft() > 0) { if (G.msgCD <= 0) { G.msgCD = 3; toast('🔒 Tâches d’abord (' + G.tasksDone + '/' + G.tasks.length + ') !', 2); } } else { escape(e, e.x, e.y); return; } } } }
 }
 function unshrink() {
   const P = G.P; P.small = 0; P.spin = 0.5; AU.sfx('grow'); puff(P.x, P.y - 6, 10);
-  if (P.hidden && P.hidden.small) { const s = P.hidden; P.hidden = null; const st = s.stand[0]; P.x = st[0] * 16 + 8; P.y = st[1] * 16 + 12; toast('POP ! Tu as regrandi… tu ne tiens plus dans ta cachette !', 2); if (G.T.seeNow) G.T.detect = 1; }
+  if (P.hidden && P.hidden.small) { const s = P.hidden; P.hidden = null; const st = s.stand[0]; P.x = st[0] * 16 + 8; P.y = st[1] * 16 + 12; toast('POP ! Trop grand·e pour ta cachette. Oups.', 2); if (G.T.seeNow) G.T.detect = 1; }
   if (!boxFree(P.x, P.y, 5, 6)) {
     const [tx, ty] = tileOf(P); let best = null, bd = 1e9;
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const x = tx + dx, y = ty + dy; if (G.m.get(x, y) === K.FLOOR && boxFree(x * 16 + 8, y * 16 + 12, 5, 6)) { const d = Math.abs(dx) + Math.abs(dy); if (d < bd) { bd = d; best = [x, y]; } } }
     if (best) { P.x = best[0] * 16 + 8; P.y = best[1] * 16 + 12; }
   }
-  toast('Tu as retrouvé ta taille normale.', 1.5);
+  toast('Retour à ta taille normale.', 1.5);
 }
 function hide(spot) {
   const P = G.P, T = G.T;
@@ -801,11 +801,11 @@ function doAction(a) {
   if (G.inf && G.inf.coop && coopDo(a)) return;
   if (G.inf && infDo(a)) return;
   switch (a.id) {
-    case 'gateLocked': AU.sfx('fail'); toast('🔒 Le portail est fermé à clé. Il te faut le trousseau du concierge… ou attendre que les pompiers l’ouvrent 🔥', 3); break;
+    case 'gateLocked': AU.sfx('fail'); toast('🔒 Portail fermé. Trousseau… ou alarme incendie 🔥', 2.6); break;
     case 'unhide': unhide(); break;
     case 'hide': hide(a.spot); break;
     case 'task': TaskUI.open(a.task); break;
-    case 'locked': AU.sfx('fail'); toast('🔒 Il te reste ' + tasksLeft() + ' tâche' + (tasksLeft() > 1 ? 's' : '') + ' avant de pouvoir t’échapper ! (regarde la liste 📋)', 2.6); break;
+    case 'locked': AU.sfx('fail'); toast('🔒 Encore ' + tasksLeft() + ' tâche' + (tasksLeft() > 1 ? 's' : '') + ' 📋. Pas de raccourci !', 2.4); break;
     case 'secretGo': escape(a.ex, a.tx, a.ty); break;
     case 'exit': {
       const ex = a.ex;
@@ -814,7 +814,7 @@ function doAction(a) {
     }
     case 'small':
       if (P.small > 0) escape(a.ex, a.ex.x, a.ex.y);
-      else toast('🐭 Trop petit pour toi… Trouve le gâteau « Mange-moi » pour rétrécir !', 2.6);
+      else toast('🐭 Trop petit. Un gâteau « Mange-moi », peut-être ?', 2.4);
       break;
     case 'search': {
       const key = a.ty * G.m.w + a.tx;
@@ -826,14 +826,14 @@ function doAction(a) {
           if (G.inf && infSearchDesk(a, key)) return;
           if (ex && ex.secret && ex.secret[0] === a.tx && ex.secret[1] === a.ty) {
             ex.revealed = true; AU.sfx('found'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 24);
-            if (tasksLeft() > 0) toast('🎉 ' + ex.reveal + ' Reviens quand tes tâches seront finies !', 3);
+            if (tasksLeft() > 0) toast('🎉 ' + ex.reveal + ' Mais tâches d’abord !', 2.8);
             else { ex.done = true; toast('🎉 ' + ex.reveal, 2.2); setTimeout(() => { if (G.mode === 'play') escape(ex, a.tx, a.ty); }, 700); }
           } else if (G.disguiseAt && G.disguiseAt.has(key)) {
-            if (P.inv.length >= 3) { G.searched.delete(key); toast('🥸 Il y a un déguisement… mais ton sac est plein !', 2.2); }
+            if (P.inv.length >= 3) { G.searched.delete(key); toast('🥸 Un déguisement… et pas de place. Dommage.', 2.2); }
             else { G.disguiseAt.delete(key); P.inv.push('disguise'); AU.sfx('pickup'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 16); hop(P, 100); FX.flyers.push({ kind: 'disguise', slot: P.inv.length - 1, wx: a.tx * 16 + 8, wy: a.ty * 16, t: 0 }); toast('🥸 Un déguisement ! ' + ITEMS.disguise.d, 3.4); }
           } else if (Math.random() < 0.18 && G.found < 2 && P.inv.length < 3) {
             G.found++; const kd = pick(ITEM_KEYS); P.inv.push(kd); AU.sfx('pickup'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 12);
-            if (kd === 'squishy') squishyGot(P); else toast('😮 Tu trouves : ' + ITEMS[kd].n + ' ! ' + ITEMS[kd].d, 3.2);
+            if (kd === 'squishy') squishyGot(P); else toast('😮 Trouvé : ' + ITEMS[kd].n + ' ! ' + ITEMS[kd].d, 3);
           } else { AU.sfx('fail'); toast(pick(SEARCH_MSG) + (ex ? ' Pas de passage ici…' : ''), 1.8); }
         }
       };
@@ -841,7 +841,7 @@ function doAction(a) {
     }
     case 'lock': {
       const d = a.door;
-      P.busy = { label: 'Je ferme à clé…', dur: 0.35, t: 0, done: () => { if (actorInDoor(d)) return; d.locked = true; d.byPlayer = true; d.target = 0; d.closeT = 0; AU.sfx('lock'); makeNoise(d.x * 16 + 8, d.y * 16 + 8, 4, 'CLIC !'); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 1 }); cue(d.x * 16 + 8, d.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true, life: 0.9 }); toast('🔒 Porte fermée à clé ! Le prof devra aller chercher ses clés.', 2); } };
+      P.busy = { label: 'Je ferme à clé…', dur: 0.35, t: 0, done: () => { if (actorInDoor(d)) return; d.locked = true; d.byPlayer = true; d.target = 0; d.closeT = 0; AU.sfx('lock'); makeNoise(d.x * 16 + 8, d.y * 16 + 8, 4, 'CLIC !'); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 1 }); cue(d.x * 16 + 8, d.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true, life: 0.9 }); toast('🔒 Verrouillé ! Le prof va devoir chercher ses clés. Hihi.', 2); } };
       break;
     }
     case 'openKey': {
@@ -849,7 +849,7 @@ function doAction(a) {
       P.busy = { label: 'J’ouvre…', dur: 0.6, t: 0, done: () => { if (!d.locked) return; d.locked = false; d.byPlayer = false; if (!(G.inf && G.inf.keys)) P.keys = Math.max(0, (P.keys || 0) - 1); AU.sfx('lock'); AU.sfx('keys', 0.5); cue(d.x * 16 + 8, d.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true }); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 0 }); UI.hudSig = null; } };
       break;
     }
-    case 'lockedDoor': AU.sfx('bump'); if (P.jail) { toast('🔒 Tes clés ont été confisquées… Attends que ton équipier vienne te libérer !', 2.6); break; } toast('🔒 Cette porte est fermée à clé. Trouve une petite clé 🗝️ (elles brillent par terre)… ou le trousseau du concierge !', 3); break;
+    case 'lockedDoor': AU.sfx('bump'); if (P.jail) { toast('🔒 Clés confisquées. Attends ton équipier !', 2.2); break; } toast('🔒 Fermé à clé. Une petite clé 🗝️ qui brille par terre ? Ou le trousseau.', 2.6); break;
     case 'unlock': { const d = a.door; d.locked = false; d.byPlayer = false; AU.sfx('lock'); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 0 }); break; }
     case 'gag': toast(a.gag.text, 2.4); AU.sfx('bump'); makeNoise(a.gag.x * 16 + 8, a.gag.y * 16 + 16, 3, 'BOUM'); break;
   }
@@ -860,7 +860,7 @@ function useItem(i) {
   switch (kind) {
     case 'cake':
       if (P.hidden && !P.hidden.small) { /* ok */ }
-      P.small = Math.max(P.small, 0) + 20; P.spin = 0.6; AU.sfx('shrink'); sparkle(P.x, P.y - 8, 16, '#ff9fd8'); toast('🍰 Croc ! Tu rétrécis pendant 20 secondes !', 2);
+      P.small = Math.max(P.small, 0) + 20; P.spin = 0.6; AU.sfx('shrink'); sparkle(P.x, P.y - 8, 16, '#ff9fd8'); toast('🍰 Croc ! Mini-toi pendant 20 s.', 2);
       break;
     case 'lamp': {
       const T = G.T;
@@ -875,26 +875,26 @@ function useItem(i) {
       P.hidden = s; P.hideFrom = [P.x, P.y]; puff(s.x * 16 + 8, s.y * 16 + 8, 16, '#c8b0ff');
       if (T.state === 'chase') { T.lastSeen = [ox, oy]; T.goingLast = false; T.goingSpot = false; T.path = null; }
       T.knows = null; T.detect = Math.min(T.detect, 0.5);
-      toast('🧞 Pouf ! Le génie t’envoie ' + s.n + ' !', 2.4);
+      toast('🧞 Pouf ! Le génie te planque ' + s.n + '.', 2.2);
       break;
     }
-    case 'slipper': P.slip = 10; hop(P, 90); AU.sfx('magic'); sparkle(P.x, P.y - 6, 14, '#bfefff'); toast('👠 Tu cours vite et sans bruit pendant 10 s !', 2); break;
+    case 'slipper': P.slip = 10; hop(P, 90); AU.sfx('magic'); sparkle(P.x, P.y - 6, 14, '#bfefff'); toast('👠 Rapide et silencieux·se : 10 s. Fonce !', 2); break;
     case 'apple':
-      if (P.hidden) { toast('Sors de ta cachette pour poser la pomme.', 1.6); used = false; break; }
-      { const ap = { id: (G.appleId = (G.appleId || 0) + 1) + (G.net && Net.isHost ? 0 : 1000), x: P.x, y: P.y + 2, eaten: false }; G.apples.push(ap); if (G.net) Net.send({ t: 'apple', id: ap.id, x: Math.round(ap.x), y: Math.round(ap.y) }); } AU.sfx('blip'); toast('🍎 Pomme posée ! Éloigne-toi…', 1.8);
+      if (P.hidden) { toast('Sors d’abord de ta cachette.', 1.4); used = false; break; }
+      { const ap = { id: (G.appleId = (G.appleId || 0) + 1) + (G.net && Net.isHost ? 0 : 1000), x: P.x, y: P.y + 2, eaten: false }; G.apples.push(ap); if (G.net) Net.send({ t: 'apple', id: ap.id, x: Math.round(ap.x), y: Math.round(ap.y) }); } AU.sfx('blip'); toast('🍎 Pomme posée. Les profs adorent les pommes. Trop.', 2);
       break;
     case 'disguise': {
-      if (P.hidden) { toast('Sors de ta cachette pour te déguiser.', 1.6); used = false; break; }
+      if (P.hidden) { toast('Sors d’abord de ta cachette.', 1.4); used = false; break; }
       const src = G.kids.length ? pick(G.kids).cfg : randomChar('');
       const nc = Object.assign({}, src, { name: P.cfg.name }); P.cfg = nc; P.disguised = true; P.spin = 0.7;
       puff(P.x, P.y - 10, 20, '#ffffff'); sparkle(P.x, P.y - 12, 16); AU.sfx('pouf'); AU.sfx('magic'); cue(P.x, P.y - 40, 'word', 'TADAAA !', { col: '#ffd23f', pop: true });
       if (G.net) Net.send({ t: 'disguise', cfg: nc }); else if (!G.T.seeNow) { G.T.knows = null; G.T.detect = 0; }
-      toast('🥸 Déguisement enfilé ! ' + (G.kids.length ? 'Tu ressembles à un autre élève…' : 'Le prof va avoir du mal à te reconnaître.'), 2.6);
+      toast('🥸 Déguisé·e ! ' + (G.kids.length ? 'Personne ne te reconnaît. Normalement.' : 'Le prof n’y verra que du feu.'), 2.4);
       break;
     }
-    case 'mirror': G.reveal = 8; FX.flash = 0.7; FX.flashCol = '220,240,255'; AU.sfx('magic'); toast('🪞 Miroir, gentil miroir : montre-moi le prof… et les sorties !', 2.4); break;
-    case 'squishy': { const q = SQUISHIES[squishyAt(P, i)] || SQUISHIES[0]; toast('🧸 « ' + q.n + ' » (' + SQ_RARITY[q.r].n.toLowerCase() + ') : il sort tout seul si un prof t’attrape !', 2.4); used = false; break; }
-    case 'watch': G.slowT = 8; if (G.net) Net.send({ t: 'slow', d: 8 }); FX.flash = 0.6; FX.flashCol = '140,190,255'; AU.sfx('slow'); toast('⏱️ Tic… tac… Le prof est au ralenti !', 2); break;
+    case 'mirror': G.reveal = 8; FX.flash = 0.7; FX.flashCol = '220,240,255'; AU.sfx('magic'); toast('🪞 Miroir : prof et sorties révélés !', 2); break;
+    case 'squishy': { const q = SQUISHIES[squishyAt(P, i)] || SQUISHIES[0]; toast('🧸 « ' + q.n + ' » : il sort tout seul si on t’attrape.', 2.2); used = false; break; }
+    case 'watch': G.slowT = 8; if (G.net) Net.send({ t: 'slow', d: 8 }); FX.flash = 0.6; FX.flashCol = '140,190,255'; AU.sfx('slow'); toast('⏱️ Prof en mode escargot !', 2); break;
   }
   if (used) P.inv.splice(i, 1);
 }
@@ -933,7 +933,7 @@ function update(dt) {
     if (FX.freeze > 0) { FX.freeze -= dt; return; }
     G.time += dt;
     if (G.reveal > 0) G.reveal -= dt;
-    if (G.slowT > 0) { G.slowT -= dt; if (G.slowT <= 0) toast('Le prof reprend sa vitesse normale.', 1.4); }
+    if (G.slowT > 0) { G.slowT -= dt; if (G.slowT <= 0) toast('Le prof a retrouvé ses jambes.', 1.4); }
     if (G.net) { netUpdate(dt); if (G.mode !== 'play') return; }
     else {
     updatePlayer(dt); if (G.mode !== 'play') return;

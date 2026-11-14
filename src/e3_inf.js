@@ -177,11 +177,11 @@ function infGoFloor(nf, letter) {
   FX.iris = { mode: 'in', t: 0, dur: 0.5 };
   infLoad(nf);
   const sp = G.L.stairs[letter]; P.x = sp[0] * 16 + 8; P.y = sp[1] * 16 + 14; P.busy = null; P.moving = false; P.fl = nf;
-  if (I.coop) { infRepark(); coopFloorAuth(); AU.sfx('tstep'); I.grace = Math.max(I.grace, 1.6); UI.banner('📍 ' + INF_FLOOR_META[nf].name + (nf === 0 ? ' · la cour est toute proche !' : '')); UI.hudSig = null; return; }
+  if (I.coop) { infRepark(); coopFloorAuth(); AU.sfx('tstep'); I.grace = Math.max(I.grace, 1.6); UI.banner('📍 ' + INF_FLOOR_META[nf].name + (nf === 0 ? ' · la cour est là !' : '')); UI.hudSig = null; return; }
   if (I.multi) { infRepark(); AU.sfx('tstep'); UI.banner('📍 ' + INF_FLOOR_META[nf].name); UI.hudSig = null; return; }
   AU.sfx(nf < I.cur + 1 ? 'tstep' : 'step'); AU.sfx('door', 0.4);
   I.grace = Math.max(I.grace, 1.6);
-  UI.banner('📍 ' + INF_FLOOR_META[nf].name + (nf === 0 ? ' · la cour est toute proche !' : ''));
+  UI.banner('📍 ' + INF_FLOOR_META[nf].name + (nf === 0 ? ' · la cour est là !' : ''));
   if (chased || I.hunt) { I.radio = { t: chased ? 2.5 : 5, x: P.x, y: P.y, from: INF_FLOOR_META[I.cur].short }; }
   UI.hudSig = null;
 }
@@ -200,7 +200,7 @@ function infWarn(by) {
   by.detect = 0;
   if (I.multi && (I.warn >= 3 || I.hunt)) {
     I.hunt = true; I.grace = 2.5; infSay(by, pick(INF_LINES.call), 2.4); setMark(by, '!', 1.4); hop(by, 80); AU.sfx('whistle', 0.7);
-    infPing(by, true); toast('🚨 ' + by.name + ' prévient le surveillant !', 2); return;
+    infPing(by, true); toast('🚨 ' + by.name + ' appelle le surveillant. Balance !', 2); return;
   }
   if (I.warn >= 3 || I.hunt) {
     I.hunt = true; I.grace = 0.5;
@@ -220,7 +220,7 @@ function infWarn(by) {
   G.shake = 0.18;
   cue(by.x, by.y - 34, 'word', I.warn + '/3', { col: '#ffd23f', pop: true, life: 1.2 });
   if (I.multi) infPing(by, false);
-  toast(I.warn < 3 ? '⚠️ Avertissement ' + I.warn + '/3 ! Ne te fais plus voir hors de ta classe…' : '🚨 DERNIER avertissement ! La prochaine fois, on te court après !', 2.8);
+  toast(I.warn < 3 ? '⚠️ Repéré·e ! ' + I.warn + '/3. Discrétion, on a dit.' : '🚨 3/3. La prochaine fois, ça court !', 2.8);
   UI.hudSig = null;
 }
 function infSay(k, text, dur) {
@@ -323,7 +323,7 @@ function infAlarm() {
   const I = G.inf; if (I.alarmUsed) return; I.alarmUsed = true;
   I.alarm = { t: 0, dur: 60, call: false, sirenT: 0 };
   AU.sfx('alarm'); G.shake = 0.4; FX.punch && FX.punch(0.12);
-  UI.banner('🔥 ALARME INCENDIE ! Tout le monde descend dans la cour !');
+  UI.banner('🔥 ALARME INCENDIE ! Tout le monde dehors !');
   infSave();
   I.floors.forEach(F => {
     F.kidsBak = F.kids; if (F.T) F.tBak = { x: F.T.x, y: F.T.y };
@@ -350,7 +350,7 @@ function infAlarm() {
   F0.kids = crowd.concat(guards);
   if (I.cur === 0) { G.kids = F0.kids; }
   else infSave();
-  toast('🔥 Les étages se vident… mais attention : un appel aura lieu dans la cour !', 3.4);
+  toast('🔥 Tout le monde dehors ! (Appel dans la cour, hein.)', 3);
 }
 function infAlarmEnd() {
   const I = G.inf, P = G.P;
@@ -364,8 +364,8 @@ function infAlarmEnd() {
   I.alarm = null;
   infLoad(I.cur); G.camX = G.camX;
   I.grace = Math.max(I.grace, 3);
-  UI.banner('🔔 Fin de l’alerte : tout le monde remonte en classe !');
-  toast(I.hunt ? '😱 Tous les profs te cherchent maintenant…' : '🤫 Profite du retour en classe pour te faufiler !', 3);
+  UI.banner('🔔 Fausse alerte. Tout le monde remonte !');
+  toast(I.hunt ? '😱 Tous les profs te cherchent. Bravo.' : '🤫 Retour en classe : faufile-toi !', 3);
   AU.play(I.hunt ? 'chase' : 'sneak');
 }
 // ---------- mise à jour (appelée dans update) ----------
@@ -382,7 +382,7 @@ function infUpdate(dt) {
       I.hideT = (I.hideT || 0) + dt;
       if (I.hideT >= 20) {
         I.hideT = 0; I.hunt = false; I.warn = 2;
-        UI.banner(I.coop ? '😮‍💨 Fausse alerte… ils ont arrêté de vous chercher ! (encore 1 avertissement)' : '😮‍💨 Fausse alerte… ils ont arrêté de te chercher ! (encore 1 avertissement avant la poursuite)'); AU.play('sneak'); UI.hudSig = null; UI.infSig = null;
+        UI.banner(I.coop ? '😮‍💨 Ils ont lâché l’affaire. (Plus qu’1 avertissement.)' : '😮‍💨 Ils ont lâché l’affaire. (Plus qu’1 avertissement.)'); AU.play('sneak'); UI.hudSig = null; UI.infSig = null;
         if (I.multi) Net.send({ t: 'calm' });
         if (I.coop && G.T.state !== 'patrol' && !G.T.gone && I.auth) { G.T.state = 'patrol'; G.T.path = null; G.T.knows = null; }
         else if (!G.T.gone && G.T.state !== 'patrol' && G.T.state !== 'evac') { G.T.state = 'patrol'; G.T.path = null; G.T.knows = null; G.T.detect = 0; say('Bon… j’ai dû rêver. Je reprends ma ronde.'); }
@@ -402,8 +402,8 @@ function infUpdate(dt) {
       const ok = I.coop ? (inA(P) && inA(G.P2)) : (I.cur === 0 && inRectT(P, I.floors[0].L.assembly) && !P.hidden);
       const T0 = I.floors[0].T;
       if (I.multi) Net.send({ t: 'call', ok: ok ? 1 : 0 });
-      if (ok) { UI.banner('📋 L’appel… « ' + (P.cfg.name || 'Toi') + ' ? » — « Présent·e ! »'); toast('✅ Personne ne se doute de rien !', 2.4); }
-      else { I.hunt = true; I.warn = 3; UI.banner('📋 L’appel… « ' + (P.cfg.name || 'toi') + ' ? »… IL MANQUE ' + (P.cfg.name || 'UN ÉLÈVE').toUpperCase() + ' !'); toast('😱 Tu n’étais pas à l’appel : tout le collège te cherche !', 3.2); AU.sfx('spot'); if (I.cur === 0 && T0 === G.T) infAlertT(P.x, P.y, false); }
+      if (ok) { UI.banner('📋 L’appel… « ' + (P.cfg.name || 'Toi') + ' ? » — « Présent·e ! »'); toast('✅ Personne n’a rien vu. Classique.', 2.4); }
+      else { I.hunt = true; I.warn = 3; UI.banner('📋 L’appel… « ' + (P.cfg.name || 'toi') + ' ? »… IL MANQUE ' + (P.cfg.name || 'UN ÉLÈVE').toUpperCase() + ' !'); toast('😱 Absent·e à l’appel. Tout le collège te cherche !', 3); AU.sfx('spot'); if (I.cur === 0 && T0 === G.T) infAlertT(P.x, P.y, false); }
     }
     if (boss && A.t >= A.dur) { if (I.multi) Net.send({ t: 'alarmEnd' }); infAlarmEnd(); }
   } else G.alarmFlash = false;
@@ -445,17 +445,17 @@ function infDo(a) {
   const I = G.inf, P = G.P;
   switch (a.id) {
     case 'stair': case 'stairUp':
-      if (G.T.state === 'chase' && dist(G.T.x, G.T.y, P.x, P.y) < 40) { toast('Trop tard, il est juste derrière toi !', 1.4); return true; }
+      if (G.T.state === 'chase' && dist(G.T.x, G.T.y, P.x, P.y) < 40) { toast('Trop tard, il est juste derrière !', 1.4); return true; }
       infGoFloor(a.to, a.letter); return true;
-    case 'stairLocked': AU.sfx('fail'); toast('🔒 La grille de l’escalier est fermée à clé. Il te faut le trousseau… ou une bonne raison d’évacuer 🔥', 3); return true;
-    case 'stairNo': AU.sfx('bump'); toast('🚧 Escalier fermé pour travaux. Trouve l’autre escalier !', 2.2); return true;
+    case 'stairLocked': AU.sfx('fail'); toast('🔒 Grille fermée. Trousseau… ou alarme incendie 🔥', 2.6); return true;
+    case 'stairNo': AU.sfx('bump'); toast('🚧 Fermé pour travaux. Va voir l’autre escalier.', 2.2); return true;
     case 'alarm':
       P.busy = { label: 'Je tire la poignée…', dur: 0.8, t: 0, done: () => { makeNoise(P.x, P.y, 6, 'CLAC !'); infAlarm(); if (I.multi) Net.send({ t: 'alarm' }); } };
       return true;
     case 'plan':
       I.plan = true; if (I.multi) Net.send({ t: 'planTaken' }); AU.sfx('pickup'); sparkle(P.x, P.y - 20, 18); hop(P, 90);
       G.m.decor = G.m.decor.filter(d => d.t !== 'evac'); G.mapCanvas = I.floors[I.cur].mapCanvas = renderMapCanvas(G.L);
-      toast('🗺️ Le plan du collège ! Touche 🗺️ en haut pour voir où sont les profs.', 3.4); UI.hudSig = null; return true;
+      toast('🗺️ Le plan ! Touche 🗺️ pour espionner les profs.', 3); UI.hudSig = null; return true;
     case 'peek':
       P.busy = { label: 'Je regarde par la serrure…', dur: 1e9, t: 0, peek: a.door, dir: a.dir, done: () => { } };
       AU.sfx('tick', 0.5); return true;
@@ -467,7 +467,7 @@ function infSearchDesk(a, key) {
   const I = G.inf, P = G.P;
   if (I.cur === I.keysFloor && key === I.keysKey && !I.keys) {
     I.keys = true; if (I.multi) Net.send({ t: 'trousseau' }); AU.sfx('found'); AU.sfx('keys'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 24); hop(P, 110);
-    UI.banner('🔑 LE TROUSSEAU DU CONCIERGE !'); toast('Il ouvre la grille de l’escalier… et le portail de la cour !', 3.2); UI.hudSig = null;
+    UI.banner('🔑 LE TROUSSEAU DU CONCIERGE !'); toast('Grille + portail : ouverts. Merci le concierge !', 3); UI.hudSig = null;
     return true;
   }
   return false;
@@ -620,7 +620,7 @@ function infDoT(a) {
   const T = G.T;
   switch (a.id) {
     case 'stair': case 'stairUp': infGoFloor(a.to, a.letter); return true;
-    case 'stairNo': AU.sfx('bump'); toast('🚧 Escalier fermé pour travaux.', 1.6); return true;
+    case 'stairNo': AU.sfx('bump'); toast('🚧 Fermé pour travaux.', 1.6); return true;
     case 'peek': T.busy = { label: 'Je regarde par la serrure…', dur: 1e9, t: 0, peek: a.door, dir: a.dir, done: () => { } }; AU.sfx('tick', 0.5); return true;
   }
   return false;
@@ -673,7 +673,7 @@ function coopUpdate(dt) {
   I.me = P;
   updatePlayer(dt); if (G.mode !== 'play') return;
   // sorti de la salle de colle (porte ouverte, clé…) : libre !
-  if (P.jail && I.jail && I.cur === 1 && !inRectT(P, I.jail.r)) { P.jail = false; P.jailT = 0; UI.banner('🏃 Tu t’es échappé·e de la salle de colle !'); }
+  if (P.jail && I.jail && I.cur === 1 && !inRectT(P, I.jail.r)) { P.jail = false; P.jailT = 0; UI.banner('🏃 Évadé·e de la colle. La classe !'); }
   // le coéquipier
   if (Q.net && Q.fl === I.cur) { Net.smooth(Q, dt); const s = Q.net; Q.small = s.sm ? 10 : 0; Q.slip = s.sl ? 1 : 0; Q.skidT = s.sk ? 0.1 : 0; Q.hidden = s.h >= 0 ? G.L.hides[s.h] : null; }
   if (I.auth) {
@@ -723,7 +723,7 @@ function coopCaught(who, reason) {
       if (mine && who.hidden) { const s = who.hidden; who.hidden = null; const st = s.stand[0]; who.x = st[0] * 16 + 8; who.y = st[1] * 16 + 12; }
       const text = squishyBlast(T, who, id, true);
       Net.send({ t: 'sqFx', fl: I.cur, id, me: mine ? 1 : 0, text });
-      if (mine) squishyToast(T, id); else toast('🧸 SPLOTCH ! Le squishy de ' + (who.cfg && who.cfg.name || 'ton équipier') + ' explose à la figure de ' + T.prof.name + ' !', 2.8);
+      if (mine) squishyToast(T, id); else toast('🧸 SPLOTCH ! Le squishy de ' + (who.cfg && who.cfg.name || 'ton équipier') + ' aveugle ' + T.prof.name + ' !', 2.6);
       return;
     } }
   // le compagnon fait fuir le prof
@@ -732,7 +732,7 @@ function coopCaught(who, reason) {
     T.state = 'release'; T.st = 3.5; T.path = null; T.detect = 0; T.det = {}; T.knows = null; I.grace = Math.max(I.grace, 3);
     I.hunt = false; I.hideT = 0; I.warn = Math.min(I.warn, 2); UI.infSig = null; UI.hudSig = null; Net.send({ t: 'twarn', n: I.warn, hunt: 0, you: 0, text: '', silent: 1 });
     if (who === (I.me || G.P)) { if ((G.lessons || 0) < LESSON_MAX) lessonStart(reason); else coopJail(); }
-    else { who.jailMove = G.time; Net.send({ t: 'caughtYou', eng: 1, r: reason }); toast((T.prof.lesson === 'hist' ? '🦴 ' : '🇬🇧 ') + T.prof.name + ' a attrapé ' + (who.cfg.name || 'ton coéquipier') + ' : ' + (T.prof.lesson === 'hist' ? 'interro d’histoire !' : 'leçon d’anglais !'), 2.6); }
+    else { who.jailMove = G.time; Net.send({ t: 'caughtYou', eng: 1, r: reason }); toast((T.prof.lesson === 'hist' ? '🦴 ' : '🇬🇧 ') + T.prof.name + ' coince ' + (who.cfg.name || 'ton coéquipier') + ' : ' + (T.prof.lesson === 'hist' ? 'interro surprise !' : 'English lesson !'), 2.6); }
     return;
   }
   T.state = 'patrol'; T.path = null; T.detect = 0; T.det = {}; T.knows = null; I.grace = Math.max(I.grace, 3);
@@ -742,7 +742,7 @@ function coopCaught(who, reason) {
   Net.send({ t: 'bub', w: 'T', text: T.bubble.text, dur: 2.6 });
   AU.sfx('caught', 0.7); G.shake = 0.3; puff(who.x, who.y - 10, 16, '#ffffff');
   if (who === (I.me || G.P)) coopJail();
-  else { who.jailMove = G.time; Net.send({ t: 'caughtYou' }); toast('😱 ' + (who.cfg.name || 'Ton coéquipier') + ' s’est fait attraper ! Va le/la libérer en salle de colle (1er étage).', 3.4); }
+  else { who.jailMove = G.time; Net.send({ t: 'caughtYou' }); toast('😱 ' + (who.cfg.name || 'Ton coéquipier') + ' s’est fait coincer. Libère-le/la en salle de colle (1er) !', 3); }
 }
 function coopJail() {
   const I = G.inf, P = G.P; if (!I.jail) return;
@@ -754,15 +754,15 @@ function coopJail() {
   P.x = sp[0] * 16 + 8; P.y = sp[1] * 16 + 12; P.fl = 1; G.camX = null;
   infRepark(); coopFloorAuth();
   FX.iris = { mode: 'in', t: 0, dur: 0.6 }; AU.sfx('fail');
-  UI.banner('🚨 Attrapé·e ! Tu es enfermé·e en salle de colle (1er étage)…');
-  toast('Attends que ' + (G.P2.cfg.name || 'ton coéquipier') + ' vienne te libérer (ou 60 s et la maîtresse vient te chercher).', 3.6);
+  UI.banner('🚨 Attrapé·e ! Direction : salle de colle (1er).');
+  toast('Coincé·e ! ' + (G.P2.cfg.name || 'Ton coéquipier') + ' peut te libérer. Sinon : 60 s.', 3);
 }
 function coopAutoRelease() {
   const I = G.inf, P = G.P; P.jail = false; P.jailT = 0;
   infSave(); if (I.cur !== INF_TOP) infLoad(INF_TOP);
   P.x = P.seat[0] * 16 + 8; P.y = P.seat[1] * 16 + 12; P.fl = INF_TOP; G.camX = null; infRepark(); coopFloorAuth();
   FX.iris = { mode: 'in', t: 0, dur: 0.6 };
-  UI.banner('🧑‍🏫 La maîtresse est venue te chercher : retour en classe, à ta place !');
+  UI.banner('🧑‍🏫 La maîtresse te ramène en classe. Retour case départ !');
 }
 function coopEscape(ex, tx, ty) {
   const I = G.inf, P = G.P; if (P.out) return;
@@ -792,7 +792,7 @@ function coopWatcherBehind(d) {
 function coopDo(a) {
   const I = G.inf, P = G.P, Q = G.P2;
   switch (a.id) {
-    case 'gateTwo': AU.sfx('bump'); toast('🚧 Ce vieux portail est trop lourd : il faut être deux pour le pousser !', 2.6); return true;
+    case 'gateTwo': AU.sfx('bump'); toast('🚧 Trop lourd ! Il faut être deux.', 2.2); return true;
     case 'free': P.busy = { label: 'Je crochète la serrure…', dur: 2, t: 0, done: () => {
       I.floors[1].doors.forEach((d, i) => { if (d.jail && d.locked) { d.locked = false; d.byPlayer = false; Net.send({ t: 'lock', i, l: 0, fl: 1 }); } });
       Net.send({ t: 'freed' }); AU.sfx('lock'); AU.sfx('found'); toast('🔓 ' + (Q.cfg.name || 'Ton coéquipier') + ' est libre !', 2.4); } }; AU.sfx('keys', 0.5); return true;
@@ -800,7 +800,7 @@ function coopDo(a) {
       AU.sfx('door', 0.6); cue(a.door.x * 16 + 8, a.door.y * 16, 'word', 'TOC TOC !', { col: '#ffd23f', pop: true });
       const i = G.doors.indexOf(a.door);
       if (I.auth) coopKnock(i); else Net.send({ t: 'knock', i });
-      toast('✊ Toc toc ! Le prof va venir voir à la porte… cache-toi !', 2.2); return true;
+      toast('✊ Toc toc ! Le prof arrive… cache-toi !', 2.2); return true;
     }
   }
   return false;
@@ -820,7 +820,7 @@ function coopDiversion() {
   cue(P.x, P.y - 30, 'word', pick(['BADABOUM !', 'CRAAASH !', 'PATATRAS !']), { col: '#ff8a3a', pop: true, life: 1.3 });
   makeNoise(P.x, P.y, 11, 'BADABOUM !');
   if (I.auth) coopLookAt(P.x, P.y); else Net.send({ t: 'divert', x: Math.round(P.x), y: Math.round(P.y) });
-  toast('🥁 BADABOUM ! Les profs vont venir voir… file te cacher !', 2.4);
+  toast('🥁 BADABOUM ! Les profs rappliquent. Cache-toi !', 2.4);
 }
 function coopLookAt(x, y) { G.kids.forEach(k => { if (!k.isWatcher || k.state === 'evac' || dist(k.x, k.y, x, y) > 8 * 16) return; k.state = 'look'; k.st = 3.5; k.lookBase = Math.atan2(y - k.y, x - k.x); setMark(k, '?', 1); }); }
 function coopPing() {
@@ -847,8 +847,8 @@ function coopRecv(d) {
     case 'twarn':
       I.warn = d.n; I.hunt = !!d.hunt; UI.infSig = null; UI.hudSig = null;
       if (d.silent) return true;
-      if (d.you) { G.shake = 0.18; AU.sfx('whistle', 0.6); toast(d.hunt && !d.text ? '🚨 On te court après !' : (I.warn < 3 ? '⚠️ Avertissement ' + I.warn + '/3 ! Ne te fais plus voir hors de ta classe…' : '🚨 DERNIER avertissement ! La prochaine fois, on vous court après !'), 2.8); }
-      else if (!d.hunt) toast('⚠️ ' + (Q.cfg.name || 'Ton coéquipier') + ' s’est fait voir (' + I.warn + '/3)', 2);
+      if (d.you) { G.shake = 0.18; AU.sfx('whistle', 0.6); toast(d.hunt && !d.text ? '🚨 On te court après !' : (I.warn < 3 ? '⚠️ Repéré·e ! ' + I.warn + '/3. Discrétion, on a dit.' : '🚨 3/3. La prochaine fois, ça court !'), 2.8); }
+      else if (!d.hunt) toast('⚠️ ' + (Q.cfg.name || 'Ton coéquipier') + ' s’est fait repérer (' + I.warn + '/3). Bravo…', 2);
       return true;
     case 'look': Q.cfg = d.cfg; return true;
     case 'dopen': if (d.fl === I.cur && G.doors[d.i]) G.doors[d.i].forceT = d.d; return true;
@@ -858,15 +858,15 @@ function coopRecv(d) {
     case 'knock': if (I.auth && d.fl === I.cur) coopKnock(d.i); return true;
     case 'jailLock': I.floors[1].doors.forEach(dr => { if (dr.jail) { dr.locked = true; dr.byPlayer = false; } }); return true;
     case 'caughtYou': if (!P.jail && !P.out && !P.lesson) { if (d.eng && (G.lessons || 0) < LESSON_MAX) lessonStart(d.r); else coopJail(); } return true;
-    case 'lessonDone': toast(d.ok ? '✅ ' + (Q.cfg.name || 'Ton coéquipier') + ' a bien répondu à ' + (d.who || 'la prof') + ' !' : '❌ ' + (Q.cfg.name || 'Ton coéquipier') + ' s’est trompé·e… objets magiques confisqués !', 2.4); return true;
+    case 'lessonDone': toast(d.ok ? '✅ ' + (Q.cfg.name || 'Ton coéquipier') + ' a bien répondu à ' + (d.who || 'la prof') + ' !' : '❌ ' + (Q.cfg.name || 'Ton coéquipier') + ' s’est planté·e. Objets confisqués !', 2.4); return true;
     case 'petUse': if (P.pet) petUsed(P, G.T); return true;
     case 'sqUse': case 'sqFx': squishyRecv(d); return true;
     case 'freed': if (P.jail) { P.jail = false; P.jailT = 0; UI.banner('🔓 ' + (Q.cfg.name || 'Ton coéquipier') + ' t’a libéré·e ! File !'); AU.sfx('found'); } return true;
     case 'ping': I.ping = { x: d.x, y: d.y, fl: d.fl, t: 0, room: '', who: Q.cfg.name }; AU.sfx('ding', 0.4); if (d.fl !== I.cur) toast('📍 ' + (Q.cfg.name || 'Ton coéquipier') + ' t’appelle (' + INF_FLOOR_META[d.fl].name + ')', 1.8); return true;
     case 'gateDone': { const ex = G.L.exits && G.L.exits.find(e => e.gate); if (I.cur === 0 && ex && P.busy && P.busy.ex === ex) { P.busy = null; escape(ex, ex.x, ex.y); } return true; }
-    case 'planTaken': I.plan = true; toast('🗺️ ' + (Q.cfg.name || 'Ton coéquipier') + ' a trouvé le plan du collège : touche 🗺️ !', 2.6); UI.hudSig = null; return true;
-    case 'trousseau': I.keys = true; toast('🔑 ' + (Q.cfg.name || 'Ton coéquipier') + ' a trouvé le trousseau du concierge !', 2.8); AU.sfx('keys'); UI.hudSig = null; return true;
-    case 'call': if (d.ok) UI.banner('📋 L’appel : vous êtes là tous les deux… personne ne se doute de rien !'); else { I.hunt = true; I.warn = 3; UI.banner('📋 L’appel : il manque des élèves ! Tout le collège vous cherche…'); } return true;
+    case 'planTaken': I.plan = true; toast('🗺️ ' + (Q.cfg.name || 'Ton coéquipier') + ' a le plan : touche 🗺️ !', 2.4); UI.hudSig = null; return true;
+    case 'trousseau': I.keys = true; toast('🔑 ' + (Q.cfg.name || 'Ton coéquipier') + ' a piqué le trousseau !', 2.6); AU.sfx('keys'); UI.hudSig = null; return true;
+    case 'call': if (d.ok) UI.banner('📋 L’appel : vous êtes là tous les deux. Anges innocents.'); else { I.hunt = true; I.warn = 3; UI.banner('📋 Il manque des élèves ! Tout le collège vous cherche…'); } return true;
     case 'end': if (G.mode !== 'result') { G.mode = 'result'; Multi.resultCoop(d.r || 'time'); } return true;
   }
   return false;

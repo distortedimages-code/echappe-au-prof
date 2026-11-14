@@ -14,7 +14,7 @@ function squishyGot(P, quiet) {
   AU.sfx('squish', 0.8); if (q.r >= 2) AU.sfx('kawaii', 0.9);
   if (!quiet) {
     const head = q.r === 3 ? '🌟 LÉGENDAIRE !! ' : q.r === 2 ? '💜 Super rare ! ' : q.r === 1 ? '💙 Rare ! ' : '';
-    toast('🧸 ' + head + (isNew ? 'Nouveau squishy : ' : 'Squishy : ') + '« ' + q.n + ' » (' + R.n.toLowerCase() + ') · ' + n + '/' + SQUISHIES.length + '. Si un prof t’attrape, il te sauve !', 3.6);
+    toast('🧸 ' + head + '« ' + q.n + ' »' + (isNew ? ' (nouveau !)' : '') + ' · ' + n + '/' + SQUISHIES.length + '. Ton airbag anti-prof.', 3);
     if (q.r >= 2) { FX.flash = 0.4; FX.flashCol = q.r === 3 ? '255,230,120' : '210,160,255'; sparkle(P.x, P.y - 14, 20, R.col); }
   }
   UI.invSig = null;
@@ -55,7 +55,7 @@ function squishySplat(T) {
 }
 function squishyToast(T, id) {
   const q = SQUISHIES[id] || SQUISHIES[0];
-  toast('🧸 SPLOTCH ! « ' + q.n + ' » explose à la figure de ' + (T.prof && T.prof.name ? T.prof.name : 'ton poursuivant') + ' : il ne voit plus rien pendant ' + BLIND_T + ' s… file !', 3.2);
+  toast('🧸 SPLOTCH ! ' + (T.prof && T.prof.name ? T.prof.name : 'Le prof') + ' ne voit plus rien (' + BLIND_T + ' s). File !', 2.8);
 }
 // attrapé·e en solo (ou infiltration seul·e) : seconde chance ?
 function squishySave(T, P) {
@@ -124,7 +124,7 @@ function drawSquishFly(c) {
 function squishyOnMe(id) {
   const T = G.T; T.stunT = 2.5; T.state = 'stun';
   squishyBlast(T, { x: G.P.x, y: G.P.y }, id, false);
-  toast('🥰 SPLOTCH ! Un squishy trop mignon t’explose à la figure : tu ne vois plus rien pendant ' + BLIND_T + ' s !', 3);
+  toast('🥰 SPLOTCH ! Trop mignon… et tu ne vois plus rien (' + BLIND_T + ' s).', 3);
 }
 function squishyRecv(d) {
   const I = G.inf, T = G.T;

@@ -171,7 +171,7 @@ const Net = {
       case 'apple': if (G.inf && d.fl !== G.inf.cur) { infFloorOf(d).apples.push({ id: d.id, x: d.x, y: d.y, eaten: false }); break; } G.apples.push({ id: d.id, x: d.x, y: d.y, eaten: false }); break;
       case 'eat': { const a = G.apples.find(a => a.id === d.id); if (a) { a.eaten = true; G.apples = G.apples.filter(b => b !== a); } AU.sfx('crunch', 0.6); break; }
       case 'sqUse': squishyRecv(d); break;
-      case 'slow': G.slowT = d.d; FX.flash = 0.6; FX.flashCol = '140,190,255'; AU.sfx('slow'); toast('⏱️ La montre du Lapin blanc ! Tu avances au ralenti…', 2.2); break;
+      case 'slow': G.slowT = d.d; FX.flash = 0.6; FX.flashCol = '140,190,255'; AU.sfx('slow'); toast('⏱️ Montre magique : mode tortue activé.', 2.2); break;
       case 'pouf': if (G.inf && d.fl !== G.inf.cur) break; puff(d.x, d.y - 6, 16, '#c8b0ff'); AU.sfx('pouf', 0.6); if (dist(d.x, d.y, T.x, T.y) < 12 * 16) cue(d.x, d.y - 20, 'word', 'POUF !', { col: '#c8b0ff', pop: true }); break;
       case 'noise': if (G.inf && d.fl !== G.inf.cur) break; if (this.role === 'teacher') { const dd = dist(T.x, T.y, d.x, d.y) / 16; if (dd < d.r * 1.8 && !G.pVis) cue(d.x, d.y - 8, 'word', d.w || '?!', { col: '#ffb347', pop: true, life: 1.2 }); } break;
       case 'tcheck': { if (G.inf && d.fl !== G.inf.cur) break; const s = L.hides[d.i]; if (s) { s.shake = 1; const dd = dist(T.x, T.y, P.x, P.y) / 16; AU.sfx('search', clamp(1 - dd / 14, 0, 0.8)); if (!G.tVis && dd < 14) cue(s.x * 16 + 8, s.y * 16, 'word', 'frrr…', { col: '#ffd0a0', life: 1 }); T.state = 'check'; T.checkT = 1; } break; }
@@ -184,7 +184,7 @@ const Net = {
       case 'seen': G.alarmT = Math.max(G.alarmT || 0, 2.5); break;
       case 'caught': caught(d.r, true); break;
       case 'grabfail': if (G.inf && d.fl !== G.inf.cur) break; grabFail(d.i, true, d.li); if (this.role === 'student') { T.state = 'stun'; T.checkT = 0; const k = G.kids[d.i]; if (k && dist(k.x, k.y, P.x, P.y) < 14 * 16) cue(T.x, T.y - 30, 'word', 'RATÉ !', { col: '#9fe0ff', pop: true }); } break;
-      case 'task': G.tasksRemote = d.n; if (this.role === 'teacher') { toast('📋 ' + (P.cfg.name || 'L’élève') + ' a fini une tâche (' + d.n + '/' + (G.tasks.length || 3) + ')' + (d.n >= (G.tasks.length || 3) ? ' : les sorties sont ouvertes ! 😱' : ' !'), 2.6); AU.sfx('ding', 0.5); } break;
+      case 'task': G.tasksRemote = d.n; if (this.role === 'teacher') { toast('📋 ' + (P.cfg.name || 'L’élève') + ' a fini une tâche (' + d.n + '/' + (G.tasks.length || 3) + ')' + (d.n >= (G.tasks.length || 3) ? ' : sorties ouvertes ! 😱' : ' !'), 2.4); AU.sfx('ding', 0.5); } break;
       case 'disguise': if (this.role === 'teacher') { if (G.pVis) { puff(P.x, P.y - 10, 18, '#ffffff'); cue(P.x, P.y - 36, 'word', 'POUF !', { col: '#ffd23f', pop: true }); } P.cfg = d.cfg; P.disguised = true; } break;
       case 'escape': {
         if (G.inf && G.inf.cur !== 0) { G.mode = 'escape'; G.escT = 1.9; G.escFrom = [-9999, -9999]; G.escTo = [-9999, -9999]; break; }
@@ -192,12 +192,12 @@ const Net = {
       }
       case 'look': if (this.role === 'teacher') { P.cfg = d.cfg; } break;
       case 'warn': if (G.inf) infRecvWarn(d); break;
-      case 'alarm': if (G.inf && !G.inf.alarmUsed) { infAlarm(); UI.banner('🔥 L’ALARME A SONNÉ au ' + INF_FLOOR_META[d.fl].name + ' ! Tout le monde descend dans la cour.'); } break;
-      case 'call': if (G.inf) { if (d.ok) { UI.banner('📋 L’appel : « ' + (P.cfg.name || 'l’élève') + ' » répond présent·e… dans le rang !'); } else { G.inf.hunt = true; G.inf.warn = 3; UI.banner('📋 Il manque ' + (P.cfg.name || 'l’élève') + ' à l’appel : il/elle est encore dans le bâtiment !'); } AU.sfx('ding'); } break;
+      case 'alarm': if (G.inf && !G.inf.alarmUsed) { infAlarm(); UI.banner('🔥 ALARME au ' + INF_FLOOR_META[d.fl].name + ' ! Tout le monde dehors.'); } break;
+      case 'call': if (G.inf) { if (d.ok) { UI.banner('📋 L’appel : « ' + (P.cfg.name || 'l’élève') + ' » : présent·e. L’innocence même.'); } else { G.inf.hunt = true; G.inf.warn = 3; UI.banner('📋 Il manque ' + (P.cfg.name || 'l’élève') + ' à l’appel : encore dans le bâtiment !'); } AU.sfx('ding'); } break;
       case 'alarmEnd': if (G.inf && G.inf.alarm) infAlarmEnd(); break;
-      case 'calm': if (G.inf) { G.inf.hunt = false; G.inf.warn = 2; toast('😮‍💨 ' + (P.cfg.name || 'L’élève') + ' est resté·e caché·e : les profs ont arrêté la traque.', 3); UI.infSig = null; } break;
-      case 'trousseau': if (G.inf) { G.inf.keys = true; toast('🔑 Le trousseau du concierge a disparu (' + INF_FLOOR_META[G.inf.keysFloor].name + ') ! L’élève peut ouvrir la grille et le portail…', 3.4); AU.sfx('keys'); } break;
-      case 'planTaken': if (G.inf) { toast('🗺️ Le plan d’évacuation du ' + INF_FLOOR_META[d.fl].name + ' a été arraché : l’élève sait où tu es !', 3.2); } break;
+      case 'calm': if (G.inf) { G.inf.hunt = false; G.inf.warn = 2; toast('😮‍💨 ' + (P.cfg.name || 'L’élève') + ' est resté·e planqué·e. Traque terminée.', 2.8); UI.infSig = null; } break;
+      case 'trousseau': if (G.inf) { G.inf.keys = true; toast('🔑 Trousseau volé (' + INF_FLOOR_META[G.inf.keysFloor].name + ') ! Grille et portail en danger…', 3); AU.sfx('keys'); } break;
+      case 'planTaken': if (G.inf) { toast('🗺️ Le plan d’évacuation du ' + INF_FLOOR_META[d.fl].name + ' arraché : l’élève te voit venir !', 3); } break;
       case 'end': timeUp(); break;
     }
   },
@@ -262,7 +262,7 @@ function updateTeacherLocal(dt) {
   T.vx = 0; T.vy = 0;
   if (T.bubble) { T.bubble.t += dt; if (T.bubble.t > T.bubble.dur) T.bubble = null; }
   if (T.markT > 0) T.markT -= dt;
-  if (T.state === 'count') { if (!countdownStep(T, dt)) { T.state = 'free'; toast('À toi de jouer : trouve ' + (P.cfg.name || 'l’élève') + ' parmi les élèves… et attrape ! ✋', 2.6); } return; }
+  if (T.state === 'count') { if (!countdownStep(T, dt)) { T.state = 'free'; toast('À toi : trouve ' + (P.cfg.name || 'l’élève') + ' et attrape ! ✋', 2.4); } return; }
   if (T.stunT > 0) { T.stunT -= dt; T.state = 'stun'; T.moving = false; T.running = false; if (T.stunT <= 0) T.state = 'free'; return; }
   if (T.sleepT > 0) {
     T.sleepT -= dt; T.state = 'sleep'; T.moving = false; T.running = false; T.zT = (T.zT || 0) - dt;
@@ -289,7 +289,7 @@ function updateTeacherLocal(dt) {
     if (!a.eaten && dist(T.x, T.y, a.x, a.y) < 12) {
       a.eaten = true; G.apples = G.apples.filter(b => b !== a); Net.send({ t: 'eat', id: a.id });
       AU.sfx('crunch'); T.sleepT = 7; T.state = 'sleep'; say('Oh, une pomme ! Miam… Zzz');
-      toast('🍎 Une pomme dormeuse ! Tu t’endors 7 secondes…', 2.2); return;
+      toast('🍎 Pomme dormeuse… zzz (7 s).', 2.2); return;
     }
   }
   if (G.pVis) {
@@ -313,7 +313,7 @@ function grabFail(i, fromNet, li) {
   k.bub = { text: GRAB_LINES[li % GRAB_LINES.length], t: 0, dur: 1.8 };
   puff(k.x, k.y - 8, 10); hop(k, 70);
   if (G.inf ? infAuth() : Net.isHost) fleeKid(k);
-  if (!fromNet) { Net.send({ t: 'grabfail', i, li }); T.stunT = 3; T.state = 'stun'; FX.punch(0.1); G.shake = 0.3; AU.sfx('boing'); setMark(T, '?', 1.4); toast('😵 Raté, ce n’était pas ' + (G.P.cfg.name || 'l’élève') + ' ! Ta tête tourne 3 secondes…', 2.4); }
+  if (!fromNet) { Net.send({ t: 'grabfail', i, li }); T.stunT = 3; T.state = 'stun'; FX.punch(0.1); G.shake = 0.3; AU.sfx('boing'); setMark(T, '?', 1.4); toast('😵 Raté ! Pas ' + (G.P.cfg.name || 'l’élève') + '. Tête qui tourne 3 s.', 2.2); }
   else { AU.sfx('boing', 0.5); }
 }
 function computeActionsT() {
@@ -357,9 +357,9 @@ function doActionT(a) {
       T.busy = { label: 'Je fouille…', dur: 0.9, t: 0, done: () => { const fh = G.inf && G.inf.guard && G.inf.fugs.find(f => f.fl === G.inf.cur && f.st === 'hide' && f.hide === spot.idx); if (fh) { guardTry(fh, 'found'); return; } if (P.hidden === spot) { if (P.sqN > 0) { P.sqN = 0; Net.send({ t: 'sqUse' }); squishyOnMe(P.sqId); } else { Net.send({ t: 'caught', r: 'found' }); caught('found', true); } } else { AU.sfx('fail'); toast(pick(['Personne…', 'Vide !', 'Raté, pas ici !', 'Juste de la poussière…']), 1.2); } } };
       break;
     }
-    case 'tkeys': T.state = 'keys'; AU.sfx('keys'); T.busy = { label: 'Je prends les clés…', dur: 1.3, t: 0, done: () => { T.hasKeys = true; Net.send({ t: 'keys' }); toast('🔑 Tu as les clés : tu peux ouvrir les portes fermées !', 2.2); } }; break;
+    case 'tkeys': T.state = 'keys'; AU.sfx('keys'); T.busy = { label: 'Je prends les clés…', dur: 1.3, t: 0, done: () => { T.hasKeys = true; Net.send({ t: 'keys' }); toast('🔑 Clés en poche. Aucune porte ne te résiste.', 2.2); } }; break;
     case 'tunlock': { const d = a.door; T.state = 'unlock'; AU.sfx('keys'); T.busy = { label: 'J’ouvre…', dur: 1.0, t: 0, done: () => { d.locked = false; d.byPlayer = false; Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 0 }); AU.sfx('lock'); cue(d.x * 16 + 8, d.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true }); } }; break; }
-    case 'nokey': toast('🔒 C’est fermé à clé ! Va prendre les clés au tableau à clés (' + G.m.roomAt(G.L.keyPt[0], G.L.keyPt[1]) + ').', 2.6); AU.sfx('bump'); break;
+    case 'nokey': toast('🔒 Fermé à clé. Les clés sont au tableau (' + G.m.roomAt(G.L.keyPt[0], G.L.keyPt[1]) + ').', 2.4); AU.sfx('bump'); break;
     case 'shout': {
       if (G.time - (T.shoutT || -9) < 2.2) return; T.shoutT = G.time;
       const n = P.cfg.name || 'toi';
