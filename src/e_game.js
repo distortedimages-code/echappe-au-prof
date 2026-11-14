@@ -90,7 +90,7 @@ function goTo(a, gx, gy, keepGoal) {
 function followPath(a, spd, dt) {
   if (!a.path || a.pi >= a.path.length) { a.moving = false; return 'done'; }
   const [tx, ty] = a.path[a.pi];
-  if (a.isTeacher && G.m.get(tx, ty) === K.DOOR) { const d = doorAt(tx, ty); if (d.locked) { a.moving = false; return d; } }
+  if (a.isTeacher && G.m.get(tx, ty) === K.DOOR) { const d = doorAt(tx, ty); if (d.locked && !(d.pre && !d.byPlayer)) { a.moving = false; return d; } }
   const cx = tx * 16 + 8, cy = ty * 16 + 12, dx = cx - a.x, dy = cy - a.y, d = Math.hypot(dx, dy), st = spd * dt;
   if (d > 0.01) { a.ang += angDiff(Math.atan2(dy, dx), a.ang) * Math.min(1, dt * 12); a.face = faceFromAng(a.ang); }
   a.moving = true; a.anim += dt * spd / 22; a.dist = (a.dist || 0) + Math.min(st, d);
@@ -193,6 +193,28 @@ function say(text) {
   T.bubble = { text, t: 0, dur: Math.max(2, text.length * 0.075) };
   const d = dist(T.x, T.y, G.P.x, G.P.y) / 16;
   if (d < 20) AU.say(text, T.prof, clamp(1.25 - d / 15, 0.15, 1));
+}
+// ---------- les élèves parlent (bêtises de collège) ----------
+const KID_LINES = ['Quoi ? Feur !', 'Skibidi !', 'C’est quand la récré ?', 'J’ai faim…', 'On mange quoi à la cantine ?', 'Mon chat a mangé mes devoirs.', 'T’as fait l’exo 4 ?', 'Flemme…', 'Tu me prêtes ta gomme ?', 'J’ai perdu ma trousse !', 'C’est pas moi, c’est lui !', 'Wesh !', 'Tranquille ou quoi ?', 'Ça sonne quand ?', 'Trop la flemme de l’interro…', 'Mdr', 'J’ai vu un pigeon avec un chapeau !', 'Chut, le prof !', 'J’ai oublié mon cahier…', 'Il est quelle heure ?', 'Bouge pas, y a une abeille !', 'T’as vu ma nouvelle trousse ?', 'Je suis trop fort au foot !', 'Hein ? Quoi ? J’ai rien fait !'];
+const SIX_LINES = ['Six seven ! 🤲', 'SIX… SEVEN !', 'Six seven, six seven…', 'Page 67 ? SIX SEVEN !', 'Il a 67 ans ? SIX SEVEN !'];
+const PROF_CHAT = ['Ouvrez vos cahiers page 67.', 'Silence au fond !', 'Qui mâche un chewing-gum ?', 'Interro surprise !', 'On ne dit pas « six seven » en classe !', 'Rangez vos portables !', 'Je ne veux plus entendre « feur » !', 'Qui veut passer au tableau ?', 'Les devoirs pour lundi !'];
+function npcChatter(dt) {
+  const own = !G.net;
+  G.kids.forEach(k => { if (k.sixT > 0) k.sixT -= dt; if (own && k.bub && k.beh !== 'sit' && k.beh !== 'crowd' && k.beh !== 'watch') { k.bub.t += dt; if (k.bub.t > k.bub.dur) k.bub = null; } });
+  G.chatT = (G.chatT == null ? 3 : G.chatT) - dt;
+  if (G.chatT > 0) return;
+  G.chatT = rand(2.2, 4.5);
+  const V0 = viewerA(), cand = G.kids.filter(k => k.vis && !k.gone && !k.bub && dist(k.x, k.y, V0.x, V0.y) < 10 * 16);
+  if (!cand.length) return;
+  const k = pick(cand);
+  if (k.isWatcher) { if (k.state === 'warn' || k.state === 'evac' || k.detect > 0.2) return; k.bub = { text: pick(PROF_CHAT), t: 0, dur: 2.4 }; return; }
+  const six = Math.random() < 0.3, text = six ? pick(SIX_LINES) : pick(KID_LINES);
+  k.bub = { text, t: 0, dur: 2.2 };
+  if (six) {
+    k.sixT = 2.4;
+    const nb = G.kids.find(o => o !== k && !o.isWatcher && o.vis && !o.bub && dist(o.x, o.y, k.x, k.y) < 3 * 16);
+    if (nb && Math.random() < 0.6) { nb.bub = { text: 'SEVEN !', t: 0, dur: 1.9 }; nb.sixT = 2.2; }
+  }
 }
 // ---------- Le prof ----------
 function perceive(dt) {
@@ -498,6 +520,7 @@ function updateDoors(dt) {
 }
 function onDoorOpen(d, a) {
   const V0 = viewerA(), dd = dist(d.x * 16 + 8, d.y * 16 + 8, V0.x, V0.y) / 16;
+  if (a === G.P) { G.P.lastDoor = d; G.P.lastDoorT = G.time; }
   if (a === V0) { AU.sfx('door', 0.3); if (a === G.P) makeNoise(d.x * 16 + 8, d.y * 16 + 10, 2.5, null, 'door'); return; }
   if (a === G.T || a === G.P) {
     const vis = a === G.T ? G.tVis : G.pVis;
@@ -609,6 +632,7 @@ function updatePlayer(dt) {
   for (let i = G.items.length - 1; i >= 0; i--) {
     const it = G.items[i];
     if (dist(it.x, it.y, P.x, P.y) < 11) {
+      if (it.kind === 'key') { P.keys = (P.keys || 0) + 1; G.items.splice(i, 1); if (G.net) Net.send({ t: 'item', id: it.id }); AU.sfx('keys'); sparkle(it.x, it.y - 6, 14); hop(P, 110); toast('🗝️ Une petite clé ! Elle ouvre une porte fermée à clé.', 2.6); UI.hudSig = null; continue; }
       if (P.inv.length >= 3) { if (G.msgCD <= 0) { toast('Ton sac est plein ! (3 objets max)', 1.6); G.msgCD = 2.5; } continue; }
       P.inv.push(it.kind); G.items.splice(i, 1); if (G.net) Net.send({ t: 'item', id: it.id }); AU.sfx('pickup'); sparkle(it.x, it.y - 6, 12); hop(P, 110); FX.flyers.push({ kind: it.kind, slot: P.inv.length - 1, wx: it.x, wy: it.y - 10, t: 0 });
       toast('✨ ' + ITEMS[it.kind].n + ' : ' + ITEMS[it.kind].d, 3.2);
@@ -677,13 +701,21 @@ function computeActions() {
     }
     if (k === K.DOOR) {
       const dr = doorAt(tx, ty);
-      if (!actorInDoor(dr)) {
+      if (dr.locked && !dr.byPlayer) {
+        const canKey = (P.keys || 0) > 0 || (G.inf && G.inf.keys);
+        cand.push(canKey ? { id: 'openKey', door: dr, icon: '🗝️', label: 'Ouvrir', sub: G.inf && G.inf.keys ? 'avec le trousseau' : 'avec ta clé', prio: 0.4, d } : { id: 'lockedDoor', icon: '🔒', label: 'Fermé à clé', sub: 'il faut une clé 🗝️', prio: 3, d });
+      }
+      else if (!actorInDoor(dr)) {
         if (dr.locked && dr.byPlayer) cand.push({ id: 'unlock', door: dr, icon: '🔓', label: 'Déverrouiller', sub: '', prio: 4, d });
         else if (!dr.locked && locksLeft() > 0) cand.push({ id: 'lock', door: dr, icon: '🔒', label: 'Fermer à clé', sub: locksLeft() + ' clé' + (locksLeft() > 1 ? 's' : ''), prio: 4, d });
       }
     }
     const gag = m.gags.find(g => g.x === tx && g.y === ty);
     if (gag) cand.push({ id: 'gag', gag, icon: '🚪', label: 'Pousser', sub: 'la grande porte', prio: 5, d });
+  }
+  if (P.lastDoor && G.time - P.lastDoorT < 3.5 && !P.lastDoor.locked && locksLeft() > 0 && !actorInDoor(P.lastDoor)) {
+    const d0 = P.lastDoor, dd = Math.hypot(d0.x * 16 + 8 - P.x, d0.y * 16 + 8 - (P.y - 6));
+    if (dd > 12 && dd < 44) cand.push({ id: 'lock', door: d0, icon: '🔒', label: 'Fermer à clé', sub: 'derrière moi !', prio: 0.15, d: 0 });
   }
   if (G.inf) infActions(cand, P);
   cand.sort((a, b) => a.prio - b.prio || a.d - b.d);
@@ -743,9 +775,15 @@ function doAction(a) {
     }
     case 'lock': {
       const d = a.door;
-      P.busy = { label: 'Je ferme à clé…', dur: 0.5, t: 0, done: () => { if (actorInDoor(d)) return; d.locked = true; d.byPlayer = true; d.target = 0; d.closeT = 0; AU.sfx('lock'); makeNoise(d.x * 16 + 8, d.y * 16 + 8, 4, 'CLIC !'); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 1 }); cue(d.x * 16 + 8, d.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true, life: 0.9 }); toast('🔒 Porte fermée à clé ! Le prof devra aller chercher ses clés.', 2); } };
+      P.busy = { label: 'Je ferme à clé…', dur: 0.35, t: 0, done: () => { if (actorInDoor(d)) return; d.locked = true; d.byPlayer = true; d.target = 0; d.closeT = 0; AU.sfx('lock'); makeNoise(d.x * 16 + 8, d.y * 16 + 8, 4, 'CLIC !'); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 1 }); cue(d.x * 16 + 8, d.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true, life: 0.9 }); toast('🔒 Porte fermée à clé ! Le prof devra aller chercher ses clés.', 2); } };
       break;
     }
+    case 'openKey': {
+      const d = a.door;
+      P.busy = { label: 'J’ouvre…', dur: 0.6, t: 0, done: () => { if (!d.locked) return; d.locked = false; d.byPlayer = false; if (!(G.inf && G.inf.keys)) P.keys = Math.max(0, (P.keys || 0) - 1); AU.sfx('lock'); AU.sfx('keys', 0.5); cue(d.x * 16 + 8, d.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true }); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 0 }); UI.hudSig = null; } };
+      break;
+    }
+    case 'lockedDoor': AU.sfx('bump'); toast('🔒 Cette porte est fermée à clé. Trouve une petite clé 🗝️ (elles brillent par terre)… ou le trousseau du concierge !', 3); break;
     case 'unlock': { const d = a.door; d.locked = false; d.byPlayer = false; AU.sfx('lock'); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 0 }); break; }
     case 'gag': toast(a.gag.text, 2.4); AU.sfx('bump'); makeNoise(a.gag.x * 16 + 8, a.gag.y * 16 + 16, 3, 'BOUM'); break;
   }
@@ -833,6 +871,7 @@ function update(dt) {
     if (AU.songName === 'chase' && G.T.state !== 'chase' && !['tired'].includes(G.T.state)) AU.play('sneak');
     if (AU.songName == null || AU.songName === 'menu') AU.play('sneak');
     }
+    if (G.mode === 'play') npcChatter(dt);
   } else if (G.mode === 'escape') {
     G.escT += dt; const P = G.P, t = Math.min(1, G.escT / 0.8);
     const ex0 = P.x, ey0 = P.y; P.x = lerp(G.escFrom[0], G.escTo[0], t); P.y = lerp(G.escFrom[1], G.escTo[1], t); P.moving = t < 1; P.running = true; P.dist = (P.dist || 0) + Math.hypot(P.x - ex0, P.y - ey0) + dt * 30; P.skidT = 0;
@@ -879,7 +918,12 @@ function update(dt) {
       G.kids.forEach(k => { const d = Math.hypot(k.x - G.eye[0], k.y - 10 - G.eye[1]); let v = false; if (T.state !== 'count' && d < R) { let inC = d < 28; if (!inC) inC = Math.abs(angDiff(Math.atan2(k.y - 10 - G.eye[1], k.x - G.eye[0]), T.ang)) < fov; v = inC && los(G.eye[0], G.eye[1], k.x, k.y - 10); } k.vis = v; });
     } else {
     G.pVis = true;
-    if (P.hidden) { G.eye = [P.hidden.x * 16 + 8, P.hidden.y * 16 + 8]; G.visR = P.hidden.peek * 16; }
+    if (P.hidden) {
+      const hs = P.hidden, hx = hs.x * 16 + 8, hy = hs.y * 16 + 8;
+      if (KP[hs.k] && KP[hs.k].opaque && P.hideFrom) { const fx = P.hideFrom[0] - hx, fy = P.hideFrom[1] - 7 - hy, fl = Math.hypot(fx, fy) || 1; G.eye = [hx + fx / fl * 10, hy + fy / fl * 10]; }
+      else G.eye = [hx, hy];
+      G.visR = hs.peek * 16;
+    }
     else { G.eye = [P.x, P.y - 7]; G.visR = (G.L.outdoor ? 9 : 7.5) * 16 * (P.small > 0 ? 0.85 : 1); }
     G.tVis = !T.gone && dist(G.eye[0], G.eye[1], T.x, T.y - 12) < G.visR && los(G.eye[0], G.eye[1], T.x, T.y - 12);
     G.kids.forEach(k => k.vis = !k.gone && dist(G.eye[0], G.eye[1], k.x, k.y - 10) < G.visR && los(G.eye[0], G.eye[1], k.x, k.y - 10));

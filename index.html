@@ -906,15 +906,17 @@ const ITEMS = {
   apple: { n: 'Pomme dormeuse', d: 'Pose-la par terre : le prof la croque et s’endort.', short: 'Dodo' },
   mirror: { n: 'Miroir magique', d: 'Montre où est le prof et les sorties pendant 8 s.', short: 'Voir' },
   watch: { n: 'Montre du Lapin blanc', d: 'Le prof avance au ralenti pendant 8 s.', short: 'Ralenti' },
+  key: { n: 'Petite clé', d: 'Elle ouvre une porte fermée à clé.', short: 'Clé' },
   disguise: { n: 'Déguisement', d: 'Perruque + fausse moustache : tu changes d’apparence pour toute la partie ! Fais-le quand le prof ne te voit pas.', short: 'Déguise' },
 };
-const ITEM_KEYS = Object.keys(ITEMS).filter(k => k !== 'disguise');
+const ITEM_KEYS = Object.keys(ITEMS).filter(k => k !== 'disguise' && k !== 'key');
 const ITEM_CACHE = {};
 function itemCanvas(kind) {
   if (ITEM_CACHE[kind]) return ITEM_CACHE[kind];
   const [cv, c] = mkCanvas(14, 14);
   const R = (a, b, w, h, col) => { c.fillStyle = col; c.fillRect(a + 1, b + 1, w, h); };
   switch (kind) {
+    case 'key': R(1, 3, 5, 5, '#ffd23f'); R(2, 4, 3, 3, '#1a1028'); R(3, 5, 1, 1, '#ffd23f'); R(5, 5, 7, 2, '#ffd23f'); R(9, 7, 1, 2, '#ffd23f'); R(11, 7, 1, 3, '#ffd23f'); R(1, 3, 5, 1, '#fff2a8'); R(5, 5, 7, 1, '#fff2a8'); break;
     case 'cake': R(1, 9, 10, 2, '#e8e8f0'); R(2, 5, 8, 4, '#f4b6c2'); R(2, 4, 8, 2, '#fff4f8'); R(2, 6, 8, 1, '#ff6f91'); R(3, 8, 1, 1, '#c94a6b'); R(6, 8, 1, 1, '#c94a6b'); R(8, 7, 1, 1, '#c94a6b'); R(5, 1, 2, 3, '#e43b44'); R(6, 0, 1, 1, '#3e8948'); R(5, 1, 1, 1, '#ff8a8a'); break;
     case 'lamp': R(1, 6, 8, 3, '#f2c14e'); R(3, 5, 4, 1, '#ffd76e'); R(8, 5, 3, 2, '#f2c14e'); R(10, 4, 2, 1, '#f2c14e'); R(0, 6, 2, 2, '#c99a2e'); R(3, 9, 5, 2, '#c99a2e'); R(4, 4, 2, 1, '#c99a2e'); R(2, 7, 3, 1, '#ffe9a8'); R(4, 2, 1, 2, '#d8e8ff'); R(5, 0, 1, 2, '#d8e8ff'); break;
     case 'slipper': R(1, 7, 9, 3, '#bfefff'); R(7, 5, 4, 3, '#bfefff'); R(2, 6, 5, 1, '#e8fbff'); R(1, 10, 10, 1, '#7fcfe8'); R(9, 3, 1, 1, '#ffffff'); R(3, 2, 1, 3, '#ffffff'); R(2, 3, 3, 1, '#ffffff'); break;
@@ -1135,6 +1137,8 @@ function drawFloorDecor(c, d) {
     case 'rug': c.fillStyle = d.col || '#7b45a8'; c.fillRect(px + 2, py + 2, d.w * 16 - 4, d.h * 16 - 4); c.fillStyle = shade(d.col || '#7b45a8', 0.3); c.fillRect(px + 4, py + 4, d.w * 16 - 8, 1); c.fillRect(px + 4, py + d.h * 16 - 5, d.w * 16 - 8, 1); break;
   }
 }
+const OVERHANG = 9;
+const TALL_KINDS = new Set([K.WALL, K.LOCKER, K.ARMOIRE, K.SHELF, K.STALL, K.COPIER, K.PILLAR, K.X_WINDOW, K.X_DOOR, K.X_ELEV]);
 function isWallish(k) { return k === K.WALL || k === K.X_WINDOW || k === K.X_DOOR || k === K.X_ELEV || k === K.LOCKER; }
 function renderMapCanvas(L) {
   const m = L.m; const [cv, c] = mkCanvas(m.w * 16, m.h * 16);
@@ -1158,6 +1162,15 @@ function renderMapCanvas(L) {
   }
   // 4) décor mural
   m.decor.forEach(d => { const w = d.w || 1; for (let i = 0; i < w; i++) { if (isWallish(m.get(d.x + i, d.y + 1)) || m.get(d.x + i, d.y) !== K.WALL) continue; drawWallDecor(c, (d.x + i) * 16, d.y * 16, d, i); } });
+  // 5) perspective : le haut des murs et des grands meubles dépasse un peu vers le haut (ce qui est derrière est en partie caché)
+  L.over = new Uint8Array(m.w * m.h);
+  for (let y = 1; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+    const k = m.get(x, y), up = m.get(x, y - 1); if (!TALL_KINDS.has(k) || TALL_KINDS.has(up) || up === K.DOOR || up === K.FENCE) continue;
+    const px = x * 16, py = y * 16;
+    if (k === K.WALL || k === K.X_WINDOW || k === K.X_DOOR || k === K.X_ELEV) { const S = WSTYLE[m.ws[y * m.w + x]]; c.fillStyle = S.top; c.fillRect(px, py - OVERHANG, 16, OVERHANG); c.fillStyle = shade(S.top, 0.14); c.fillRect(px, py - OVERHANG, 16, 1); c.fillStyle = 'rgba(10,6,20,0.25)'; c.fillRect(px, py - OVERHANG - 1, 16, 1); }
+    else c.drawImage(cv, px, py, 16, OVERHANG, px, py - OVERHANG, 16, OVERHANG);
+    L.over[y * m.w + x] = 1;
+  }
   return cv;
 }
 
@@ -2621,6 +2634,7 @@ const Net = {
       case 'alarm': if (G.inf && !G.inf.alarmUsed) { infAlarm(); UI.banner('🔥 L’ALARME A SONNÉ au ' + INF_FLOOR_META[d.fl].name + ' ! Tout le monde descend dans la cour.'); } break;
       case 'call': if (G.inf) { if (d.ok) { UI.banner('📋 L’appel : « ' + (P.cfg.name || 'l’élève') + ' » répond présent·e… dans le rang !'); } else { G.inf.hunt = true; G.inf.warn = 3; UI.banner('📋 Il manque ' + (P.cfg.name || 'l’élève') + ' à l’appel : il/elle est encore dans le bâtiment !'); } AU.sfx('ding'); } break;
       case 'alarmEnd': if (G.inf && G.inf.alarm) infAlarmEnd(); break;
+      case 'calm': if (G.inf) { G.inf.hunt = false; G.inf.warn = 2; toast('😮‍💨 ' + (P.cfg.name || 'L’élève') + ' est resté·e caché·e : les profs ont arrêté la traque.', 3); UI.infSig = null; } break;
       case 'trousseau': if (G.inf) { G.inf.keys = true; toast('🔑 Le trousseau du concierge a disparu (' + INF_FLOOR_META[G.inf.keysFloor].name + ') ! L’élève peut ouvrir la grille et le portail…', 3.4); AU.sfx('keys'); } break;
       case 'planTaken': if (G.inf) { toast('🗺️ Le plan d’évacuation du ' + INF_FLOOR_META[d.fl].name + ' a été arraché : l’élève sait où tu es !', 3.2); } break;
       case 'end': timeUp(); break;
@@ -2958,6 +2972,21 @@ function infSetupFloor(F, R, itemPlan) {
     R.sh(c); if (c.length) { const w = infMakeWatcher('la documentaliste', c[0], r, c.slice(0, 10), R); w.walkP = 0.6; w.boardP = 0; G.kids.push(w); }
   }
   F.robotSpots = []; if (I.multi) infSpawnRobots(F, R);
+  // des portes fermées à clé (dont la salle du trousseau) et des petites clés qui traînent
+  F.lockedRooms = [];
+  if (F.f > 0) {
+    const inR = (r, x, y) => x >= r.x - 1 && y >= r.y - 1 && x <= r.x + r.w && y <= r.y + r.h;
+    const doorsOf = r => G.doors.filter(d => inR(r, d.x, d.y));
+    const lockRoom = r => { const ds = doorsOf(r); if (!ds.length) return; ds.forEach(d => { d.locked = true; d.byPlayer = false; d.pre = true; }); F.lockedRooms.push(r); };
+    if (F.f === I.keysFloor) { const kr = L.rooms.find(r => I.keysDesk[0] >= r.x && I.keysDesk[1] >= r.y && I.keysDesk[0] < r.x + r.w && I.keysDesk[1] < r.y + r.h); if (kr) lockRoom(kr); }
+    const extra = L.rooms.filter(r => !r.def.stair && !r.def.startCls && !F.lockedRooms.includes(r) && !(L.planPt && inR(r, L.planPt[0], L.planPt[1])) && doorsOf(r).length && doorsOf(r).every(d => !G.doors.some(o => o !== d && o.x === d.x && o.y === d.y)));
+    R.sh(extra); extra.slice(0, R.i(1, 2)).forEach(lockRoom);
+    const free = L.itemSpots.filter(([x, y]) => !F.lockedRooms.some(r => inR(r, x, y)) && !(I.startRoom && F.f === INF_TOP && inR(I.startRoom, x, y)) && !G.items.some(it => Math.abs(it.x - x * 16 - 8) + Math.abs(it.y - y * 16 - 12) < 48));
+    R.sh(free); const nk = F.lockedRooms.length + 1, picked = [];
+    for (const s of free) { if (picked.length >= nk) break; if (picked.every(c => Math.abs(c[0] - s[0]) + Math.abs(c[1] - s[1]) >= 7)) picked.push(s); }
+    L.patrol = L.patrol.filter(([x, y]) => !F.lockedRooms.some(r => inR(r, x, y)));
+    picked.forEach((s, i) => G.items.push({ id: F.f * 10 + 5 + i, x: s[0] * 16 + 8, y: s[1] * 16 + 12, kind: 'key', ph: R.f() * 6 }));
+  }
   if (F.f === 0) { L.kidSpots = L.itemSpots.filter(([x, y]) => { const fs = m.fs[y * m.w + x]; return fs === FS.ASPHALT || fs === FS.GRASS || fs === FS.SAND; }); G.pigeons = []; spawnPigeons(); }
   else G.pigeons = [];
   G.kids.forEach(k => { k.orig = { x: k.x, y: k.y, beh: k.beh, ang: k.ang }; });
@@ -3173,6 +3202,18 @@ function infUpdate(dt) {
   if (G.T.state === 'chase') I.chased = Math.max(I.chased, 1);
   if (I.ping) I.ping.t += dt;
   const boss = !I.multi || I.role === 'student';
+  // la traque s'épuise si l'élève reste caché 20 secondes
+  if (boss) {
+    if (I.hunt && P.hidden) {
+      I.hideT = (I.hideT || 0) + dt;
+      if (I.hideT >= 20) {
+        I.hideT = 0; I.hunt = false; I.warn = 2;
+        UI.banner('😮‍💨 Fausse alerte… ils ont arrêté de te chercher ! (encore 1 avertissement avant la poursuite)'); AU.play('sneak'); UI.hudSig = null; UI.infSig = null;
+        if (I.multi) Net.send({ t: 'calm' });
+        else if (!G.T.gone && G.T.state !== 'patrol' && G.T.state !== 'evac') { G.T.state = 'patrol'; G.T.path = null; G.T.knows = null; G.T.detect = 0; say('Bon… j’ai dû rêver. Je reprends ma ronde.'); }
+      }
+    } else I.hideT = 0;
+  }
   // talkie-walkie entre surveillants
   if (I.radio) { I.radio.t -= dt; if (I.radio.t <= 0) { const r = I.radio; I.radio = null; if (!G.T.gone && G.T.state !== 'chase') { UI.banner('📻 Talkie : « Un élève arrive par l’escalier ! »'); infAlertT(r.x, r.y, false); } } }
   // l'alarme
@@ -3493,7 +3534,7 @@ function goTo(a, gx, gy, keepGoal) {
 function followPath(a, spd, dt) {
   if (!a.path || a.pi >= a.path.length) { a.moving = false; return 'done'; }
   const [tx, ty] = a.path[a.pi];
-  if (a.isTeacher && G.m.get(tx, ty) === K.DOOR) { const d = doorAt(tx, ty); if (d.locked) { a.moving = false; return d; } }
+  if (a.isTeacher && G.m.get(tx, ty) === K.DOOR) { const d = doorAt(tx, ty); if (d.locked && !(d.pre && !d.byPlayer)) { a.moving = false; return d; } }
   const cx = tx * 16 + 8, cy = ty * 16 + 12, dx = cx - a.x, dy = cy - a.y, d = Math.hypot(dx, dy), st = spd * dt;
   if (d > 0.01) { a.ang += angDiff(Math.atan2(dy, dx), a.ang) * Math.min(1, dt * 12); a.face = faceFromAng(a.ang); }
   a.moving = true; a.anim += dt * spd / 22; a.dist = (a.dist || 0) + Math.min(st, d);
@@ -3596,6 +3637,28 @@ function say(text) {
   T.bubble = { text, t: 0, dur: Math.max(2, text.length * 0.075) };
   const d = dist(T.x, T.y, G.P.x, G.P.y) / 16;
   if (d < 20) AU.say(text, T.prof, clamp(1.25 - d / 15, 0.15, 1));
+}
+// ---------- les élèves parlent (bêtises de collège) ----------
+const KID_LINES = ['Quoi ? Feur !', 'Skibidi !', 'C’est quand la récré ?', 'J’ai faim…', 'On mange quoi à la cantine ?', 'Mon chat a mangé mes devoirs.', 'T’as fait l’exo 4 ?', 'Flemme…', 'Tu me prêtes ta gomme ?', 'J’ai perdu ma trousse !', 'C’est pas moi, c’est lui !', 'Wesh !', 'Tranquille ou quoi ?', 'Ça sonne quand ?', 'Trop la flemme de l’interro…', 'Mdr', 'J’ai vu un pigeon avec un chapeau !', 'Chut, le prof !', 'J’ai oublié mon cahier…', 'Il est quelle heure ?', 'Bouge pas, y a une abeille !', 'T’as vu ma nouvelle trousse ?', 'Je suis trop fort au foot !', 'Hein ? Quoi ? J’ai rien fait !'];
+const SIX_LINES = ['Six seven ! 🤲', 'SIX… SEVEN !', 'Six seven, six seven…', 'Page 67 ? SIX SEVEN !', 'Il a 67 ans ? SIX SEVEN !'];
+const PROF_CHAT = ['Ouvrez vos cahiers page 67.', 'Silence au fond !', 'Qui mâche un chewing-gum ?', 'Interro surprise !', 'On ne dit pas « six seven » en classe !', 'Rangez vos portables !', 'Je ne veux plus entendre « feur » !', 'Qui veut passer au tableau ?', 'Les devoirs pour lundi !'];
+function npcChatter(dt) {
+  const own = !G.net;
+  G.kids.forEach(k => { if (k.sixT > 0) k.sixT -= dt; if (own && k.bub && k.beh !== 'sit' && k.beh !== 'crowd' && k.beh !== 'watch') { k.bub.t += dt; if (k.bub.t > k.bub.dur) k.bub = null; } });
+  G.chatT = (G.chatT == null ? 3 : G.chatT) - dt;
+  if (G.chatT > 0) return;
+  G.chatT = rand(2.2, 4.5);
+  const V0 = viewerA(), cand = G.kids.filter(k => k.vis && !k.gone && !k.bub && dist(k.x, k.y, V0.x, V0.y) < 10 * 16);
+  if (!cand.length) return;
+  const k = pick(cand);
+  if (k.isWatcher) { if (k.state === 'warn' || k.state === 'evac' || k.detect > 0.2) return; k.bub = { text: pick(PROF_CHAT), t: 0, dur: 2.4 }; return; }
+  const six = Math.random() < 0.3, text = six ? pick(SIX_LINES) : pick(KID_LINES);
+  k.bub = { text, t: 0, dur: 2.2 };
+  if (six) {
+    k.sixT = 2.4;
+    const nb = G.kids.find(o => o !== k && !o.isWatcher && o.vis && !o.bub && dist(o.x, o.y, k.x, k.y) < 3 * 16);
+    if (nb && Math.random() < 0.6) { nb.bub = { text: 'SEVEN !', t: 0, dur: 1.9 }; nb.sixT = 2.2; }
+  }
 }
 // ---------- Le prof ----------
 function perceive(dt) {
@@ -3901,6 +3964,7 @@ function updateDoors(dt) {
 }
 function onDoorOpen(d, a) {
   const V0 = viewerA(), dd = dist(d.x * 16 + 8, d.y * 16 + 8, V0.x, V0.y) / 16;
+  if (a === G.P) { G.P.lastDoor = d; G.P.lastDoorT = G.time; }
   if (a === V0) { AU.sfx('door', 0.3); if (a === G.P) makeNoise(d.x * 16 + 8, d.y * 16 + 10, 2.5, null, 'door'); return; }
   if (a === G.T || a === G.P) {
     const vis = a === G.T ? G.tVis : G.pVis;
@@ -4012,6 +4076,7 @@ function updatePlayer(dt) {
   for (let i = G.items.length - 1; i >= 0; i--) {
     const it = G.items[i];
     if (dist(it.x, it.y, P.x, P.y) < 11) {
+      if (it.kind === 'key') { P.keys = (P.keys || 0) + 1; G.items.splice(i, 1); if (G.net) Net.send({ t: 'item', id: it.id }); AU.sfx('keys'); sparkle(it.x, it.y - 6, 14); hop(P, 110); toast('🗝️ Une petite clé ! Elle ouvre une porte fermée à clé.', 2.6); UI.hudSig = null; continue; }
       if (P.inv.length >= 3) { if (G.msgCD <= 0) { toast('Ton sac est plein ! (3 objets max)', 1.6); G.msgCD = 2.5; } continue; }
       P.inv.push(it.kind); G.items.splice(i, 1); if (G.net) Net.send({ t: 'item', id: it.id }); AU.sfx('pickup'); sparkle(it.x, it.y - 6, 12); hop(P, 110); FX.flyers.push({ kind: it.kind, slot: P.inv.length - 1, wx: it.x, wy: it.y - 10, t: 0 });
       toast('✨ ' + ITEMS[it.kind].n + ' : ' + ITEMS[it.kind].d, 3.2);
@@ -4080,13 +4145,21 @@ function computeActions() {
     }
     if (k === K.DOOR) {
       const dr = doorAt(tx, ty);
-      if (!actorInDoor(dr)) {
+      if (dr.locked && !dr.byPlayer) {
+        const canKey = (P.keys || 0) > 0 || (G.inf && G.inf.keys);
+        cand.push(canKey ? { id: 'openKey', door: dr, icon: '🗝️', label: 'Ouvrir', sub: G.inf && G.inf.keys ? 'avec le trousseau' : 'avec ta clé', prio: 0.4, d } : { id: 'lockedDoor', icon: '🔒', label: 'Fermé à clé', sub: 'il faut une clé 🗝️', prio: 3, d });
+      }
+      else if (!actorInDoor(dr)) {
         if (dr.locked && dr.byPlayer) cand.push({ id: 'unlock', door: dr, icon: '🔓', label: 'Déverrouiller', sub: '', prio: 4, d });
         else if (!dr.locked && locksLeft() > 0) cand.push({ id: 'lock', door: dr, icon: '🔒', label: 'Fermer à clé', sub: locksLeft() + ' clé' + (locksLeft() > 1 ? 's' : ''), prio: 4, d });
       }
     }
     const gag = m.gags.find(g => g.x === tx && g.y === ty);
     if (gag) cand.push({ id: 'gag', gag, icon: '🚪', label: 'Pousser', sub: 'la grande porte', prio: 5, d });
+  }
+  if (P.lastDoor && G.time - P.lastDoorT < 3.5 && !P.lastDoor.locked && locksLeft() > 0 && !actorInDoor(P.lastDoor)) {
+    const d0 = P.lastDoor, dd = Math.hypot(d0.x * 16 + 8 - P.x, d0.y * 16 + 8 - (P.y - 6));
+    if (dd > 12 && dd < 44) cand.push({ id: 'lock', door: d0, icon: '🔒', label: 'Fermer à clé', sub: 'derrière moi !', prio: 0.15, d: 0 });
   }
   if (G.inf) infActions(cand, P);
   cand.sort((a, b) => a.prio - b.prio || a.d - b.d);
@@ -4146,9 +4219,15 @@ function doAction(a) {
     }
     case 'lock': {
       const d = a.door;
-      P.busy = { label: 'Je ferme à clé…', dur: 0.5, t: 0, done: () => { if (actorInDoor(d)) return; d.locked = true; d.byPlayer = true; d.target = 0; d.closeT = 0; AU.sfx('lock'); makeNoise(d.x * 16 + 8, d.y * 16 + 8, 4, 'CLIC !'); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 1 }); cue(d.x * 16 + 8, d.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true, life: 0.9 }); toast('🔒 Porte fermée à clé ! Le prof devra aller chercher ses clés.', 2); } };
+      P.busy = { label: 'Je ferme à clé…', dur: 0.35, t: 0, done: () => { if (actorInDoor(d)) return; d.locked = true; d.byPlayer = true; d.target = 0; d.closeT = 0; AU.sfx('lock'); makeNoise(d.x * 16 + 8, d.y * 16 + 8, 4, 'CLIC !'); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 1 }); cue(d.x * 16 + 8, d.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true, life: 0.9 }); toast('🔒 Porte fermée à clé ! Le prof devra aller chercher ses clés.', 2); } };
       break;
     }
+    case 'openKey': {
+      const d = a.door;
+      P.busy = { label: 'J’ouvre…', dur: 0.6, t: 0, done: () => { if (!d.locked) return; d.locked = false; d.byPlayer = false; if (!(G.inf && G.inf.keys)) P.keys = Math.max(0, (P.keys || 0) - 1); AU.sfx('lock'); AU.sfx('keys', 0.5); cue(d.x * 16 + 8, d.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true }); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 0 }); UI.hudSig = null; } };
+      break;
+    }
+    case 'lockedDoor': AU.sfx('bump'); toast('🔒 Cette porte est fermée à clé. Trouve une petite clé 🗝️ (elles brillent par terre)… ou le trousseau du concierge !', 3); break;
     case 'unlock': { const d = a.door; d.locked = false; d.byPlayer = false; AU.sfx('lock'); if (G.net) Net.send({ t: 'lock', i: G.doors.indexOf(d), l: 0 }); break; }
     case 'gag': toast(a.gag.text, 2.4); AU.sfx('bump'); makeNoise(a.gag.x * 16 + 8, a.gag.y * 16 + 16, 3, 'BOUM'); break;
   }
@@ -4236,6 +4315,7 @@ function update(dt) {
     if (AU.songName === 'chase' && G.T.state !== 'chase' && !['tired'].includes(G.T.state)) AU.play('sneak');
     if (AU.songName == null || AU.songName === 'menu') AU.play('sneak');
     }
+    if (G.mode === 'play') npcChatter(dt);
   } else if (G.mode === 'escape') {
     G.escT += dt; const P = G.P, t = Math.min(1, G.escT / 0.8);
     const ex0 = P.x, ey0 = P.y; P.x = lerp(G.escFrom[0], G.escTo[0], t); P.y = lerp(G.escFrom[1], G.escTo[1], t); P.moving = t < 1; P.running = true; P.dist = (P.dist || 0) + Math.hypot(P.x - ex0, P.y - ey0) + dt * 30; P.skidT = 0;
@@ -4282,7 +4362,12 @@ function update(dt) {
       G.kids.forEach(k => { const d = Math.hypot(k.x - G.eye[0], k.y - 10 - G.eye[1]); let v = false; if (T.state !== 'count' && d < R) { let inC = d < 28; if (!inC) inC = Math.abs(angDiff(Math.atan2(k.y - 10 - G.eye[1], k.x - G.eye[0]), T.ang)) < fov; v = inC && los(G.eye[0], G.eye[1], k.x, k.y - 10); } k.vis = v; });
     } else {
     G.pVis = true;
-    if (P.hidden) { G.eye = [P.hidden.x * 16 + 8, P.hidden.y * 16 + 8]; G.visR = P.hidden.peek * 16; }
+    if (P.hidden) {
+      const hs = P.hidden, hx = hs.x * 16 + 8, hy = hs.y * 16 + 8;
+      if (KP[hs.k] && KP[hs.k].opaque && P.hideFrom) { const fx = P.hideFrom[0] - hx, fy = P.hideFrom[1] - 7 - hy, fl = Math.hypot(fx, fy) || 1; G.eye = [hx + fx / fl * 10, hy + fy / fl * 10]; }
+      else G.eye = [hx, hy];
+      G.visR = hs.peek * 16;
+    }
     else { G.eye = [P.x, P.y - 7]; G.visR = (G.L.outdoor ? 9 : 7.5) * 16 * (P.small > 0 ? 0.85 : 1); }
     G.tVis = !T.gone && dist(G.eye[0], G.eye[1], T.x, T.y - 12) < G.visR && los(G.eye[0], G.eye[1], T.x, T.y - 12);
     G.kids.forEach(k => k.vis = !k.gone && dist(G.eye[0], G.eye[1], k.x, k.y - 10) < G.visR && los(G.eye[0], G.eye[1], k.x, k.y - 10));
@@ -4908,6 +4993,24 @@ function updateCamera(dt) {
   const k = 1 - Math.exp(-dt * 6);
   G.camX += (tx - G.camX) * k; G.camY += (ty - G.camY) * k;
 }
+// perspective : un personnage juste derrière un mur ou un grand meuble est en partie caché
+function occlude(c, a, fn) {
+  const L = G.L, m = G.m; if (!L || !L.over || a.x < 0) { fn(); return; }
+  const tx = Math.floor(a.x / 16), ty = Math.floor((a.y - 4) / 16), y = ty + 1, rects = [];
+  if (y < m.h) for (let x = tx - 1; x <= tx + 1; x++) { if (x < 0 || x >= m.w || !L.over[y * m.w + x]) continue; const top = y * 16 - OVERHANG; if (a.y > top) rects.push([x * 16, top, 16, OVERHANG + 16]); }
+  if (!rects.length) { fn(); return; }
+  c.save(); c.beginPath(); c.rect(a.x - 48, a.y - 90, 96, 140); rects.forEach(r => c.rect(r[0], r[1], r[2], r[3])); c.clip('evenodd'); fn(); c.restore();
+}
+// « six seven ! » : les mains qui balancent comme une balance
+function drawSixSeven(c, k, dy) {
+  const skin = SKINS[k.cfg.skin] || SKINS[0], ph = Math.sin(G.time * 11 + k.ph), y0 = k.y - 15 + dy;
+  [[-1, ph], [1, -ph]].forEach(([s, p]) => {
+    const hx = k.x + s * 9, hy = y0 - p * 3.5;
+    c.strokeStyle = '#1a1028'; c.lineWidth = 2.2; c.beginPath(); c.moveTo(k.x + s * 4, y0 + 2); c.lineTo(hx, hy); c.stroke();
+    c.strokeStyle = skin; c.lineWidth = 1.2; c.beginPath(); c.moveTo(k.x + s * 4, y0 + 2); c.lineTo(hx, hy); c.stroke();
+    c.fillStyle = '#1a1028'; c.fillRect(hx - 2.5, hy - 1.5, 5, 3); c.fillStyle = skin; c.fillRect(hx - 2, hy - 1, 4, 2);
+  });
+}
 function renderGame(dt) {
   const { lx, lw, lh, ctx, S } = V, P = G.P, T = G.T;
   updateCamera(dt || 0.016);
@@ -4934,22 +5037,23 @@ function renderGame(dt) {
   G.apples.forEach(a => ents.push([a.y, () => { const w = Math.sin(G.time * 4) * 0.12; ctx.save(); ctx.translate(a.x, a.y - 6); ctx.rotate(w); ctx.drawImage(itemCanvas('apple'), -7, -7); ctx.restore(); }]));
   G.kids.forEach(k => {
     if (!k.vis) return;
-    ents.push([k.y, () => {
+    ents.push([k.y, () => occlude(ctx, k, () => {
       const bob = k.beh === 'jump' ? -Math.abs(Math.sin(G.time * 6 + k.ph)) * 5 : 0;
       if (k.beh === 'jump') { const up = Math.sin(G.time * 6 + k.ph) > 0; ctx.strokeStyle = '#e43b44'; ctx.lineWidth = 0.9; ctx.beginPath(); if (up) ctx.ellipse(k.x, k.y - 2, 8, 3, 0, 0.1, Math.PI - 0.1); else ctx.ellipse(k.x, k.y - 22 + bob, 8, 4, 0, Math.PI + 0.1, -0.1); ctx.stroke(); }
-      if (k.beh === 'sit') { drawSprite(ctx, k.cfg, null, k, { sy: 0.86, bob: 2, noShadow: true }); return; }
+      if (k.beh === 'sit') { drawSprite(ctx, k.cfg, null, k, { sy: 0.86, bob: 2, noShadow: true }); if (k.sixT > 0) drawSixSeven(ctx, k, 3); return; }
       drawSprite(ctx, k.cfg, k.v || null, k, { bob, sy: k.beh === 'jump' && bob > -1 ? 0.9 : 1 });
+      if (k.sixT > 0) drawSixSeven(ctx, k, 0);
       if (k.isWatcher && k.markT > 0 && k.mark) txt(ctx, k.mark, k.x, k.y - 40, 9, k.mark === '!' ? '#e43b44' : '#ffd23f');
-    }]);
+    })]);
   });
   (G.pigeons || []).forEach(p => { if (p.st === 'gone') return; if (dist(G.eye[0], G.eye[1], p.x, p.y) > G.visR + 10 && p.z < 20) return; ents.push([p.y + (p.z > 4 ? 200 : 0), () => drawPigeon(ctx, p)]); });
-  if (showT && !T.gone) ents.push([T.y, () => drawTeacher(ctx, T)]);
+  if (showT && !T.gone) ents.push([T.y, () => occlude(ctx, T, () => drawTeacher(ctx, T))]);
   FX.ghosts.forEach(g => ents.push([g.y - 0.1, () => drawSprite(ctx, P.cfg, null, { x: g.x, y: g.y, face: g.face, dist: g.dist, moving: true, running: true }, { tint: '#7ff0ff', alpha: 0.45 * (1 - g.t / 0.32), scale: g.small ? 0.5 : 1, noShadow: true, still: true, gait: 'run' })]));
   FX.zips.forEach(zp => ents.push([zp.y1, () => { const t = zp.t, e = t * t; drawSprite(ctx, P.cfg, null, { x: lerp(zp.x0, zp.x1, e), y: lerp(zp.y0, zp.y1, e), face: zp.face, moving: false }, { sx: 1 + t * 0.6, sy: 1 - t * 0.8, scale: zp.small ? 0.5 : 1, alpha: 1 - t * 0.5, still: true }); }]));
   if (!P.hidden && G.pVis !== false) {
     let sc = P.small > 0 ? 0.5 : 1; if (P.small > 0 && P.small < 3 && (G.time * 7 | 0) % 2) sc = 0.75;
     let al = 1; if (G.mode === 'escape') { al = clamp(1 - (G.escT - 0.5) / 0.6, 0, 1); sc *= clamp(1 - (G.escT - 0.4) / 0.8, 0.2, 1); }
-    ents.push([P.y, () => drawSprite(ctx, P.cfg, null, P, { scale: sc, alpha: al, dx: P.trem ? Math.sin(G.time * 70) * P.trem : 0 })]);
+    ents.push([P.y, () => occlude(ctx, P, () => drawSprite(ctx, P.cfg, null, P, { scale: sc, alpha: al, dx: P.trem ? Math.sin(G.time * 70) * P.trem : 0 }))]);
   }
   if (G.ball) {
     const a = G.kids[G.ball.from], b = G.kids[G.ball.to];
@@ -5460,7 +5564,8 @@ const UI = {
       el.classList.toggle('all', !!(pg && pg.t < 8));
       return;
     }
-    const sig = [I.keys, I.plan, I.alarmUsed, !!I.alarm, I.warn, I.hunt, I.cur, I.alarm ? Math.ceil(Math.max(0, I.alarm.dur - I.alarm.t) / 5) : 0].join('|');
+    const hideLeft = I.hunt && G.P.hidden ? Math.ceil(20 - (I.hideT || 0)) : 0;
+    const sig = [I.keys, I.plan, I.alarmUsed, !!I.alarm, I.warn, I.hunt, I.cur, I.alarm ? Math.ceil(Math.max(0, I.alarm.dur - I.alarm.t) / 5) : 0, hideLeft, G.P.keys || 0].join('|');
     $('bPlan').classList.toggle('hidden', !I.plan || G.mode !== 'play');
     if (sig === this.infSig && !el.classList.contains('hidden')) return; this.infSig = sig;
     el.classList.remove('hidden');
@@ -5468,7 +5573,7 @@ const UI = {
     const kf = I.plan && !I.keys ? ' (' + INF_FLOOR_META[I.keysFloor].short + ')' : '';
     const st = (ok, ic) => ok ? '✅' : ic;
     const al = I.alarm ? `🔥 ${I.alarm.call ? 'fin' : 'appel'} ${Math.ceil(Math.max(0, (I.alarm.call ? I.alarm.dur : 32) - I.alarm.t))} s` : st(I.alarmUsed, '🔥');
-    el.innerHTML = `<div class="hd">${I.hunt ? '🚨 ON TE CHERCHE !' : '⚠️ ' + dots}</div><div class="tl">${st(I.keys, '🔑')}${kf} · ${st(I.plan, '🗺️')} · ${al}</div>`;
+    el.innerHTML = `<div class="hd">${I.hunt ? (hideLeft ? '🫣 RESTE CACHÉ·E ' + hideLeft + ' s' : '🚨 ON TE CHERCHE ! cache-toi 20 s') : '⚠️ ' + dots}</div><div class="tl">${st(I.keys, '🔑')}${kf} · ${st(I.plan, '🗺️')} · ${al}${G.P.keys ? ' · 🗝️×' + G.P.keys : ''}</div>`;
     el.classList.toggle('all', I.keys);
   },
   launch(i, keepSeed) {

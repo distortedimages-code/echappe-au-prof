@@ -173,6 +173,7 @@ const Net = {
       case 'alarm': if (G.inf && !G.inf.alarmUsed) { infAlarm(); UI.banner('🔥 L’ALARME A SONNÉ au ' + INF_FLOOR_META[d.fl].name + ' ! Tout le monde descend dans la cour.'); } break;
       case 'call': if (G.inf) { if (d.ok) { UI.banner('📋 L’appel : « ' + (P.cfg.name || 'l’élève') + ' » répond présent·e… dans le rang !'); } else { G.inf.hunt = true; G.inf.warn = 3; UI.banner('📋 Il manque ' + (P.cfg.name || 'l’élève') + ' à l’appel : il/elle est encore dans le bâtiment !'); } AU.sfx('ding'); } break;
       case 'alarmEnd': if (G.inf && G.inf.alarm) infAlarmEnd(); break;
+      case 'calm': if (G.inf) { G.inf.hunt = false; G.inf.warn = 2; toast('😮‍💨 ' + (P.cfg.name || 'L’élève') + ' est resté·e caché·e : les profs ont arrêté la traque.', 3); UI.infSig = null; } break;
       case 'trousseau': if (G.inf) { G.inf.keys = true; toast('🔑 Le trousseau du concierge a disparu (' + INF_FLOOR_META[G.inf.keysFloor].name + ') ! L’élève peut ouvrir la grille et le portail…', 3.4); AU.sfx('keys'); } break;
       case 'planTaken': if (G.inf) { toast('🗺️ Le plan d’évacuation du ' + INF_FLOOR_META[d.fl].name + ' a été arraché : l’élève sait où tu es !', 3.2); } break;
       case 'end': timeUp(); break;

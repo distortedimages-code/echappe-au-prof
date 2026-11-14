@@ -206,6 +206,8 @@ function drawFloorDecor(c, d) {
     case 'rug': c.fillStyle = d.col || '#7b45a8'; c.fillRect(px + 2, py + 2, d.w * 16 - 4, d.h * 16 - 4); c.fillStyle = shade(d.col || '#7b45a8', 0.3); c.fillRect(px + 4, py + 4, d.w * 16 - 8, 1); c.fillRect(px + 4, py + d.h * 16 - 5, d.w * 16 - 8, 1); break;
   }
 }
+const OVERHANG = 9;
+const TALL_KINDS = new Set([K.WALL, K.LOCKER, K.ARMOIRE, K.SHELF, K.STALL, K.COPIER, K.PILLAR, K.X_WINDOW, K.X_DOOR, K.X_ELEV]);
 function isWallish(k) { return k === K.WALL || k === K.X_WINDOW || k === K.X_DOOR || k === K.X_ELEV || k === K.LOCKER; }
 function renderMapCanvas(L) {
   const m = L.m; const [cv, c] = mkCanvas(m.w * 16, m.h * 16);
@@ -229,5 +231,14 @@ function renderMapCanvas(L) {
   }
   // 4) décor mural
   m.decor.forEach(d => { const w = d.w || 1; for (let i = 0; i < w; i++) { if (isWallish(m.get(d.x + i, d.y + 1)) || m.get(d.x + i, d.y) !== K.WALL) continue; drawWallDecor(c, (d.x + i) * 16, d.y * 16, d, i); } });
+  // 5) perspective : le haut des murs et des grands meubles dépasse un peu vers le haut (ce qui est derrière est en partie caché)
+  L.over = new Uint8Array(m.w * m.h);
+  for (let y = 1; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+    const k = m.get(x, y), up = m.get(x, y - 1); if (!TALL_KINDS.has(k) || TALL_KINDS.has(up) || up === K.DOOR || up === K.FENCE) continue;
+    const px = x * 16, py = y * 16;
+    if (k === K.WALL || k === K.X_WINDOW || k === K.X_DOOR || k === K.X_ELEV) { const S = WSTYLE[m.ws[y * m.w + x]]; c.fillStyle = S.top; c.fillRect(px, py - OVERHANG, 16, OVERHANG); c.fillStyle = shade(S.top, 0.14); c.fillRect(px, py - OVERHANG, 16, 1); c.fillStyle = 'rgba(10,6,20,0.25)'; c.fillRect(px, py - OVERHANG - 1, 16, 1); }
+    else c.drawImage(cv, px, py, 16, OVERHANG, px, py - OVERHANG, 16, OVERHANG);
+    L.over[y * m.w + x] = 1;
+  }
   return cv;
 }

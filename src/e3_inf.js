@@ -117,6 +117,21 @@ function infSetupFloor(F, R, itemPlan) {
     R.sh(c); if (c.length) { const w = infMakeWatcher('la documentaliste', c[0], r, c.slice(0, 10), R); w.walkP = 0.6; w.boardP = 0; G.kids.push(w); }
   }
   F.robotSpots = []; if (I.multi) infSpawnRobots(F, R);
+  // des portes fermées à clé (dont la salle du trousseau) et des petites clés qui traînent
+  F.lockedRooms = [];
+  if (F.f > 0) {
+    const inR = (r, x, y) => x >= r.x - 1 && y >= r.y - 1 && x <= r.x + r.w && y <= r.y + r.h;
+    const doorsOf = r => G.doors.filter(d => inR(r, d.x, d.y));
+    const lockRoom = r => { const ds = doorsOf(r); if (!ds.length) return; ds.forEach(d => { d.locked = true; d.byPlayer = false; d.pre = true; }); F.lockedRooms.push(r); };
+    if (F.f === I.keysFloor) { const kr = L.rooms.find(r => I.keysDesk[0] >= r.x && I.keysDesk[1] >= r.y && I.keysDesk[0] < r.x + r.w && I.keysDesk[1] < r.y + r.h); if (kr) lockRoom(kr); }
+    const extra = L.rooms.filter(r => !r.def.stair && !r.def.startCls && !F.lockedRooms.includes(r) && !(L.planPt && inR(r, L.planPt[0], L.planPt[1])) && doorsOf(r).length && doorsOf(r).every(d => !G.doors.some(o => o !== d && o.x === d.x && o.y === d.y)));
+    R.sh(extra); extra.slice(0, R.i(1, 2)).forEach(lockRoom);
+    const free = L.itemSpots.filter(([x, y]) => !F.lockedRooms.some(r => inR(r, x, y)) && !(I.startRoom && F.f === INF_TOP && inR(I.startRoom, x, y)) && !G.items.some(it => Math.abs(it.x - x * 16 - 8) + Math.abs(it.y - y * 16 - 12) < 48));
+    R.sh(free); const nk = F.lockedRooms.length + 1, picked = [];
+    for (const s of free) { if (picked.length >= nk) break; if (picked.every(c => Math.abs(c[0] - s[0]) + Math.abs(c[1] - s[1]) >= 7)) picked.push(s); }
+    L.patrol = L.patrol.filter(([x, y]) => !F.lockedRooms.some(r => inR(r, x, y)));
+    picked.forEach((s, i) => G.items.push({ id: F.f * 10 + 5 + i, x: s[0] * 16 + 8, y: s[1] * 16 + 12, kind: 'key', ph: R.f() * 6 }));
+  }
   if (F.f === 0) { L.kidSpots = L.itemSpots.filter(([x, y]) => { const fs = m.fs[y * m.w + x]; return fs === FS.ASPHALT || fs === FS.GRASS || fs === FS.SAND; }); G.pigeons = []; spawnPigeons(); }
   else G.pigeons = [];
   G.kids.forEach(k => { k.orig = { x: k.x, y: k.y, beh: k.beh, ang: k.ang }; });
@@ -332,6 +347,18 @@ function infUpdate(dt) {
   if (G.T.state === 'chase') I.chased = Math.max(I.chased, 1);
   if (I.ping) I.ping.t += dt;
   const boss = !I.multi || I.role === 'student';
+  // la traque s'épuise si l'élève reste caché 20 secondes
+  if (boss) {
+    if (I.hunt && P.hidden) {
+      I.hideT = (I.hideT || 0) + dt;
+      if (I.hideT >= 20) {
+        I.hideT = 0; I.hunt = false; I.warn = 2;
+        UI.banner('😮‍💨 Fausse alerte… ils ont arrêté de te chercher ! (encore 1 avertissement avant la poursuite)'); AU.play('sneak'); UI.hudSig = null; UI.infSig = null;
+        if (I.multi) Net.send({ t: 'calm' });
+        else if (!G.T.gone && G.T.state !== 'patrol' && G.T.state !== 'evac') { G.T.state = 'patrol'; G.T.path = null; G.T.knows = null; G.T.detect = 0; say('Bon… j’ai dû rêver. Je reprends ma ronde.'); }
+      }
+    } else I.hideT = 0;
+  }
   // talkie-walkie entre surveillants
   if (I.radio) { I.radio.t -= dt; if (I.radio.t <= 0) { const r = I.radio; I.radio = null; if (!G.T.gone && G.T.state !== 'chase') { UI.banner('📻 Talkie : « Un élève arrive par l’escalier ! »'); infAlertT(r.x, r.y, false); } } }
   // l'alarme

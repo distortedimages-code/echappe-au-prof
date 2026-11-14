@@ -366,15 +366,17 @@ const ITEMS = {
   apple: { n: 'Pomme dormeuse', d: 'Pose-la par terre : le prof la croque et s’endort.', short: 'Dodo' },
   mirror: { n: 'Miroir magique', d: 'Montre où est le prof et les sorties pendant 8 s.', short: 'Voir' },
   watch: { n: 'Montre du Lapin blanc', d: 'Le prof avance au ralenti pendant 8 s.', short: 'Ralenti' },
+  key: { n: 'Petite clé', d: 'Elle ouvre une porte fermée à clé.', short: 'Clé' },
   disguise: { n: 'Déguisement', d: 'Perruque + fausse moustache : tu changes d’apparence pour toute la partie ! Fais-le quand le prof ne te voit pas.', short: 'Déguise' },
 };
-const ITEM_KEYS = Object.keys(ITEMS).filter(k => k !== 'disguise');
+const ITEM_KEYS = Object.keys(ITEMS).filter(k => k !== 'disguise' && k !== 'key');
 const ITEM_CACHE = {};
 function itemCanvas(kind) {
   if (ITEM_CACHE[kind]) return ITEM_CACHE[kind];
   const [cv, c] = mkCanvas(14, 14);
   const R = (a, b, w, h, col) => { c.fillStyle = col; c.fillRect(a + 1, b + 1, w, h); };
   switch (kind) {
+    case 'key': R(1, 3, 5, 5, '#ffd23f'); R(2, 4, 3, 3, '#1a1028'); R(3, 5, 1, 1, '#ffd23f'); R(5, 5, 7, 2, '#ffd23f'); R(9, 7, 1, 2, '#ffd23f'); R(11, 7, 1, 3, '#ffd23f'); R(1, 3, 5, 1, '#fff2a8'); R(5, 5, 7, 1, '#fff2a8'); break;
     case 'cake': R(1, 9, 10, 2, '#e8e8f0'); R(2, 5, 8, 4, '#f4b6c2'); R(2, 4, 8, 2, '#fff4f8'); R(2, 6, 8, 1, '#ff6f91'); R(3, 8, 1, 1, '#c94a6b'); R(6, 8, 1, 1, '#c94a6b'); R(8, 7, 1, 1, '#c94a6b'); R(5, 1, 2, 3, '#e43b44'); R(6, 0, 1, 1, '#3e8948'); R(5, 1, 1, 1, '#ff8a8a'); break;
     case 'lamp': R(1, 6, 8, 3, '#f2c14e'); R(3, 5, 4, 1, '#ffd76e'); R(8, 5, 3, 2, '#f2c14e'); R(10, 4, 2, 1, '#f2c14e'); R(0, 6, 2, 2, '#c99a2e'); R(3, 9, 5, 2, '#c99a2e'); R(4, 4, 2, 1, '#c99a2e'); R(2, 7, 3, 1, '#ffe9a8'); R(4, 2, 1, 2, '#d8e8ff'); R(5, 0, 1, 2, '#d8e8ff'); break;
     case 'slipper': R(1, 7, 9, 3, '#bfefff'); R(7, 5, 4, 3, '#bfefff'); R(2, 6, 5, 1, '#e8fbff'); R(1, 10, 10, 1, '#7fcfe8'); R(9, 3, 1, 1, '#ffffff'); R(3, 2, 1, 3, '#ffffff'); R(2, 3, 3, 1, '#ffffff'); break;

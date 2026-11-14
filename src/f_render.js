@@ -205,6 +205,24 @@ function updateCamera(dt) {
   const k = 1 - Math.exp(-dt * 6);
   G.camX += (tx - G.camX) * k; G.camY += (ty - G.camY) * k;
 }
+// perspective : un personnage juste derrière un mur ou un grand meuble est en partie caché
+function occlude(c, a, fn) {
+  const L = G.L, m = G.m; if (!L || !L.over || a.x < 0) { fn(); return; }
+  const tx = Math.floor(a.x / 16), ty = Math.floor((a.y - 4) / 16), y = ty + 1, rects = [];
+  if (y < m.h) for (let x = tx - 1; x <= tx + 1; x++) { if (x < 0 || x >= m.w || !L.over[y * m.w + x]) continue; const top = y * 16 - OVERHANG; if (a.y > top) rects.push([x * 16, top, 16, OVERHANG + 16]); }
+  if (!rects.length) { fn(); return; }
+  c.save(); c.beginPath(); c.rect(a.x - 48, a.y - 90, 96, 140); rects.forEach(r => c.rect(r[0], r[1], r[2], r[3])); c.clip('evenodd'); fn(); c.restore();
+}
+// « six seven ! » : les mains qui balancent comme une balance
+function drawSixSeven(c, k, dy) {
+  const skin = SKINS[k.cfg.skin] || SKINS[0], ph = Math.sin(G.time * 11 + k.ph), y0 = k.y - 15 + dy;
+  [[-1, ph], [1, -ph]].forEach(([s, p]) => {
+    const hx = k.x + s * 9, hy = y0 - p * 3.5;
+    c.strokeStyle = '#1a1028'; c.lineWidth = 2.2; c.beginPath(); c.moveTo(k.x + s * 4, y0 + 2); c.lineTo(hx, hy); c.stroke();
+    c.strokeStyle = skin; c.lineWidth = 1.2; c.beginPath(); c.moveTo(k.x + s * 4, y0 + 2); c.lineTo(hx, hy); c.stroke();
+    c.fillStyle = '#1a1028'; c.fillRect(hx - 2.5, hy - 1.5, 5, 3); c.fillStyle = skin; c.fillRect(hx - 2, hy - 1, 4, 2);
+  });
+}
 function renderGame(dt) {
   const { lx, lw, lh, ctx, S } = V, P = G.P, T = G.T;
   updateCamera(dt || 0.016);
@@ -231,22 +249,23 @@ function renderGame(dt) {
   G.apples.forEach(a => ents.push([a.y, () => { const w = Math.sin(G.time * 4) * 0.12; ctx.save(); ctx.translate(a.x, a.y - 6); ctx.rotate(w); ctx.drawImage(itemCanvas('apple'), -7, -7); ctx.restore(); }]));
   G.kids.forEach(k => {
     if (!k.vis) return;
-    ents.push([k.y, () => {
+    ents.push([k.y, () => occlude(ctx, k, () => {
       const bob = k.beh === 'jump' ? -Math.abs(Math.sin(G.time * 6 + k.ph)) * 5 : 0;
       if (k.beh === 'jump') { const up = Math.sin(G.time * 6 + k.ph) > 0; ctx.strokeStyle = '#e43b44'; ctx.lineWidth = 0.9; ctx.beginPath(); if (up) ctx.ellipse(k.x, k.y - 2, 8, 3, 0, 0.1, Math.PI - 0.1); else ctx.ellipse(k.x, k.y - 22 + bob, 8, 4, 0, Math.PI + 0.1, -0.1); ctx.stroke(); }
-      if (k.beh === 'sit') { drawSprite(ctx, k.cfg, null, k, { sy: 0.86, bob: 2, noShadow: true }); return; }
+      if (k.beh === 'sit') { drawSprite(ctx, k.cfg, null, k, { sy: 0.86, bob: 2, noShadow: true }); if (k.sixT > 0) drawSixSeven(ctx, k, 3); return; }
       drawSprite(ctx, k.cfg, k.v || null, k, { bob, sy: k.beh === 'jump' && bob > -1 ? 0.9 : 1 });
+      if (k.sixT > 0) drawSixSeven(ctx, k, 0);
       if (k.isWatcher && k.markT > 0 && k.mark) txt(ctx, k.mark, k.x, k.y - 40, 9, k.mark === '!' ? '#e43b44' : '#ffd23f');
-    }]);
+    })]);
   });
   (G.pigeons || []).forEach(p => { if (p.st === 'gone') return; if (dist(G.eye[0], G.eye[1], p.x, p.y) > G.visR + 10 && p.z < 20) return; ents.push([p.y + (p.z > 4 ? 200 : 0), () => drawPigeon(ctx, p)]); });
-  if (showT && !T.gone) ents.push([T.y, () => drawTeacher(ctx, T)]);
+  if (showT && !T.gone) ents.push([T.y, () => occlude(ctx, T, () => drawTeacher(ctx, T))]);
   FX.ghosts.forEach(g => ents.push([g.y - 0.1, () => drawSprite(ctx, P.cfg, null, { x: g.x, y: g.y, face: g.face, dist: g.dist, moving: true, running: true }, { tint: '#7ff0ff', alpha: 0.45 * (1 - g.t / 0.32), scale: g.small ? 0.5 : 1, noShadow: true, still: true, gait: 'run' })]));
   FX.zips.forEach(zp => ents.push([zp.y1, () => { const t = zp.t, e = t * t; drawSprite(ctx, P.cfg, null, { x: lerp(zp.x0, zp.x1, e), y: lerp(zp.y0, zp.y1, e), face: zp.face, moving: false }, { sx: 1 + t * 0.6, sy: 1 - t * 0.8, scale: zp.small ? 0.5 : 1, alpha: 1 - t * 0.5, still: true }); }]));
   if (!P.hidden && G.pVis !== false) {
     let sc = P.small > 0 ? 0.5 : 1; if (P.small > 0 && P.small < 3 && (G.time * 7 | 0) % 2) sc = 0.75;
     let al = 1; if (G.mode === 'escape') { al = clamp(1 - (G.escT - 0.5) / 0.6, 0, 1); sc *= clamp(1 - (G.escT - 0.4) / 0.8, 0.2, 1); }
-    ents.push([P.y, () => drawSprite(ctx, P.cfg, null, P, { scale: sc, alpha: al, dx: P.trem ? Math.sin(G.time * 70) * P.trem : 0 })]);
+    ents.push([P.y, () => occlude(ctx, P, () => drawSprite(ctx, P.cfg, null, P, { scale: sc, alpha: al, dx: P.trem ? Math.sin(G.time * 70) * P.trem : 0 }))]);
   }
   if (G.ball) {
     const a = G.kids[G.ball.from], b = G.kids[G.ball.to];

@@ -212,7 +212,8 @@ const UI = {
       el.classList.toggle('all', !!(pg && pg.t < 8));
       return;
     }
-    const sig = [I.keys, I.plan, I.alarmUsed, !!I.alarm, I.warn, I.hunt, I.cur, I.alarm ? Math.ceil(Math.max(0, I.alarm.dur - I.alarm.t) / 5) : 0].join('|');
+    const hideLeft = I.hunt && G.P.hidden ? Math.ceil(20 - (I.hideT || 0)) : 0;
+    const sig = [I.keys, I.plan, I.alarmUsed, !!I.alarm, I.warn, I.hunt, I.cur, I.alarm ? Math.ceil(Math.max(0, I.alarm.dur - I.alarm.t) / 5) : 0, hideLeft, G.P.keys || 0].join('|');
     $('bPlan').classList.toggle('hidden', !I.plan || G.mode !== 'play');
     if (sig === this.infSig && !el.classList.contains('hidden')) return; this.infSig = sig;
     el.classList.remove('hidden');
@@ -220,7 +221,7 @@ const UI = {
     const kf = I.plan && !I.keys ? ' (' + INF_FLOOR_META[I.keysFloor].short + ')' : '';
     const st = (ok, ic) => ok ? '✅' : ic;
     const al = I.alarm ? `🔥 ${I.alarm.call ? 'fin' : 'appel'} ${Math.ceil(Math.max(0, (I.alarm.call ? I.alarm.dur : 32) - I.alarm.t))} s` : st(I.alarmUsed, '🔥');
-    el.innerHTML = `<div class="hd">${I.hunt ? '🚨 ON TE CHERCHE !' : '⚠️ ' + dots}</div><div class="tl">${st(I.keys, '🔑')}${kf} · ${st(I.plan, '🗺️')} · ${al}</div>`;
+    el.innerHTML = `<div class="hd">${I.hunt ? (hideLeft ? '🫣 RESTE CACHÉ·E ' + hideLeft + ' s' : '🚨 ON TE CHERCHE ! cache-toi 20 s') : '⚠️ ' + dots}</div><div class="tl">${st(I.keys, '🔑')}${kf} · ${st(I.plan, '🗺️')} · ${al}${G.P.keys ? ' · 🗝️×' + G.P.keys : ''}</div>`;
     el.classList.toggle('all', I.keys);
   },
   launch(i, keepSeed) {
