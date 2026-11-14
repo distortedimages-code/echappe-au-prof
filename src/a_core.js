@@ -43,7 +43,7 @@ const AU = {
     } catch (e) { }
     try {
       if (window.speechSynthesis) {
-        const pickV = () => { const vs = speechSynthesis.getVoices(); this.frVoice = vs.find(v => /^fr[-_]FR/i.test(v.lang)) || vs.find(v => /^fr/i.test(v.lang)) || null; };
+        const pickV = () => { const vs = speechSynthesis.getVoices(); this.frVoice = vs.find(v => /^fr[-_]FR/i.test(v.lang)) || vs.find(v => /^fr/i.test(v.lang)) || null; this.enVoice = vs.find(v => /^en[-_]GB/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null; };
         pickV(); speechSynthesis.onvoiceschanged = pickV;
         if (!this._unlocked) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); this._unlocked = true; }
       }
@@ -131,12 +131,17 @@ const AU = {
       this.nextT += spb; this.step++;
     }
   },
+  // en anglais (Miss Teacup) ; force = même si les voix sont coupées (bouton 🔊)
+  sayEn(text, prof, force) {
+    if (!window.speechSynthesis || (!force && !this.set.voice)) return;
+    try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(String(text).replace(/[«»]/g, '')); u.lang = 'en-GB'; if (this.enVoice) u.voice = this.enVoice; u.pitch = prof && prof.voice ? prof.voice.pitch : 1.1; u.rate = 0.9; speechSynthesis.speak(u); } catch (e) { }
+  },
   say(text, prof, vol = 1) {
     if (!this.set.voice || !window.speechSynthesis || vol < 0.05) return;
     try {
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text.replace(/[«»]/g, ''));
-      u.lang = 'fr-FR'; if (this.frVoice) u.voice = this.frVoice;
+      const en = prof && prof.english; u.lang = en ? 'en-GB' : 'fr-FR'; if (en ? this.enVoice : this.frVoice) u.voice = en ? this.enVoice : this.frVoice;
       u.pitch = prof && prof.voice ? prof.voice.pitch : 1; u.rate = prof && prof.voice ? prof.voice.rate : 1.1;
       u.volume = clamp(vol, 0, 1); speechSynthesis.speak(u);
     } catch (e) { }

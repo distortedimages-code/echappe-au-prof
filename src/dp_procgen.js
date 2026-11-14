@@ -515,7 +515,13 @@ function validateLevel(L) {
   if (L.patrol.length < 4) return 'patrol';
   return null;
 }
-const PROC_GENS = [genYard, R => genIndoor(R, UNIVERSES[2]), R => genIndoor(R, UNIVERSES[3]), R => genIndoor(R, UNIVERSES[4]), R => genIndoor(R, UNIVERSES[5])];
+// l'étage des langues : comme les salles de classe, mais Miss Teacup règne sur la salle d'anglais
+UNIVERSES[6] = Object.assign({}, UNIVERSES[3], {
+  teacher: 'Salle 105 · Anglais',
+  rooms: UNIVERSES[3].rooms.map(r => r.n === 'Salle 101 · Français' ? Object.assign({}, r, { n: 'Salle 105 · Anglais' }) : r),
+  fill: UNIVERSES[3].fill.map(r => r.n === 'Salle 105 · Anglais' ? Object.assign({}, r, { n: 'Salle 101 · Français' }) : r)
+});
+const PROC_GENS = [genYard, R => genIndoor(R, UNIVERSES[2]), R => genIndoor(R, UNIVERSES[3]), R => genIndoor(R, UNIVERSES[6]), R => genIndoor(R, UNIVERSES[4]), R => genIndoor(R, UNIVERSES[5])];
 function buildProcLevel(idx, seed) {
   let why = '';
   for (let a = 0; a < 40; a++) {
@@ -535,7 +541,7 @@ const newSeed = () => (Math.random() * 4294967295) >>> 0;
 const INF_FLOOR_META = [
   { name: 'Rez-de-chaussée', short: 'RDC', prof: 0 },
   { name: '1er étage', short: '1er', prof: 1, ws: WS.GREEN, fs: FS.LINO, corFs: FS.CHECK, lockerCol: '#e07a3a', sofaCol: '#3d7bff' },
-  { name: '2e étage', short: '2e', prof: 2, ws: WS.PAINT, fs: FS.WOOD, corFs: FS.CHECK, lockerCol: '#d94a5a', sofaCol: '#7b45a8' },
+  { name: '2e étage', short: '2e', prof: 5, ws: WS.PAINT, fs: FS.WOOD, corFs: FS.CHECK, lockerCol: '#d94a5a', sofaCol: '#7b45a8' },
   { name: '3e étage', short: '3e', prof: 4, ws: WS.BLUE, fs: FS.WOOD, corFs: FS.LINO, lockerCol: '#3fae8e', sofaCol: '#e0249a' }
 ];
 const INF_SUBJECTS = ['Français', 'Maths', 'Histoire-géo', 'Anglais', 'Espagnol', 'SVT', 'Physique', 'Musique', 'Arts plastiques', 'Techno', 'Latin', 'Allemand'];

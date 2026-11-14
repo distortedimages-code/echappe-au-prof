@@ -134,6 +134,35 @@ ul.hints li{background:rgba(255,255,255,.06);border-radius:6px;padding:5px 8px;l
 #pkClose,#plClose{width:34px;height:34px;flex:none;border:3px solid var(--ink);border-radius:8px;background:var(--red);color:#fff;font-size:14px;box-shadow:0 3px 0 var(--ink)}
 #peekCv{width:100%;aspect-ratio:1;display:block;border-radius:10px;background:#000}
 .pkHint{text-align:center;font-size:16px;opacity:.75;margin-top:4px}
+#sLesson{position:absolute;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;background:rgba(10,6,20,.72);padding:12px;overflow-y:auto;touch-action:pan-y}
+.lsPanel{width:100%;max-width:440px;background:var(--paper);color:var(--ink);border:4px solid var(--ink);border-radius:14px;box-shadow:0 6px 0 var(--ink);padding:14px;animation:tkIn .35s;font-size:21px;line-height:1.15}
+.lsHead{display:flex;align-items:center;gap:10px;border-bottom:3px dashed #d8c8b0;padding-bottom:8px;margin-bottom:8px}
+.lsHead canvas{width:44px;height:68px;image-rendering:pixelated;background:#e8f1ff;border:3px solid var(--ink);border-radius:8px}
+.lsName{font-family:'Press Start 2P',monospace;font-size:12px;color:#1f4e99}.lsSub{font-size:18px;color:#7a5a3a}.lsFlag{margin-left:auto;font-size:30px}
+.lsQ{font-size:20px;color:#5a3a8a}
+.lsFr{font-size:25px;font-weight:bold;margin:6px 0 10px;padding:8px 10px;background:#fff;border:3px solid var(--ink);border-radius:10px}
+.lsIn{width:100%;box-sizing:border-box;font-family:'VT323',monospace;font-size:24px;padding:10px;border:3px solid var(--ink);border-radius:8px;background:#fff;color:var(--ink);user-select:text;-webkit-user-select:text;touch-action:manipulation}
+.lsIn.shake{animation:lsShake .3s}@keyframes lsShake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.lsHelp{font-size:17px;color:#7a5a3a;margin:8px 0 4px}
+.lsChoices{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.lsChoices .choice{display:flex;align-items:center;gap:10px;text-align:left;font-family:'VT323',monospace;font-size:23px;line-height:1.05;padding:9px 10px;border:3px solid var(--ink);border-radius:10px;background:#d8f4ff;color:var(--ink);box-shadow:0 4px 0 var(--ink);touch-action:manipulation}
+.lsChoices .choice b{font-family:'Press Start 2P',monospace;font-size:11px;background:var(--ink);color:var(--yel);border-radius:6px;padding:6px 7px;flex:0 0 auto}
+.lsChoices .choice:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.lsChoices .choice.good{background:#c8f5b8;border-color:#2e8a3a}.lsChoices .choice.bad{background:#ffc9cf;border-color:#d0283a;text-decoration:line-through}.lsChoices .choice.off{opacity:.45}
+.lsType{display:block;margin:0 auto 6px;background:none;border:none;color:#5a3a8a;font-family:'VT323',monospace;font-size:19px;text-decoration:underline;touch-action:manipulation}
+.lsGiftT{font-size:19px;color:#2e8a3a}.lsLostI.gift canvas{filter:none;animation:lsPop .6s .2s both}@keyframes lsPop{0%{transform:scale(.2)}70%{transform:scale(1.25)}100%{transform:scale(1)}}
+.lsTiles{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.lsTiles .tile{font-family:'VT323',monospace;font-size:21px;padding:5px 9px;border:3px solid var(--ink);border-radius:8px;background:#d8f4ff;color:var(--ink);box-shadow:0 3px 0 var(--ink);touch-action:manipulation}
+.lsTiles .tile.used{transform:translateY(3px);box-shadow:none;background:#ffe7a0}
+.lsRow{display:flex;gap:8px}.lsRow .btn{flex:0 0 auto}.lsRow #lsOk{flex:1}
+.lsVerdict{font-family:'Press Start 2P',monospace;font-size:14px;margin:4px 0 8px}.lsVerdict.ok{color:#2e8a3a}.lsVerdict.ko{color:#d0283a}
+.lsYou{font-size:20px;color:#a0303a;margin-bottom:4px}
+.lsAnsBox{display:flex;align-items:center;gap:8px;background:#e6ffe0;border:3px solid #2e8a3a;border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.lsAns{font-size:25px;font-weight:bold;flex:1}.lsEar{font-size:24px;background:#fff;border:3px solid var(--ink);border-radius:8px;padding:2px 8px;touch-action:manipulation}
+.lsTip{font-size:20px;margin-bottom:8px}.lsLost{margin-bottom:10px}.lsLostT{font-size:19px;color:#a0303a}
+.lsLostI{display:flex;gap:8px;margin-top:6px}.lsLostI canvas{width:42px;height:42px;image-rendering:pixelated;background:#fff;border:3px solid var(--ink);border-radius:8px;filter:grayscale(.3);animation:lsGone 1.2s .3s forwards}
+@keyframes lsGone{to{opacity:.25;transform:translateY(10px) rotate(-12deg)}}
+#lsDone{width:100%}
 #sPlan{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(10,6,20,.7);padding:12px}
 .plPanel{width:min(96vw,560px);background:var(--panel);border:3px solid var(--ink);border-radius:14px;box-shadow:0 5px 0 var(--ink);padding:10px;animation:tkIn .3s cubic-bezier(.2,1.6,.4,1)}
 .plHead{display:flex;align-items:center;justify-content:space-between;font-family:'Press Start 2P',ui-monospace,monospace;font-size:11px;color:var(--yel);margin-bottom:8px}
@@ -252,6 +281,27 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     <div id="banner" class="hidden"></div>
     <div id="hint">Glisse ton doigt pour bouger</div>
     <div id="sPeek" class="hidden"><div class="pkPanel"><div class="pkHead"><span>👁️ Par le trou de la serrure…</span><button id="pkClose" aria-label="Arrêter de regarder">✖</button></div><canvas id="peekCv" width="300" height="300"></canvas><div class="pkHint">Bouge pour arrêter de regarder</div></div></div>
+    <div id="sLesson" class="hidden"><div class="lsPanel">
+      <div class="lsHead"><canvas id="lsProf" width="22" height="34"></canvas><div><div id="lsName" class="lsName">Miss Teacup</div><div id="lsSub" class="lsSub"></div></div><div class="lsFlag">🇬🇧</div></div>
+      <div id="lsQ" class="lsQ"></div>
+      <div id="lsFr" class="lsFr"></div>
+      <div id="lsChoices" class="lsChoices"></div>
+      <button id="lsType" class="lsType">✍️ Je préfère l’écrire moi-même</button>
+      <div id="lsAsk" class="hidden">
+        <input id="lsIn" class="lsIn" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="In English…">
+        <div id="lsHelp" class="lsHelp">Ou touche les mots dans l’ordre :</div>
+        <div id="lsTiles" class="lsTiles"></div>
+        <div class="lsRow"><button class="btn" id="lsBack" aria-label="Effacer le dernier mot" style="font-family:VT323,monospace;font-size:22px;padding:8px 14px">⌫ mot</button><button class="btn green" id="lsOk">Valider ✔</button></div>
+      </div>
+      <div id="lsRes" class="hidden">
+        <div id="lsVerdict" class="lsVerdict"></div>
+        <div id="lsYou" class="lsYou"></div>
+        <div class="lsAnsBox"><span id="lsAns" class="lsAns"></span><button id="lsEar" class="lsEar" aria-label="Écouter la phrase">🔊</button></div>
+        <div id="lsTip" class="lsTip"></div>
+        <div id="lsLost" class="lsLost"></div>
+        <button class="btn big green" id="lsDone">OK</button>
+      </div>
+    </div></div>
     <div id="sPlan" class="hidden"><div class="plPanel"><div class="plHead"><b>🗺️ Plan du collège</b><button id="plClose" aria-label="Fermer le plan">✖</button></div><div id="plTabs"></div><canvas id="planCv" width="440" height="330"></canvas><div class="plLegend"><span>🟢 toi</span><span>🔴 surveillant</span><span>🟠 profs</span><span>⬇️⬆️ escaliers</span><span>🔑 trousseau</span><span>🔥 alarme</span></div></div></div>
     <div id="sTask" class="hidden">
       <div class="tkPanel">

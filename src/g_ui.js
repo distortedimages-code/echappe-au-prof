@@ -95,12 +95,18 @@ const Input = {
 const $ = id => document.getElementById(id);
 const UI = {
   chars: store.get('nds_chars', []), cur: store.get('nds_cur', 0),
-  prog: Object.assign({ unlocked: 1, stars: [0, 0, 0, 0, 0] }, store.get('nds_prog', {})),
+  prog: (() => {
+    const p = Object.assign({ unlocked: 1, stars: [0, 0, 0, 0, 0, 0] }, store.get('nds_prog', {}));
+    // v2 : le cours d'anglais s'insère en niveau 4 (le gymnase et la directrice passent en 5 et 6)
+    if (!p.v) { const s = p.stars || []; p.stars = [s[0] || 0, s[1] || 0, s[2] || 0, 0, s[3] || 0, s[4] || 0]; if (p.unlocked >= 4) p.unlocked++; p.v = 2; }
+    return p;
+  })(),
   editing: null, editIdx: -1, prevDir: 0, prevT: 0, after: 'levels', toastTimer: null, bannerTimer: null, hudSig: null, invSig: null, hudT: 0,
   save() { store.set('nds_chars', this.chars); store.set('nds_cur', this.cur); store.set('nds_prog', this.prog); },
   cfg() { return this.chars[this.cur] || this.chars[0]; },
   show(id) {
     Input.reset();
+    if (['sTitle', 'sLevels', 'sResult', 'sMulti', 'sIntro', 'sChars', 'sCreator'].includes(id)) Lesson.abort();
     ['sTitle', 'sChars', 'sCreator', 'sLevels', 'sIntro', 'sPause', 'sResult', 'sMulti'].forEach(s => $(s).classList.toggle('hidden', s !== id));
     $('hud').classList.toggle('hidden', !['play'].includes(id) && !['sIntro', 'sPause', 'sResult'].includes(id));
   },
@@ -296,7 +302,8 @@ const UI = {
       '🔑 Le trousseau du concierge est caché dans le bureau d’un prof. Il ouvre la grille du 1er étage et le portail.',
       '👁️ Devant une porte fermée, regarde par le trou de la serrure avant d’entrer.',
       '🗺️ Un plan d’évacuation affiché dans un couloir montre où sont les profs.',
-      '🔥 L’alarme incendie vide les étages… mais il y aura un appel dans la cour !'];
+      '🔥 L’alarme incendie vide les étages… mais il y aura un appel dans la cour !',
+      '🇬🇧 Au 2e, Miss Teacup ne t’envoie pas en colle : elle te fait une leçon d’anglais ! Bonne réponse = un objet magique en cadeau, faute = elle confisque tes objets.'];
     $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     $('inTips').innerHTML = '🎲 Le collège est différent à chaque partie.<br>👆 Un peu = marcher sans bruit · à fond = courir (ça s’entend !).';
     G.mode = 'intro'; this.show('sIntro'); this.hudSig = null; this.invSig = null; this.infSig = null; $('bGo').textContent = 'C’est parti !'; $('bGo').disabled = false;
@@ -330,10 +337,10 @@ const UI = {
     const i = G.lvl, pr = G.T.prof, p = $('resPanel'), t = G.time;
     const mm = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
     if (win) {
-      const par = [180, 210, 230, 230, 270][i];
+      const par = [180, 210, 230, 230, 230, 270][i];
       const stars = 1 + (G.spotted <= 1 ? 1 : 0) + (t < par ? 1 : 0);
       this.prog.stars[i] = Math.max(this.prog.stars[i] || 0, stars);
-      this.prog.unlocked = Math.max(this.prog.unlocked, Math.min(5, i + 2)); this.save();
+      this.prog.unlocked = Math.max(this.prog.unlocked, Math.min(LEVELS.length, i + 2)); this.save();
       const last = i === LEVELS.length - 1;
       p.innerHTML = `<div class="bigtitle" style="color:var(--green)">ÉVASION<br>RÉUSSIE !</div>
         <div class="stars">${[0, 1, 2].map(k => `<span class="${k < stars ? '' : 'off'}">⭐</span>`).join('')}</div>

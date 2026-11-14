@@ -174,7 +174,8 @@ const Multi = {
       '✊ « Toc toc » à une porte : le prof vient ouvrir… cache-toi vite !',
       '🔒 Attrapé·e ? Direction la salle de colle (1er étage). Ton équipier peut te libérer (sinon 60 s et retour en classe).',
       '🚧 Le vieux portail de la cour : il faut le pousser à deux ! (le trou du grillage, chacun son tour)',
-      '📍 Appelle ton équipier : il voit où tu es. 🗺️ Le plan montre aussi où il est.'
+      '📍 Appelle ton équipier : il voit où tu es. 🗺️ Le plan montre aussi où il est.',
+      '🇬🇧 Au 2e, Miss Teacup fait passer une leçon d’anglais au lieu de la colle (3 fois max).'
     ];
     $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     $('inTips').innerHTML = '🎲 Nouveau collège à chaque partie · 🕐 8 minutes<br>👆 Un peu = marcher sans bruit · à fond = courir (ça s’entend !).';

@@ -111,7 +111,7 @@ function startLevel(idx, cfg, setup, opts) {
   let L = seed != null ? buildProcLevel(idx, seed) : null;
   if (!L) L = finalizeLevel(def.build());
   L.def = def; G.seed = L.seed != null ? L.seed : null; G.net = null; G.inf = null; G.alarmFlash = false; G.appleId = 0; G.alarmT = 0; G.pVis = true;
-  G.L = L; G.m = L.m; G.lvl = idx; G.time = 0; G.spotted = 0; G.reveal = 0; G.slowT = 0; G.shake = 0; G.found = 0;
+  G.L = L; G.m = L.m; G.lvl = idx; G.lessons = 0; G.time = 0; G.spotted = 0; G.reveal = 0; G.slowT = 0; G.shake = 0; G.found = 0;
   G.cues = []; G.parts = []; G.apples = []; G.searched = new Set(); G.intercomT = 24; G.kidCueT = 3; G.smallDoorTip = false; G.banner = null; G.heartT = 0;
   G.doorIdx = new Int16Array(L.m.w * L.m.h).fill(-1);
   G.doors = L.m.doors.map((d, i) => { G.doorIdx[d.y * L.m.w + d.x] = i; return { x: d.x, y: d.y, open: 0, target: 0, closeT: 0, locked: false, byPlayer: false, hideP: false, horiz: L.m.get(d.x - 1, d.y) !== K.FLOOR && L.m.get(d.x + 1, d.y) !== K.FLOOR }; });
@@ -290,6 +290,8 @@ function updateTeacher(dt) {
   if (T.bubble) { T.bubble.t += dt; if (T.bubble.t > T.bubble.dur) T.bubble = null; }
   if (T.markT > 0) T.markT -= dt;
   if (T.state === 'caught') return;
+  // après une leçon d'anglais : la prof reste plantée là quelques secondes, le temps de filer
+  if (T.state === 'release') { T.st -= dt; T.moving = false; if (T.st <= 0) { T.state = 'patrol'; T.path = null; T.detect = 0; } return; }
   if (T.state === 'count') {
     T.st -= dt; T.moving = false;
     const n = 3 - Math.ceil(T.st - 0.3);
@@ -565,6 +567,7 @@ function updatePlayer(dt) {
   const P = G.P, inp = Input.get(), T = G.T;
   if (P.out) { P.moving = false; return; }
   if (P.jail) { P.jailT = (P.jailT || 0) + dt; if (P.jailT > 60) coopAutoRelease(); }
+  if (P.lesson) { P.moving = false; P.running = false; return; }
   P.vx = 0; P.vy = 0;
   { const dT = dist(T.x, T.y, P.x, P.y) / 16, danger = ['chase', 'search', 'check', 'investigate', 'alert'].includes(T.state);
     P.trem = 0;
@@ -856,6 +859,8 @@ function caught(reason, fromNet) {
   if (G.mode !== 'play') return;
   if (G.inf && G.inf.coop && !fromNet) { coopCaught(G.P, reason); return; }
   const P = G.P, T = G.T;
+  // Miss Teacup : une leçon d'anglais au lieu de l'heure de colle (3 fois maximum)
+  if (!G.net && T.prof && T.prof.english && (G.lessons || 0) < LESSON_MAX) { lessonStart(reason); return; }
   if (P.hidden) { const s = P.hidden; P.hidden = null; if (s.k === K.DOOR) { const d = doorAt(s.x, s.y); if (d) d.hideP = false; } const st = s.stand[0]; P.x = st[0] * 16 + 8; P.y = st[1] * 16 + 12; puff(s.x * 16 + 8, s.y * 16 + 8, 12); }
   P.busy = null; G.mode = 'caught'; G.caughtT = 0; T.state = 'caught'; T.moving = false; setMark(T, '!', 3);
   T.bubble = { text: reason === 'found' ? 'TROUVÉ ! Heure de colle !' : 'ATTRAPÉ ! Heure de colle !', t: 0, dur: 3 };

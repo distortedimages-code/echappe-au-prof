@@ -357,6 +357,22 @@ const PROFS = [
       intercom: 'Ding-dong ! {n}, présente-toi immédiatement au bureau de la directrice !',
       caught: 'Convocation des parents. Vendredi. 17 heures.'
     }
+  },
+  {
+    name: 'Miss Teacup', title: 'la prof d’anglais', english: true,
+    cfg: { skin: 0, hair: 10, hairCol: 3, eyes: 2, mouth: 1, face: 3, top: 3, topCol: 7, bottom: 2, botCol: 7, shoes: 1, acc: 2, accCol: 0 },
+    v: { adult: true, extras: ['livre'] }, voice: { pitch: 1.25, rate: 1.0 },
+    patrol: 1.8, chase: 3.65, range: 7, fov: 1.0, hear: 1.25, searchN: 3, chatty: true,
+    lines: {
+      start: 'One, two, three… Ready or not, here I come!',
+      spot: ['Stop right there, {n}!', '{n}! Come here, please!', 'Hello {n}… where are you going?'],
+      lost: ['Where are you, {n}?', 'Hide and seek? Very funny…', 'I will find you, {n}!'],
+      heard: ['What was that noise?', 'Who is there?', 'Hmm… a mouse?'],
+      search: ['Let me see…', 'Nobody here…', 'Not here…', 'Hmm…'],
+      give: ['Oh well… back to my cup of tea.', 'Never mind…'],
+      chat: ['Repeat after me: I have a pen!', 'He, she, it… HAS!', 'Where is my cup of tea?', 'Open your books, please!', 'AN eraser, not A eraser!', 'Does she have a ruler? Yes, she does!'],
+      caught: 'Got you! Now… English lesson!'
+    }
   }
 ];
 const LEVELS = [
@@ -366,6 +382,8 @@ const LEVELS = [
     hints: ['🗂️ Derrière les dossiers du bureau, il y a peut-être une porte secrète.', '🪟 La fenêtre de l’infirmerie s’ouvre (en grinçant).', '🐭 Un trou de souris dans le local ménage…'] },
   { title: 'Le cours de français', place: 'Couloirs et salles de classe', prof: 2, build: buildL3,
     hints: ['📚 Au CDI, un livre n’est pas comme les autres.', '🪟 La fenêtre de la salle de sciences donne dehors.', '🐭 Un trou de souris dans le local ménage…'] },
+  { title: 'Le cours d’anglais', place: 'Couloirs et salles de langues', prof: 5, build: buildL3,
+    hints: ['🇬🇧 Si Miss Teacup t’attrape : leçon d’anglais ! Bonne réponse = elle te laisse filer avec un objet magique en cadeau. Faute = elle confisque tes objets. Au bout de 3 leçons : heure de colle !', '🪟 Une fenêtre de salle de classe donne dehors.', '🐭 Un trou de souris dans le local ménage…'] },
   { title: 'Le gymnase', place: 'Gymnase et vestiaires', prof: 3, build: buildL4,
     hints: ['🤸 Une trappe secrète est cachée sous des tapis de gym.', '🚨 L’issue de secours du hall… mais l’alarme va sonner !', '🐭 Un petit trou dans le mur du local matériel.'] },
   { title: 'Le bureau de la directrice', place: 'L’étage de la direction', prof: 4, build: buildL5,
