@@ -382,7 +382,7 @@ function drawOverlay() {
   if (seeT && T.state === 'stun') { // étoiles d'étourdissement
     for (let i = 0; i < 4; i++) { const a = G.time * 5 + i * Math.PI / 2, x = tsx + Math.cos(a) * 13 * d, y = tsy + 4 * d + Math.sin(a) * 4 * d; txt(c, i % 2 ? '💫' : '⭐', x, y, Math.round((Math.sin(a) > 0 ? 9 : 7) * d), '#ffd23f'); }
   }
-  if (G.inf && G.mode === 'play' && G.time < 6 && !P.hidden) { // « toi » au début
+  if (G.inf && G.mode === 'play' && G.time < 6 && !P.hidden && viewerA() === P) { // « toi » au début
     const [qx, qy] = toScreen(P.x, P.y - 40), bob = Math.sin(G.time * 7) * 3 * d;
     txt(c, '▼', qx, qy + bob, Math.round(12 * d), '#3fd06a'); txt(c, 'TOI', qx, qy - 13 * d + bob, Math.round(8 * d), '#ffffff');
   }
@@ -398,6 +398,14 @@ function drawOverlay() {
     c.fillStyle = '#1a1028'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(b.text, 0, 1 * d);
     c.restore(); c.globalAlpha = 1;
   });
+  // signalement d'un prof (surveillant en multi)
+  if (G.inf && G.inf.multi && G.inf.role === 'teacher' && G.inf.ping && G.inf.ping.fl === G.inf.cur && G.inf.ping.t < 10 && G.mode === 'play') {
+    const pg = G.inf.ping; let [sx, sy] = toScreen(pg.x, pg.y - 8); const [cx, cy, off] = clampEdge(sx, sy), pul = 1 + Math.sin(G.time * 8) * 0.15, al = clamp(1 - pg.t / 10, 0.25, 1);
+    c.globalAlpha = al;
+    if (off) { const an = Math.atan2(sy - cy, sx - cx); drawArrow(c, cx, cy, an, '#e43b44', 7 * d); txt(c, '❗', cx - Math.cos(an) * 15 * d, cy - Math.sin(an) * 15 * d, Math.round(12 * d), '#fff'); }
+    else { c.strokeStyle = '#e43b44'; c.lineWidth = 3 * d; c.beginPath(); c.arc(sx, sy, 18 * d * pul, 0, 7); c.stroke(); txt(c, '❗', sx, sy - 26 * d, Math.round(12 * d), '#fff'); }
+    c.globalAlpha = 1;
+  }
   // tâches (côté élève)
   if (viewerA() === P && G.tasks && G.mode === 'play' && !P.taskOpen) {
     G.tasks.forEach((t, i) => {

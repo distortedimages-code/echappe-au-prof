@@ -1,7 +1,7 @@
 // ================= MODE À DEUX (pair-à-pair, PeerJS) =================
 const PAGES_URL = 'https://distortedimages-code.github.io/echappe-au-prof/';
 const Net = {
-  peer: null, conn: null, role: null, isHost: false, code: '', connected: false, closing: false,
+  peer: null, conn: null, role: null, isHost: false, mode: 'classic', code: '', connected: false, closing: false,
   ready: { me: false, them: false }, lastRecv: 0, sendT: 0, kidsT: 0, seenT: 0, them: { name: '', cfg: null }, level: 0, timeLeft: 180, setup: null, joinTimer: null,
   available() { return typeof RTCPeerConnection !== 'undefined' && (location.protocol === 'file:' || /github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname)); },
   loadLib() {
@@ -59,7 +59,7 @@ const Net = {
     c.on('close', () => this.lost());
     c.on('error', () => this.lost());
   },
-  send(o) { if (this.conn && this.conn.open) try { this.conn.send(o); } catch (e) { } },
+  send(o) { if (G.inf && G.inf.multi && o.fl == null) o.fl = G.inf.cur; if (this.conn && this.conn.open) try { this.conn.send(o); } catch (e) { } },
   close(silent) {
     this.closing = true;
     if (this.conn) { try { if (!silent) this.conn.send({ t: 'bye' }); } catch (e) { } try { this.conn.close(); } catch (e) { } }
@@ -77,6 +77,14 @@ const Net = {
   studentCfg() { return this.role === 'student' ? UI.cfg() : this.them.cfg; },
   newRound(swap, level) {
     if (!this.isHost) { this.send({ t: 'rematch', swap: !!swap, lvl: level }); return; }
+    if (this.mode === 'inf') {
+      // infiltration : rôles tirés au sort, nouveau collège, nouveau look secret pour l'élève
+      this.role = Math.random() < 0.5 ? 'student' : 'teacher';
+      const sname = this.role === 'student' ? (UI.cfg() || {}).name : this.them.name, scfg = randomChar(sname || 'Élève'), seed = newSeed();
+      infStart(scfg, seed, { role: this.role });
+      this.setup = { t: 'setup', mode: 'inf', seed, hostRole: this.role, time: 360, student: scfg };
+      this.send(this.setup); this.enter(this.setup); return;
+    }
     if (swap) this.role = this.role === 'student' ? 'teacher' : 'student';
     if (level != null) this.level = clamp(level, 0, LEVELS.length - 1);
     // nouvelle apparence secrète à chaque manche : le prof ne sait pas à quoi ressemble l'élève
@@ -108,7 +116,7 @@ const Net = {
   start() {
     G.mode = 'play'; UI.show('play'); FX.iris = { mode: 'in', t: 0, dur: 0.75 }; AU.play('sneak');
     UI.hudSig = null; UI.invSig = null; $('bGo').disabled = false;
-    const T = G.T; T.state = 'count'; T.st = 3.3; T.countN = 0;
+    const T = G.T; if (G.inf) { T.state = 'free'; G.inf.grace = 2; } else { T.state = 'count'; T.st = 3.3; T.countN = 0; }
     $('hint').classList.add('hidden');
   },
   // ---------- réception ----------
@@ -121,8 +129,10 @@ const Net = {
         if (this.isHost) this.newRound(false);
         break;
       case 'setup':
-        this.role = d.hostRole === 'student' ? 'teacher' : 'student'; this.level = d.lvl; this.setup = d;
-        startLevel(d.lvl, d.student, d); this.enter(d);
+        this.role = d.hostRole === 'student' ? 'teacher' : 'student'; this.setup = d; this.mode = d.mode || 'classic';
+        if (d.mode === 'inf') infStart(d.student, d.seed, { role: this.role });
+        else { this.level = d.lvl; startLevel(d.lvl, d.student, d); }
+        this.enter(d);
         break;
       case 'ready': this.ready.them = true; this.maybeGo(); break;
       case 'go': this.start(); break;
@@ -131,29 +141,40 @@ const Net = {
     }
     if (!G.net || !G.P) return;
     switch (d.t) {
-      case 's': if (this.role === 'teacher') P.net = d; break;
-      case 'T': if (this.role === 'student') T.net = d; break;
-      case 'k': if (!this.isHost) { d.a.forEach((a, i) => { const k = G.kids[i]; if (k) k.net = a; }); if (G.ball && d.b) { G.ball.from = d.b[0]; G.ball.to = d.b[1]; G.ball.t = d.b[2]; } } break;
-      case 'lock': { const dr = G.doors[d.i]; if (dr) { dr.locked = !!d.l; dr.byPlayer = !!d.l; if (dr.locked) { dr.target = 0; dr.closeT = 0; } const V0 = viewerA(), dd = dist(dr.x * 16, dr.y * 16, V0.x, V0.y) / 16; if (dd < 16) { AU.sfx('lock', clamp(1 - dd / 16, 0.2, 1)); cue(dr.x * 16 + 8, dr.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true }); } } break; }
-      case 'item': G.items = G.items.filter(i => i.id !== d.id); break;
-      case 'apple': G.apples.push({ id: d.id, x: d.x, y: d.y, eaten: false }); break;
+      case 's': if (this.role === 'teacher') { if (G.inf) infRecvPos(P, d); else P.net = d; } break;
+      case 'T': if (this.role === 'student') { if (G.inf) infRecvPos(T, d); else T.net = d; } break;
+      case 'k': if (G.inf) { if (d.fl === G.inf.cur && !infAuth()) d.a.forEach(a => { const k = G.kids[a[0]]; if (k) k.net = a.slice(1); }); break; }
+        if (!this.isHost) { d.a.forEach((a, i) => { const k = G.kids[i]; if (k) k.net = a; }); if (G.ball && d.b) { G.ball.from = d.b[0]; G.ball.to = d.b[1]; G.ball.t = d.b[2]; } } break;
+      case 'lock': { const dr = (G.inf ? infFloorOf(d).doors : G.doors)[d.i]; if (G.inf && d.fl !== G.inf.cur) { if (dr) { dr.locked = !!d.l; dr.byPlayer = !!d.l; } break; } if (dr) { dr.locked = !!d.l; dr.byPlayer = !!d.l; if (dr.locked) { dr.target = 0; dr.closeT = 0; } const V0 = viewerA(), dd = dist(dr.x * 16, dr.y * 16, V0.x, V0.y) / 16; if (dd < 16) { AU.sfx('lock', clamp(1 - dd / 16, 0.2, 1)); cue(dr.x * 16 + 8, dr.y * 16 + 4, 'word', 'CLIC !', { col: '#ffd23f', pop: true }); } } break; }
+      case 'item': if (G.inf) { const arr = infFloorOf(d).items, j = arr.findIndex(i => i.id === d.id); if (j >= 0) arr.splice(j, 1); } else G.items = G.items.filter(i => i.id !== d.id); break;
+      case 'apple': if (G.inf && d.fl !== G.inf.cur) { infFloorOf(d).apples.push({ id: d.id, x: d.x, y: d.y, eaten: false }); break; } G.apples.push({ id: d.id, x: d.x, y: d.y, eaten: false }); break;
       case 'eat': { const a = G.apples.find(a => a.id === d.id); if (a) { a.eaten = true; G.apples = G.apples.filter(b => b !== a); } AU.sfx('crunch', 0.6); break; }
       case 'slow': G.slowT = d.d; FX.flash = 0.6; FX.flashCol = '140,190,255'; AU.sfx('slow'); toast('⏱️ La montre du Lapin blanc ! Tu avances au ralenti…', 2.2); break;
-      case 'pouf': puff(d.x, d.y - 6, 16, '#c8b0ff'); AU.sfx('pouf', 0.6); if (dist(d.x, d.y, T.x, T.y) < 12 * 16) cue(d.x, d.y - 20, 'word', 'POUF !', { col: '#c8b0ff', pop: true }); break;
-      case 'noise': if (this.role === 'teacher') { const dd = dist(T.x, T.y, d.x, d.y) / 16; if (dd < d.r * 1.8 && !G.pVis) cue(d.x, d.y - 8, 'word', d.w || '?!', { col: '#ffb347', pop: true, life: 1.2 }); } break;
-      case 'tcheck': { const s = L.hides[d.i]; if (s) { s.shake = 1; const dd = dist(T.x, T.y, P.x, P.y) / 16; AU.sfx('search', clamp(1 - dd / 14, 0, 0.8)); if (!G.tVis && dd < 14) cue(s.x * 16 + 8, s.y * 16, 'word', 'frrr…', { col: '#ffd0a0', life: 1 }); T.state = 'check'; T.checkT = 1; } break; }
+      case 'pouf': if (G.inf && d.fl !== G.inf.cur) break; puff(d.x, d.y - 6, 16, '#c8b0ff'); AU.sfx('pouf', 0.6); if (dist(d.x, d.y, T.x, T.y) < 12 * 16) cue(d.x, d.y - 20, 'word', 'POUF !', { col: '#c8b0ff', pop: true }); break;
+      case 'noise': if (G.inf && d.fl !== G.inf.cur) break; if (this.role === 'teacher') { const dd = dist(T.x, T.y, d.x, d.y) / 16; if (dd < d.r * 1.8 && !G.pVis) cue(d.x, d.y - 8, 'word', d.w || '?!', { col: '#ffb347', pop: true, life: 1.2 }); } break;
+      case 'tcheck': { if (G.inf && d.fl !== G.inf.cur) break; const s = L.hides[d.i]; if (s) { s.shake = 1; const dd = dist(T.x, T.y, P.x, P.y) / 16; AU.sfx('search', clamp(1 - dd / 14, 0, 0.8)); if (!G.tVis && dd < 14) cue(s.x * 16 + 8, s.y * 16, 'word', 'frrr…', { col: '#ffd0a0', life: 1 }); T.state = 'check'; T.checkT = 1; } break; }
       case 'keys': T.hasKeys = true; if (dist(T.x, T.y, P.x, P.y) < 16 * 16 && !G.tVis) cue(T.x, T.y - 24, 'word', 'cling cling', { col: '#ffd23f', life: 1 }); AU.sfx('keys', 0.5); break;
-      case 'say': T.bubble = { text: d.text, t: 0, dur: Math.max(2, d.text.length * 0.075) }; { const dd = dist(T.x, T.y, P.x, P.y) / 16; if (dd < 20) AU.say(d.text, T.prof, clamp(1.25 - dd / 15, 0.15, 1)); } break;
+      case 'say': if (G.inf && d.fl !== G.inf.cur) break; T.bubble = { text: d.text, t: 0, dur: Math.max(2, d.text.length * 0.075) }; { const dd = dist(T.x, T.y, P.x, P.y) / 16; if (dd < 20) AU.say(d.text, T.prof, clamp(1.25 - dd / 15, 0.15, 1)); } break;
       case 'spot':
         G.spotted++; FX.spotted(); setMark(T, '!', 1.3); T.flashT = 0.18; hop(T, 90); G.shake = 0.25; AU.sfx('spot');
         if (T.prof.whistle) { AU.sfx('whistle', 0.8); cue(T.x, T.y - 26, 'word', 'PRIIIT !', { col: '#9fe0ff', life: 1 }); }
         G.alarmT = 3; AU.play('chase'); break;
       case 'seen': G.alarmT = Math.max(G.alarmT || 0, 2.5); break;
       case 'caught': caught(d.r, true); break;
-      case 'grabfail': grabFail(d.i, true, d.li); if (this.role === 'student') { T.state = 'stun'; T.checkT = 0; const k = G.kids[d.i]; if (k && dist(k.x, k.y, P.x, P.y) < 14 * 16) cue(T.x, T.y - 30, 'word', 'RATÉ !', { col: '#9fe0ff', pop: true }); } break;
+      case 'grabfail': if (G.inf && d.fl !== G.inf.cur) break; grabFail(d.i, true, d.li); if (this.role === 'student') { T.state = 'stun'; T.checkT = 0; const k = G.kids[d.i]; if (k && dist(k.x, k.y, P.x, P.y) < 14 * 16) cue(T.x, T.y - 30, 'word', 'RATÉ !', { col: '#9fe0ff', pop: true }); } break;
       case 'task': G.tasksRemote = d.n; if (this.role === 'teacher') { toast('📋 ' + (P.cfg.name || 'L’élève') + ' a fini une tâche (' + d.n + '/' + (G.tasks.length || 3) + ')' + (d.n >= (G.tasks.length || 3) ? ' : les sorties sont ouvertes ! 😱' : ' !'), 2.6); AU.sfx('ding', 0.5); } break;
       case 'disguise': if (this.role === 'teacher') { if (G.pVis) { puff(P.x, P.y - 10, 18, '#ffffff'); cue(P.x, P.y - 36, 'word', 'POUF !', { col: '#ffd23f', pop: true }); } P.cfg = d.cfg; P.disguised = true; } break;
-      case 'escape': { const ex = L.exits[d.e]; if (ex) escape(ex, d.x, d.y, true); break; }
+      case 'escape': {
+        if (G.inf && G.inf.cur !== 0) { G.mode = 'escape'; G.escT = 1.9; G.escFrom = [-9999, -9999]; G.escTo = [-9999, -9999]; break; }
+        const ex = (G.inf ? G.inf.floors[0].L : L).exits[d.e]; if (ex) escape(ex, d.x, d.y, true); break;
+      }
+      case 'look': if (this.role === 'teacher') { P.cfg = d.cfg; } break;
+      case 'warn': if (G.inf) infRecvWarn(d); break;
+      case 'alarm': if (G.inf && !G.inf.alarmUsed) { infAlarm(); UI.banner('🔥 L’ALARME A SONNÉ au ' + INF_FLOOR_META[d.fl].name + ' ! Tout le monde descend dans la cour.'); } break;
+      case 'call': if (G.inf) { if (d.ok) { UI.banner('📋 L’appel : « ' + (P.cfg.name || 'l’élève') + ' » répond présent·e… dans le rang !'); } else { G.inf.hunt = true; G.inf.warn = 3; UI.banner('📋 Il manque ' + (P.cfg.name || 'l’élève') + ' à l’appel : il/elle est encore dans le bâtiment !'); } AU.sfx('ding'); } break;
+      case 'alarmEnd': if (G.inf && G.inf.alarm) infAlarmEnd(); break;
+      case 'trousseau': if (G.inf) { G.inf.keys = true; toast('🔑 Le trousseau du concierge a disparu (' + INF_FLOOR_META[G.inf.keysFloor].name + ') ! L’élève peut ouvrir la grille et le portail…', 3.4); AU.sfx('keys'); } break;
+      case 'planTaken': if (G.inf) { toast('🗺️ Le plan d’évacuation du ' + INF_FLOOR_META[d.fl].name + ' a été arraché : l’élève sait où tu es !', 3.2); } break;
       case 'end': timeUp(); break;
     }
   },
@@ -163,10 +184,13 @@ const Net = {
     if (this.sendT <= 0) {
       this.sendT = 0.05;
       const P = G.P, T = G.T;
-      if (this.role === 'student') this.send({ t: 's', x: +P.x.toFixed(1), y: +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0 });
-      else this.send({ t: 'T', x: +T.x.toFixed(1), y: +T.y.toFixed(1), a: +T.ang.toFixed(2), f: T.face, m: T.moving ? 1 : 0, r: T.running ? 1 : 0, st: T.state, k: T.hasKeys ? 1 : 0 });
+      if (this.role === 'student') this.send({ t: 's', fl: G.inf ? G.inf.cur : undefined, x: +P.x.toFixed(1), y: +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0 });
+      else this.send({ t: 'T', fl: G.inf ? G.inf.cur : undefined, x: +T.x.toFixed(1), y: +T.y.toFixed(1), a: +T.ang.toFixed(2), f: T.face, m: T.moving ? 1 : 0, r: T.running ? 1 : 0, st: T.state, k: T.hasKeys ? 1 : 0 });
     }
-    if (this.isHost && G.kids.length) {
+    if (G.inf) {
+      this.kidsT -= dt;
+      if (this.role === 'student' && G.T.fl === G.inf.cur && this.kidsT <= 0) { this.kidsT = 0.1; const a = []; G.kids.forEach((k, i) => { if (k.beh !== 'sit' && k.beh !== 'crowd') a.push([i, Math.round(k.x), Math.round(k.y), k.face, k.moving ? 1 : 0, k.runK ? 1 : 0, +((k.ang || 0).toFixed(2))]); }); this.send({ t: 'k', a }); }
+    } else if (this.isHost && G.kids.length) {
       this.kidsT -= dt;
       if (this.kidsT <= 0) { this.kidsT = 0.1; this.send({ t: 'k', a: G.kids.map(k => [Math.round(k.x), Math.round(k.y), k.face, k.moving ? 1 : 0, k.runK ? 1 : 0]), b: G.ball ? [G.ball.from, G.ball.to, +G.ball.t.toFixed(2)] : null }); }
     }
@@ -253,7 +277,7 @@ function updateTeacherLocal(dt) {
 function grabTarget() {
   const T = G.T, P = G.P, R = 22; let best = null, bd = R;
   if (!P.hidden && G.pVis) { const d = dist(T.x, T.y, P.x, P.y); if (d < bd) { bd = d; best = P; } }
-  G.kids.forEach(k => { if (!k.vis || k.fleeT > 0) return; const d = dist(T.x, T.y, k.x, k.y); if (d < bd) { bd = d; best = k; } });
+  G.kids.forEach(k => { if (!k.vis || k.fleeT > 0 || k.isWatcher || k.gone) return; const d = dist(T.x, T.y, k.x, k.y); if (d < bd) { bd = d; best = k; } });
   return best;
 }
 const GRAB_LINES = ['C’est pas moi !', 'Hé ! Lâchez-moi !', 'Je suis un élève modèle, moi !', 'Bip boup… erreur !', 'Mauvaise personne !', 'Je dirai tout à mes parents !'];
@@ -262,7 +286,7 @@ function grabFail(i, fromNet, li) {
   if (li == null) li = randi(0, GRAB_LINES.length - 1);
   k.bub = { text: GRAB_LINES[li % GRAB_LINES.length], t: 0, dur: 1.8 };
   puff(k.x, k.y - 8, 10); hop(k, 70);
-  if (Net.isHost) fleeKid(k);
+  if (G.inf ? infAuth() : Net.isHost) fleeKid(k);
   if (!fromNet) { Net.send({ t: 'grabfail', i, li }); T.stunT = 3; T.state = 'stun'; FX.punch(0.1); G.shake = 0.3; AU.sfx('boing'); setMark(T, '?', 1.4); toast('😵 Raté, ce n’était pas ' + (G.P.cfg.name || 'l’élève') + ' ! Ta tête tourne 3 secondes…', 2.4); }
   else { AU.sfx('boing', 0.5); }
 }
@@ -278,6 +302,7 @@ function computeActionsT() {
     if (hs) cand.push({ id: 'tcheck', spot: hs, icon: '🔍', label: 'Fouiller', sub: hs.n, prio: 1, d });
     if (m.get(tx, ty) === K.DOOR) { const dr = doorAt(tx, ty); if (dr.locked) cand.push(T.hasKeys ? { id: 'tunlock', door: dr, icon: '🔓', label: 'Ouvrir la porte', sub: 'avec tes clés', prio: 0, d } : { id: 'nokey', icon: '🔒', label: 'Fermé à clé !', sub: 'va chercher les clés', prio: 2, d }); }
   }
+  if (G.inf) infActsT(cand);
   if (!T.hasKeys && dist(T.x, T.y - 4, L.keyPt[0] * 16 + 8, L.keyPt[1] * 16 + 8) < 22) cand.push({ id: 'tkeys', icon: '🔑', label: 'Prendre les clés', sub: 'tableau à clés', prio: 0, d: 0 });
   cand.sort((a, b) => a.prio - b.prio || a.d - b.d);
   const gt = grabTarget();
@@ -288,6 +313,7 @@ function computeActionsT() {
 }
 function doActionT(a) {
   const T = G.T, P = G.P;
+  if (G.inf && infDoT(a)) return;
   switch (a.id) {
     case 'grab': {
       const w = a.who; hop(T, 60); AU.sfx('whistle', 0.4); T.ang = Math.atan2(w.y - T.y, w.x - T.x); T.face = faceFromAng(T.ang);
@@ -356,9 +382,10 @@ function netUpdate(dt) {
     AU.play(G.pVis ? 'chase' : 'sneak');
   }
   G.kids.forEach(k => { if (k.bub) { k.bub.t += dt; if (k.bub.t > k.bub.dur) k.bub = null; } });
-  if (Net.isHost) updateKids(dt);
-  else G.kids.forEach(k => { if (k.net) { const ox = k.x, oy = k.y, a = k.net; k.x += (a[0] - k.x) * Math.min(1, dt * 12); k.y += (a[1] - k.y) * Math.min(1, dt * 12); k.dist = (k.dist || 0) + Math.hypot(k.x - ox, k.y - oy); k.face = a[2]; k.moving = !!a[3]; k.runK = !!a[4]; } });
+  if (G.inf ? infAuth() : Net.isHost) updateKids(dt);
+  else G.kids.forEach(k => { if (k.net) { if (G.inf && k.net.length > 5) k.ang = k.net[5]; const ox = k.x, oy = k.y, a = k.net; if (Math.abs(a[0] - k.x) + Math.abs(a[1] - k.y) > 80) { k.x = a[0]; k.y = a[1]; } else { k.x += (a[0] - k.x) * Math.min(1, dt * 12); k.y += (a[1] - k.y) * Math.min(1, dt * 12); } k.dist = (k.dist || 0) + Math.hypot(k.x - ox, k.y - oy); k.face = a[2]; k.moving = !!a[3]; k.runK = !!a[4]; } });
   updateDoors(dt);
+  if (G.inf) { infUpdate(dt); if (G.mode !== 'play') return; }
   Net.timeLeft -= dt;
   if (Net.isHost && Net.timeLeft <= 0) { Net.send({ t: 'end' }); timeUp(); }
   Net.tick(dt);

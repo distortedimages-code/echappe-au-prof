@@ -1,6 +1,6 @@
 // ================= SALON DU MODE À DEUX =================
 const Multi = {
-  role: 'student', level: 0,
+  role: 'student', level: 0, mode: 'classic',
   open() {
     if (!UI.chars.length && Net.available()) { UI.openCreator(-1, 'multi'); return; }
     G.mode = 'menu'; UI.show('sMulti'); AU.play('menu'); this.menu();
@@ -27,14 +27,16 @@ const Multi = {
   },
   create() {
     const me = UI.cfg();
-    const b = this.body(`<h3 class="px" style="font-size:11px;color:var(--cyan)">Tu veux jouer…</h3>
+    const b = this.body(`<div class="modes"><button class="mode" data-m="classic"><b>🏃 Cache-cache</b><span>5 niveaux, tu choisis ton rôle</span></button><button class="mode" data-m="inf"><b>🕵️ Infiltration</b><span>4 étages, rôles tirés au sort</span></button></div>
+      <div id="mInfInfo" class="panel howto">🕵️ <b>Infiltration à deux</b> : l’élève part de sa classe au 3e étage et doit s’échapper par la cour. L’autre joueur est <b>le surveillant</b> : il se promène dans tous les couloirs, d’étage en étage, pour l’attraper.<br>🎲 Les rôles sont tirés au sort à chaque partie, et l’élève choisit une nouvelle apparence au début.</div>
+      <div id="mClassic"><h3 class="px" style="font-size:11px;color:var(--cyan)">Tu veux jouer…</h3>
       <div class="roles">
         <button class="role" data-r="student"><canvas width="20" height="34"></canvas><b>L’élève</b><span>avec ${esc(me ? me.name : 'ton perso')}</span></button>
         <button class="role" data-r="teacher"><canvas width="20" height="34"></canvas><b>Le prof</b><span>celui du niveau</span></button>
       </div>
       <h3 class="px" style="font-size:11px;color:var(--cyan)">Niveau</h3>
       <div class="lvlpick">${LEVELS.map((L, i) => `<button data-l="${i}"><b>${i + 1}</b><span>${esc(L.title)}</span></button>`).join('')}</div>
-      <button class="procTog" id="mProc"></button>
+      <button class="procTog" id="mProc"></button></div>
       <button class="btn big green" id="mGo">Créer ▶</button>
       <button class="btn ghost" id="mBack">◀ Retour</button>`);
     const paint = () => {
@@ -43,11 +45,14 @@ const Multi = {
       const pr = PROFS[LEVELS[this.level].prof], cvs = b.querySelectorAll('.role canvas');
       portrait(cvs[0], me, null, 1); portrait(cvs[1], pr.cfg, pr.v, 1);
       b.querySelector('.role[data-r="teacher"] span').textContent = pr.name;
+      b.querySelectorAll('.mode').forEach(r => r.classList.toggle('sel', r.dataset.m === this.mode));
+      $('mClassic').classList.toggle('hidden', this.mode === 'inf'); $('mInfInfo').classList.toggle('hidden', this.mode !== 'inf');
     };
+    b.querySelectorAll('.mode').forEach(r => r.onclick = () => { AU.sfx('tick'); this.mode = r.dataset.m; paint(); });
     b.querySelectorAll('.role').forEach(r => r.onclick = () => { AU.sfx('tick'); this.role = r.dataset.r; paint(); });
     b.querySelectorAll('.lvlpick button').forEach(r => r.onclick = () => { AU.sfx('tick'); this.level = +r.dataset.l; paint(); });
     paint(); UI.paintProc($('mProc'));
-    $('mGo').onclick = () => { AU.init(); AU.sfx('blip'); this.status('Création de la partie…', true); Net.host(this.role, this.level); };
+    $('mGo').onclick = () => { AU.init(); AU.sfx('blip'); this.status('Création de la partie…', true); Net.mode = this.mode; Net.host(this.role, this.level); };
     $('mBack').onclick = () => { AU.sfx('blip'); this.menu(); };
   },
   waiting(code) {
@@ -85,6 +90,7 @@ const Multi = {
     $('mBack').onclick = () => { AU.sfx('blip'); Net.close(true); G.net = null; UI.openTitle(); };
   },
   intro() {
+    if (G.inf) { this.introInf(); return; }
     const role = Net.role, L = LEVELS[Net.level], pr = PROFS[L.prof], st = G.P.cfg, them = Net.them.name || 'l’autre joueur';
     $('inNum').textContent = 'PARTIE À DEUX · NIVEAU ' + (Net.level + 1) + ' · ' + L.place.toUpperCase();
     $('inTitle').textContent = role === 'student' ? 'Tu es l’élève !' : 'Tu es ' + pr.name + ' !';
@@ -111,7 +117,49 @@ const Multi = {
     $('toast').classList.add('hidden'); $('banner').classList.add('hidden');
     AU.play('sneak');
   },
+  introInf() {
+    const role = Net.role, st = G.P.cfg, pr = G.T.prof, them = Net.them.name || 'l’autre joueur';
+    $('inNum').textContent = '🕵️ INFILTRATION À DEUX · 4 ÉTAGES';
+    $('inTitle').textContent = role === 'student' ? '🎲 Tu es l’élève !' : '🎲 Tu es le surveillant !';
+    if (role === 'student') {
+      portrait($('inProf'), st, null, 1); $('inName').textContent = st.name; $('inRole').textContent = 'Le surveillant est joué par ' + them + '.';
+      $('inQuote').textContent = '« Personne ne me reconnaîtra ! »';
+      $('inMission').innerHTML = '<b style="color:var(--yel)">Ta mission :</b> sortir de ta classe du 3e étage et t’échapper par la <b>cour</b> avant la sonnerie (6 min), sans te faire attraper par le surveillant.';
+    } else {
+      portrait($('inProf'), pr.cfg, pr.v, 1); $('inName').textContent = 'Tu es ' + pr.name; $('inRole').textContent = 'L’élève (' + st.name + ') est joué par ' + them + '.';
+      $('inQuote').textContent = '« ' + st.name + ' ne sortira pas de ce collège ! »';
+      $('inMission').innerHTML = '<b style="color:var(--yel)">Ta mission :</b> retrouver <b>' + esc(st.name) + '</b> et l’attraper avant la sonnerie (6 min). Tu ne sais pas à quoi il/elle ressemble !';
+    }
+    const hints = role === 'student' ? [
+      '🎭 Choisis ton apparence ci-dessous : le surveillant ne la connaît pas.',
+      '🪑 Sors de ta classe quand la maîtresse écrit au tableau.',
+      '🤖 Des élèves circulent dans les couloirs : marche comme eux pour passer inaperçu·e.',
+      '⚠️ Les profs dans les classes t’avertissent… et préviennent le surveillant !',
+      '🔑 Le trousseau (dans le bureau d’un prof) ouvre la grille du 1er et le portail.',
+      '🔥 L’alarme incendie vide les étages… mais il y a un appel dans la cour.'
+    ] : [
+      '🚶 Tu commences au 1er étage. Tu peux aller dans tous les couloirs et tous les étages.',
+      '📢 Quand un prof voit un élève hors de sa classe, il te prévient (❗ sur ton écran et sur ton plan).',
+      '🤖 Des élèves circulent dans les couloirs : repère celui qui ne bouge pas comme les autres.',
+      '✋ Approche-toi et appuie sur « Attraper ! ». Si tu te trompes, ta tête tourne 3 secondes.',
+      '🗺️ Tu as le plan du collège dès le début (bouton 🗺️).',
+      '👁️ Regarde par les serrures, fouille les cachettes, et passe la grille avec ton passe.'
+    ];
+    $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
+    if (role === 'student') {
+      $('inMission').innerHTML += '<div class="looks"><button class="btn cyan" id="bLook">🎲 Changer d’apparence</button><button class="btn ghost" id="bMine">😀 Mon perso</button></div>';
+      $('inTips').innerHTML = '⏰ 6 minutes avant la sonnerie !';
+      const setLook = cfg => { cfg.name = st.name; G.P.cfg = cfg; portrait($('inProf'), cfg, null, 1); Net.send({ t: 'look', cfg }); AU.sfx('pouf', 0.5); };
+      $('bLook').onclick = () => setLook(randomChar(st.name));
+      $('bMine').onclick = () => { const me = UI.cfg(); if (me) setLook(Object.assign({}, me)); };
+    } else $('inTips').innerHTML = '⏰ Si la sonnerie sonne (6 min), tu gagnes !';
+    $('bGo').textContent = 'Prêt !'; $('bGo').disabled = false;
+    G.mode = 'intro'; UI.show('sIntro'); UI.hudSig = null; UI.invSig = null; UI.infSig = null;
+    $('toast').classList.add('hidden'); $('banner').classList.add('hidden');
+    AU.play('sneak');
+  },
   result(outcome) {
+    if (G.inf) { this.resultInf(outcome); return; }
     const role = Net.role, p = $('resPanel'), st = G.P.cfg.name || 'l’élève', pr = G.T.prof;
     const win = (role === 'student') === (outcome === 'escaped');
     const t = G.time, mm = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
@@ -134,6 +182,27 @@ const Multi = {
     $('rSwap').onclick = () => ask(true);
     if ($('rNext')) $('rNext').onclick = () => ask(false, Net.level + 1);
     $('rQuit').onclick = () => { AU.sfx('blip'); Net.close(); G.net = null; UI.openTitle(); };
+    UI.show('sResult');
+  },
+  resultInf(outcome) {
+    const role = Net.role, p = $('resPanel'), st = G.P.cfg.name || 'l’élève', pr = G.T.prof, I = G.inf;
+    const win = (role === 'student') === (outcome === 'escaped');
+    const t = G.time, mm = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+    let title, line;
+    if (outcome === 'escaped') { title = role === 'student' ? 'LIBRE !' : 'ÉVADÉ·E !'; line = role === 'student' ? 'Tu as quitté le collège !' : st + ' a quitté le collège sous ton nez…'; }
+    else if (outcome === 'caught') { title = role === 'student' ? 'ATTRAPÉ·E !' : 'BIEN JOUÉ !'; line = role === 'student' ? '« ' + pr.lines.caught + ' »' : 'Tu as attrapé ' + st + ' (' + INF_FLOOR_META[I.cur].name + ') !'; }
+    else { title = 'DRIIING !'; line = role === 'student' ? 'La sonnerie a sonné… le surveillant gagne !' : 'La sonnerie a sonné : tu gagnes !'; }
+    p.innerHTML = `<div class="bigtitle" style="color:${win ? 'var(--green)' : 'var(--red)'}">${title}</div>
+      <div class="stars">${win ? '🏆' : '😵'}</div>
+      <div class="quote" style="text-align:center">${esc(line)}</div>
+      <div class="stats"><span>⏱️ ${mm}</span><span>⚠️ ${I.warn}/3</span><span>${I.keys ? '🔑' : ''}${I.alarmUsed ? '🔥' : ''}</span></div>
+      <div class="prof"><canvas id="rLook" width="20" height="34"></canvas><div class="quote">${role === 'student' ? 'Ton look secret' : 'Le look secret de ' + esc(st)}</div></div>
+      <button class="btn big green" id="rAgain">🎲 Nouvelle partie (rôles au hasard)</button>
+      <button class="btn ghost" id="rQuit">🏠 Quitter la partie</button>
+      <div class="tiny" id="rStat" style="text-align:center"></div>`;
+    portrait($('rLook'), G.P.cfg, null, 1);
+    $('rAgain').onclick = () => { AU.sfx('blip'); if (!Net.isHost) $('rStat').textContent = '⏳ Demande envoyée à l’autre joueur…'; Net.newRound(false); };
+    $('rQuit').onclick = () => { AU.sfx('blip'); Net.close(); G.net = null; G.inf = null; UI.openTitle(); };
     UI.show('sResult');
   }
 };

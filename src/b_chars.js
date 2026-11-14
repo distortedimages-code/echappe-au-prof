@@ -27,10 +27,10 @@ const CHAR_FIELDS = [
 ];
 const colOf = (list, i) => { const v = list[((i % list.length) + list.length) % list.length]; return Array.isArray(v) ? v[1] : v; };
 const nameOf = (list, i) => { const v = list[((i % list.length) + list.length) % list.length]; return Array.isArray(v) ? v[0] : (typeof v === 'string' && v[0] === '#' ? '' : v); };
-function randomChar(name) {
-  const c = { name: name || '' };
-  CHAR_FIELDS.forEach(f => c[f.k] = Math.floor(Math.random() * f.list.length));
-  if (Math.random() < 0.55) c.acc = 0; if (Math.random() < 0.5) c.face = 0;
+function randomChar(name, rf) {
+  const r = rf || Math.random, c = { name: name || '' };
+  CHAR_FIELDS.forEach(f => c[f.k] = Math.floor(r() * f.list.length));
+  if (r() < 0.55) c.acc = 0; if (r() < 0.5) c.face = 0;
   return c;
 }
 const CHAR_CACHE = new Map();

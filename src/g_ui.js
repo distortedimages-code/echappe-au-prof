@@ -88,7 +88,7 @@ const UI = {
     tap('bInf', () => { AU.init(); if (!this.chars.length) this.openCreator(-1, 'inf'); else this.launchInf(); });
     tap('bPlan', () => this.openPlan());
     tap('plClose', () => this.closePlan());
-    tap('pkClose', () => { if (G.P && G.P.busy && G.P.busy.peek) G.P.busy = null; });
+    tap('pkClose', () => { const A = G.P && viewerA(); if (A && A.busy && A.busy.peek) A.busy = null; });
     tap('bCharsBack', () => this.charsBack === 'levels' ? this.openLevels() : this.charsBack === 'multi' ? Multi.open() : this.openTitle());
     tap('bCharsGo', () => { if (!this.chars.length) this.openCreator(-1, 'levels'); else this.openLevels(); });
     tap('cRand', () => { const n = this.editing.name; this.editing = randomChar(n); this.renderOpts(); });
@@ -200,6 +200,18 @@ const UI = {
   },
   hudInf() {
     const I = G.inf, el = $('hTasks');
+    if (I.multi && I.role === 'teacher') {
+      $('bPlan').classList.toggle('hidden', G.mode !== 'play');
+      const pg = I.ping, age = pg ? Math.floor(pg.t) : 0;
+      const sig2 = ['T', I.warn, I.hunt, I.keys, !!I.alarm, pg ? pg.fl + pg.room + Math.floor(age / 5) : '', I.alarm ? Math.ceil((I.alarm.dur - I.alarm.t) / 5) : 0].join('|');
+      if (sig2 === this.infSig && !el.classList.contains('hidden')) return; this.infSig = sig2; el.classList.remove('hidden');
+      const dots = [0, 1, 2].map(i => i < I.warn ? '🟡' : '⚪').join('');
+      el.innerHTML = `<div class="hd">🎯 TROUVE ${esc((G.P.cfg.name || 'L’ÉLÈVE').toUpperCase())} · ${dots}</div>`
+        + `<div class="tl">📢 ${pg ? INF_FLOOR_META[pg.fl].short + ' · ' + esc(pg.room) + ' (' + age + ' s)' : 'aucun signalement'}</div>`
+        + (I.keys || I.alarm ? `<div class="tl">${I.keys ? '🔑 trousseau volé ' : ''}${I.alarm ? '🔥 alerte !' : ''}</div>` : '');
+      el.classList.toggle('all', !!(pg && pg.t < 8));
+      return;
+    }
     const sig = [I.keys, I.plan, I.alarmUsed, !!I.alarm, I.warn, I.hunt, I.cur, I.alarm ? Math.ceil(Math.max(0, I.alarm.dur - I.alarm.t) / 5) : 0].join('|');
     $('bPlan').classList.toggle('hidden', !I.plan || G.mode !== 'play');
     if (sig === this.infSig && !el.classList.contains('hidden')) return; this.infSig = sig;
@@ -260,17 +272,17 @@ const UI = {
   },
   openPlan(f) {
     const I = G.inf; if (!I || !I.plan || G.mode !== 'play') return;
-    AU.sfx('tick'); this.planF = f == null ? I.cur : f; G.overlay = 'plan'; $('sPlan').classList.remove('hidden');
+    AU.sfx('tick'); this.planF = f == null ? I.cur : f; this.planOpen = true; G.overlay = G.net ? null : 'plan'; $('sPlan').classList.remove('hidden');
     $('plTabs').innerHTML = I.floors.map(F => `<button data-f="${F.f}" class="${F.f === this.planF ? 'on' : ''}">${F.f === I.cur ? '📍' : ''}${INF_FLOOR_META[F.f].short}</button>`).reverse().join('');
     $('plTabs').querySelectorAll('button').forEach(b => b.onclick = () => this.openPlan(+b.dataset.f));
   },
-  closePlan() { G.overlay = null; $('sPlan').classList.add('hidden'); },
+  closePlan() { G.overlay = null; this.planOpen = false; $('sPlan').classList.add('hidden'); },
   tickInf() {
-    const I = G.inf, P = G.P, pk = $('sPeek');
+    const I = G.inf, P = G.P && viewerA(), pk = $('sPeek');
     const peeking = !!(I && P && P.busy && P.busy.peek && G.mode === 'play');
     pk.classList.toggle('hidden', !peeking);
     if (peeking) infDrawPeek($('peekCv'));
-    if (G.overlay === 'plan') { if (!I || G.mode !== 'play') this.closePlan(); else infDrawPlan($('planCv'), this.planF); }
+    if (this.planOpen) { if (!I || G.mode !== 'play') this.closePlan(); else infDrawPlan($('planCv'), this.planF); }
   },
   pause() {
     if (G.mode !== 'play') return;
