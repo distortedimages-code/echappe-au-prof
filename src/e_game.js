@@ -24,7 +24,15 @@ const tileOf = a => [Math.floor(a.x / 16), Math.floor((a.y - 4) / 16)];
 const tileXY = (x, y) => [Math.floor(x / 16), Math.floor((y - 4) / 16)];
 const faceFromAng = a => { const c = Math.cos(a), s = Math.sin(a); return Math.abs(c) > Math.abs(s) * 1.05 ? (c > 0 ? 2 : 3) : (s > 0 ? 0 : 1); };
 
+// les yeux (ou le point visé) sont un peu au-dessus des pieds : collé sous un mur ou un casier, ce point dépasse
+// dans la case du mur → on le ramène juste sous le mur, sinon la vue (et le prof) traversent le mur
+function sightY(x, y) {
+  const tx = Math.floor(x / 16), ty = Math.floor(y / 16);
+  if (!opaqueAt(tx, ty) || opaqueAt(tx, ty + 1)) return y;
+  const b = (ty + 1) * 16; return b - y < 14 ? b + 0.5 : y;
+}
 function los(ax, ay, bx, by) {
+  ay = sightY(ax, ay); by = sightY(bx, by);
   const dx = bx - ax, dy = by - ay, d = Math.hypot(dx, dy), n = Math.ceil(d / 4);
   const t0x = Math.floor(ax / 16), t0y = Math.floor(ay / 16), t1x = Math.floor(bx / 16), t1y = Math.floor(by / 16);
   for (let i = 1; i < n; i++) {
@@ -35,6 +43,7 @@ function los(ax, ay, bx, by) {
   return true;
 }
 // mode facile (réglage) : seulement là où il n'y a pas d'adversaire humain
+function playerEye(P) { return [P.x, sightY(P.x, P.y - 7)]; }
 function easyOn() { return !!AU.set.easy && (!G.net || !!(G.inf && G.inf.coop)); }
 function castRay(ox, oy, ang, maxD) {
   const dx = Math.cos(ang), dy = Math.sin(ang);
@@ -47,7 +56,12 @@ function castRay(ox, oy, ang, maxD) {
     let t, side;
     if (tmx < tmy) { t = tmx; tmx += tdx; mx += sx; side = 0; } else { t = tmy; tmy += tdy; my += sy; side = 1; }
     if (t > maxD) return maxD;
-    if (opaqueAt(mx, my)) { const ext = (side === 1 && dy < 0) ? Math.min(15 / -dy, 22) : 5; return Math.min(maxD, t + ext); }
+    if (opaqueAt(mx, my)) {
+      // on montre un peu la face du mur… sans jamais ressortir de l'autre côté (murs fins, coins, casiers)
+      let ext = (side === 1 && dy < 0) ? Math.min(15 / -dy, 22) : 5;
+      for (let k = 0; k < 4; k++) { const nb = Math.min(tmx, tmy); if (nb >= t + ext) break; if (tmx < tmy) { tmx += tdx; mx += sx; } else { tmy += tdy; my += sy; } if (!opaqueAt(mx, my)) { ext = Math.max(0, nb - t - 0.5); break; } }
+      return Math.min(maxD, t + ext);
+    }
   }
   return maxD;
 }
@@ -521,13 +535,23 @@ function updateDoors(dt) {
   if (G.inf && G.inf.guard) { G.inf.fugs.forEach(f => { if (f.fl === G.inf.cur && f.st !== 'hide' && f.st !== 'caught' && f.st !== 'out') actors.push(f); }); if (G.T2 && G.T2.x > -9000) actors.push(G.T2); }
   for (const d of G.doors) {
     const cx = d.x * 16 + 8, cy = d.y * 16 + 8; let opener = null;
-    if (!d.locked) for (const a of actors) { if (Math.abs(a.x - cx) < 15 && Math.abs(a.y - 5 - cy) < 15) { opener = a; break; } }
+    if (!d.locked) for (const a of actors) { if (doorNear(d, a, cx, cy)) { opener = a; break; } }
     if (d.hideP) opener = opener || P;
     if (d.forceT > 0) { d.forceT -= dt; if (!d.locked) opener = opener || T; }
     if (opener) { if (d.target === 0) { d.target = 1; onDoorOpen(d, opener); } d.closeT = 1.1; }
     else if (d.target === 1) { d.closeT -= dt; if (d.closeT <= 0) d.target = 0; }
     d.open += (d.target - d.open) * Math.min(1, dt * 14);
   }
+}
+// une porte s'ouvre quand on est juste devant (pas quand on passe à côté) ; l'élève qui longe le couloir ne l'ouvre pas
+function doorNear(d, a, cx, cy) {
+  const ddx = a.x - cx, ddy = a.y - 5 - cy;
+  if (d.horiz ? (Math.abs(ddx) >= 10 || Math.abs(ddy) >= 15) : (Math.abs(ddx) >= 15 || Math.abs(ddy) >= 11)) return false;
+  if (a === G.P && a.moving && !(Math.floor(a.x / 16) === d.x && Math.floor((a.y - 4) / 16) === d.y)) {
+    const vx = a.vx || 0, vy = a.vy || 0, along = Math.abs(d.horiz ? vx : vy), toward = d.horiz ? -Math.sign(ddy) * vy : -Math.sign(ddx) * vx;
+    if (toward <= 5 && along > 10) return false;
+  }
+  return true;
 }
 function onDoorOpen(d, a) {
   const V0 = viewerA(), dd = dist(d.x * 16 + 8, d.y * 16 + 8, V0.x, V0.y) / 16;
@@ -934,7 +958,7 @@ function update(dt) {
     const T = G.T;
     if (G.net && G.net.role === 'teacher') {
       const pr = T.prof, R = Math.max(7.5, pr.range) * 16, fov = Math.max(1.0, pr.fov);
-      G.eye = [T.x, T.y - 12]; G.visR = T.state === 'count' ? 0 : R; G.tVis = true;
+      G.eye = [T.x, sightY(T.x, T.y - 12)]; G.visR = T.state === 'count' ? 0 : R; G.tVis = true;
       let vis = false;
       if (!P.hidden && T.state !== 'count') {
         const px = P.x, py = P.y - (P.small > 0 ? 3 : 7), d = Math.hypot(px - G.eye[0], py - G.eye[1]);
@@ -946,11 +970,11 @@ function update(dt) {
     G.pVis = true;
     if (P.hidden) {
       const hs = P.hidden, hx = hs.x * 16 + 8, hy = hs.y * 16 + 8;
-      if (KP[hs.k] && KP[hs.k].opaque && P.hideFrom) { const fx = P.hideFrom[0] - hx, fy = P.hideFrom[1] - 7 - hy, fl = Math.hypot(fx, fy) || 1; G.eye = [hx + fx / fl * 10, hy + fy / fl * 10]; }
-      else G.eye = [hx, hy];
+      if (KP[hs.k] && KP[hs.k].opaque && P.hideFrom) { const fx = P.hideFrom[0] - hx, fy = P.hideFrom[1] - 7 - hy, fl = Math.hypot(fx, fy) || 1; G.eye = [hx + fx / fl * 10, hy + fy / fl * 10]; G.eye[1] = sightY(G.eye[0], G.eye[1]); }
+      else G.eye = [hx, sightY(hx, hy)];
       G.visR = hs.peek * 16;
     }
-    else { G.eye = [P.x, P.y - 7]; G.visR = (G.L.outdoor ? 12 : 10) * 16 * (P.small > 0 ? 0.85 : 1); }
+    else { G.eye = playerEye(P); G.visR = (G.L.outdoor ? 12 : 10) * 16 * (P.small > 0 ? 0.85 : 1); }
     if (easyOn()) { G.visR = 9999; G.tVis = !T.gone; G.kids.forEach(k => k.vis = !k.gone); }
     else {
     G.tVis = !T.gone && dist(G.eye[0], G.eye[1], T.x, T.y - 12) < G.visR && los(G.eye[0], G.eye[1], T.x, T.y - 12);

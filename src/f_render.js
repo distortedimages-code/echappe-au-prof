@@ -125,7 +125,7 @@ function drawDynamic(c, ox, oy) {
   });
 }
 function conePath(c, A) {
-  const T = A || G.T, pr = T.prof, ex = T.x, ey = T.y - 12, R = pr.range * 16 * 0.92;
+  const T = A || G.T, pr = T.prof, ex = T.x, ey = sightY(T.x, T.y - 12), R = pr.range * 16 * 0.92;
   c.beginPath(); c.moveTo(ex, ey);
   const n = 30;
   for (let i = 0; i <= n; i++) { const a = T.ang - pr.fov + 2 * pr.fov * i / n, d = castRay(ex, ey, a, R); c.lineTo(ex + Math.cos(a) * d, ey + Math.sin(a) * d); }
