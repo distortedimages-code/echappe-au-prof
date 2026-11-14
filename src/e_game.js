@@ -214,24 +214,24 @@ function say(text) {
 }
 // ---------- les élèves parlent (bêtises de collège) ----------
 const KID_LINES = ['Quoi ? Feur !', 'Skibidi !', 'C’est quand la récré ?', 'J’ai faim…', 'On mange quoi à la cantine ?', 'Mon chat a mangé mes devoirs.', 'T’as fait l’exo 4 ?', 'Flemme…', 'Tu me prêtes ta gomme ?', 'J’ai perdu ma trousse !', 'C’est pas moi, c’est lui !', 'Wesh !', 'Tranquille ou quoi ?', 'Ça sonne quand ?', 'Trop la flemme de l’interro…', 'Mdr', 'J’ai vu un pigeon avec un chapeau !', 'Chut, le prof !', 'J’ai oublié mon cahier…', 'Il est quelle heure ?', 'Bouge pas, y a une abeille !', 'T’as vu ma nouvelle trousse ?', 'Je suis trop fort au foot !', 'Hein ? Quoi ? J’ai rien fait !'];
-const SIX_LINES = ['Six seven ! 🤲', 'SIX… SEVEN !', 'Six seven, six seven…', 'Page 67 ? SIX SEVEN !', 'Il a 67 ans ? SIX SEVEN !'];
-const PROF_CHAT = ['Ouvrez vos cahiers page 67.', 'Silence au fond !', 'Qui mâche un chewing-gum ?', 'Interro surprise !', 'On ne dit pas « six seven » en classe !', 'Rangez vos portables !', 'Je ne veux plus entendre « feur » !', 'Qui veut passer au tableau ?', 'Les devoirs pour lundi !'];
+const SIX_LINES = ['Six seven ! 🤲', 'SIX… SEVEN !', 'Six seven…'];
+const PROF_CHAT = ['Ouvrez vos cahiers page 42.', 'Silence au fond !', 'Qui mâche un chewing-gum ?', 'Interro surprise !', 'On ne dit pas « six seven » en classe !', 'Rangez vos portables !', 'Je ne veux plus entendre « feur » !', 'Qui veut passer au tableau ?', 'Les devoirs pour lundi !'];
 function npcChatter(dt) {
   const own = !G.net;
   G.kids.forEach(k => { if (k.sixT > 0) k.sixT -= dt; if (own && k.bub && k.beh !== 'sit' && k.beh !== 'crowd' && k.beh !== 'watch') { k.bub.t += dt; if (k.bub.t > k.bub.dur) k.bub = null; } });
-  G.chatT = (G.chatT == null ? 3 : G.chatT) - dt;
+  G.chatT = (G.chatT == null ? 5 : G.chatT) - dt;
   if (G.chatT > 0) return;
-  G.chatT = rand(2.2, 4.5);
+  G.chatT = rand(6, 11);   // moins de bulles : une de temps en temps, pas un brouhaha
   const V0 = viewerA(), cand = G.kids.filter(k => k.vis && !k.gone && !k.bub && dist(k.x, k.y, V0.x, V0.y) < 10 * 16);
   if (!cand.length) return;
   const k = pick(cand);
   if (k.isWatcher) { if (k.state === 'warn' || k.state === 'evac' || k.detect > 0.2) return; k.bub = { text: pick(PROF_CHAT), t: 0, dur: 2.4 }; return; }
-  const six = Math.random() < 0.3, text = six ? pick(SIX_LINES) : pick(KID_LINES);
+  const six = Math.random() < 0.1, text = six ? pick(SIX_LINES) : pick(KID_LINES);
   k.bub = { text, t: 0, dur: 2.2 };
   if (six) {
     k.sixT = 2.4;
     const nb = G.kids.find(o => o !== k && !o.isWatcher && o.vis && !o.bub && dist(o.x, o.y, k.x, k.y) < 3 * 16);
-    if (nb && Math.random() < 0.6) { nb.bub = { text: 'SEVEN !', t: 0, dur: 1.9 }; nb.sixT = 2.2; }
+    if (nb && Math.random() < 0.35) { nb.bub = { text: 'SEVEN !', t: 0, dur: 1.9 }; nb.sixT = 2.2; }
   }
 }
 // ---------- Le prof ----------

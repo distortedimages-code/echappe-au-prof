@@ -112,7 +112,7 @@ const Multi = {
       '🔍 Approche-toi d’une cachette et fouille-la : s’il est dedans, c’est gagné !',
       '🔑 Porte fermée à clé ? Va prendre les clés au tableau à clés.',
       '🔑 Porte fermée ? Va prendre les clés au tableau à clés.'].slice(0, 7);
-    $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
+    $('inHints').innerHTML = ''; $('inHints').dataset.title = '💡 Comment jouer'; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     $('inTips').innerHTML = role === 'student'
       ? '⏰ Trouve une sortie en moins de 3 minutes !<br>👆 Un peu = marcher sans bruit · à fond = courir (le prof voit tes traces !).'
       : '⏰ Si la sonnerie sonne (3 minutes), tu gagnes !<br>🙈 Au début, tu fermes les yeux 3 secondes.';
@@ -149,7 +149,7 @@ const Multi = {
       '🗺️ Tu as le plan du collège dès le début (bouton 🗺️).',
       '👁️ Regarde par les serrures, fouille les cachettes, et passe la grille avec ton passe.'
     ];
-    $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
+    $('inHints').innerHTML = ''; $('inHints').dataset.title = '💡 Comment jouer'; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     if (role === 'student') {
       $('inMission').innerHTML += '<div class="looks"><button class="btn cyan" id="bLook">🎲 Changer d’apparence</button><button class="btn ghost" id="bMine">😀 Mon perso</button></div>';
       $('inTips').innerHTML = '⏰ 6 minutes avant la sonnerie !';
@@ -177,7 +177,7 @@ const Multi = {
       '📢 De temps en temps, quelqu’un les aperçoit : écoute les rumeurs.',
       '📍 Appelle ton coéquipier et partagez-vous les étages. 🗺️ Le plan montre où il est.'
     ];
-    $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
+    $('inHints').innerHTML = ''; $('inHints').dataset.title = '💡 Comment jouer'; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     $('inTips').innerHTML = '🎲 Nouveau collège à chaque partie · 🕐 6 minutes<br>👆 Un peu = marcher · à fond = courir.';
     $('bGo').textContent = 'Prêt !'; $('bGo').disabled = false;
     G.mode = 'intro'; UI.show('sIntro'); UI.hudSig = null; UI.invSig = null; UI.infSig = null;
@@ -217,7 +217,7 @@ const Multi = {
       '🚧 Le vieux portail de la cour : il faut le pousser à deux ! (le trou du grillage, chacun son tour)',
       '📍 Appelle ton équipier : il voit où tu es. 🗺️ Le plan montre aussi où il est.'
     ];
-    $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
+    $('inHints').innerHTML = ''; $('inHints').dataset.title = '💡 Comment jouer'; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     $('inTips').innerHTML = '🎲 Nouveau collège à chaque partie · 🕐 8 minutes<br>👆 Un peu = marcher sans bruit · à fond = courir (ça s’entend !).';
     const setLook = cfg => { cfg.name = me.name; G.P.cfg = cfg; portrait($('inProf'), cfg, null, 1); Net.send({ t: 'look', cfg }); AU.sfx('pouf', 0.5); };
     $('bLook').onclick = () => setLook(randomChar(me.name));

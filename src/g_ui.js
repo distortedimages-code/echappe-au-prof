@@ -57,6 +57,11 @@ const Input = {
     addEventListener('keydown', e => {
       if (e.target && e.target.tagName === 'INPUT') return;
       this.keys[e.code] = true;
+      if (G.mode === 'intro' && !$('sIntro').classList.contains('hidden')) {
+        if (e.code === 'ArrowRight') { UI.inGo(UI.inP + 1); e.preventDefault(); }
+        if (e.code === 'ArrowLeft') { UI.inGo(UI.inP - 1); e.preventDefault(); }
+        if (e.code === 'Enter' && UI.inP < UI.inN - 1) { UI.inGo(UI.inP + 1); e.preventDefault(); }
+      }
       if (G.mode === 'play') {
         if (e.code === 'Space' || e.code === 'KeyE' || e.code === 'Enter') { doAction(G.actions[0]); e.preventDefault(); }
         if (e.code === 'KeyR' || e.code === 'KeyF') doAction(G.actions[1]);
@@ -111,6 +116,56 @@ const UI = {
     if (['sTitle', 'sLevels', 'sResult', 'sMulti', 'sIntro', 'sChars', 'sCreator'].includes(id)) Lesson.abort();
     ['sTitle', 'sChars', 'sCreator', 'sLevels', 'sIntro', 'sPause', 'sResult', 'sMulti'].forEach(s => $(s).classList.toggle('hidden', s !== id));
     $('hud').classList.toggle('hidden', !['play'].includes(id) && !['sIntro', 'sPause', 'sResult'].includes(id));
+    if (id === 'sIntro') this.introPages();
+  },
+  // ---------- briefing écran par écran (on glisse, puis « C'est parti ! » sur le dernier) ----------
+  introPages() {
+    const tr = $('inTrack'); tr.querySelectorAll('.inPage.gen').forEach(e => e.remove());
+    const emo = /^((?:\p{Regional_Indicator}{2})|(?:\p{Extended_Pictographic}\uFE0F?(?:\u200D\p{Extended_Pictographic}\uFE0F?)*))\s*/u;
+    const card = (html, cls) => { const m = html.match(emo); return `<div class="inCard${cls ? ' ' + cls : ''}"><span class="em">${m ? m[1] : '✨'}</span><span>${m ? html.slice(m[0].length) : html}</span></div>`; };
+    const hints = [...$('inHints').children].map(li => esc(li.textContent));
+    const tips = $('inTips').innerHTML.split(/<br\s*\/?>/i).map(x => x.trim()).filter(Boolean);
+    const groups = [[$('inHints').dataset.title || '💡 Comment jouer', hints, ''], ['🎒 Bon à savoir', tips, 'tip']];
+    groups.forEach(([title, list, cls]) => {
+      const nP = Math.ceil(list.length / 3), per = Math.ceil(list.length / Math.max(1, nP));   // pages équilibrées (pas une carte toute seule)
+      for (let p = 0; p < nP; p++) {
+        const sec = document.createElement('section'); sec.className = 'inPage gen';
+        sec.innerHTML = `<div class="inBody"><h3>${title}${nP > 1 ? ' ' + (p + 1) + '/' + nP : ''}</h3>${list.slice(p * per, p * per + per).map(h => card(h, cls)).join('')}</div>`;
+        tr.appendChild(sec);
+      }
+    });
+    this.inN = tr.children.length; this.inGo(0, true);
+  },
+  inGo(i, instant) {
+    const n = this.inN || 1, tr = $('inTrack'); i = clamp(i, 0, n - 1);
+    if (i !== this.inP && !instant) AU.sfx('tick');
+    this.inP = i;
+    if (instant) tr.classList.add('drag');
+    tr.style.transform = 'translateX(' + (-i * 100) + '%)';
+    if (instant) { void tr.offsetWidth; tr.classList.remove('drag'); }
+    const last = i === n - 1;
+    $('bInPrev').classList.toggle('hidden', i === 0); $('bInNext').classList.toggle('hidden', last); $('bGo').classList.toggle('hidden', !last);
+    $('bInSkip').classList.toggle('gone', last);
+    $('inDots').innerHTML = n > 1 ? Array.from({ length: n }, (_, k) => `<i data-k="${k}" class="${k === i ? 'on' : ''}"></i>`).join('') : '';
+    const pg = tr.children[i]; if (pg) pg.scrollTop = 0;
+  },
+  initIntroSwipe() {
+    const v = $('inView'), tr = $('inTrack'); let st = null;
+    v.addEventListener('pointerdown', e => { if (e.target.closest('button, input')) return; st = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, drag: false }; });
+    v.addEventListener('pointermove', e => {
+      if (!st || e.pointerId !== st.id) return;
+      const dx = e.clientX - st.x, dy = e.clientY - st.y;
+      if (!st.drag) { if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy) * 1.2) return; st.drag = true; tr.classList.add('drag'); try { v.setPointerCapture(e.pointerId); } catch (er) { } }
+      const edge = (this.inP === 0 && dx > 0) || (this.inP === this.inN - 1 && dx < 0); st.dx = edge ? dx * 0.3 : dx;
+      tr.style.transform = 'translateX(calc(' + (-this.inP * 100) + '% + ' + Math.round(st.dx) + 'px))'; e.preventDefault();
+    });
+    const end = e => {
+      if (!st || e.pointerId !== st.id) return; const s0 = st; st = null; if (!s0.drag) return;
+      tr.classList.remove('drag'); const w = v.clientWidth || 300;
+      this.inGo(this.inP + (s0.dx < -w * 0.18 ? 1 : s0.dx > w * 0.18 ? -1 : 0));
+    };
+    v.addEventListener('pointerup', end); v.addEventListener('pointercancel', end); v.addEventListener('lostpointercapture', e => { if (e.target === v) end(e); });
+    $('inDots').addEventListener('click', e => { const k = e.target.dataset && e.target.dataset.k; if (k != null) this.inGo(+k); });
   },
   init() {
     // boutons généraux
@@ -132,6 +187,8 @@ const UI = {
     tap('cSave', () => this.saveCreator());
     tap('bWho', () => this.openChars('levels'));
     tap('bLvlBack', () => this.openTitle());
+    tap('bInNext', () => this.inGo(this.inP + 1)); tap('bInPrev', () => this.inGo(this.inP - 1)); tap('bInSkip', () => this.inGo(this.inN - 1));
+    this.initIntroSwipe();
     tap('bGo', () => { if (G.net) { Net.setReady(); return; } G.mode = 'play'; this.show('play'); AU.play('sneak'); FX.iris = { mode: 'in', t: 0, dur: 0.75 }; this.hudSig = null; this.invSig = null; if (G.L.def.prof === 4) G.intercomT = 12; });
     tap('bPause', () => this.pause());
     tap('pResume', () => { if (!G.net) G.mode = this.pausedFrom || 'play'; this.show('play'); });
@@ -144,6 +201,7 @@ const UI = {
     $('cName').addEventListener('input', e => { this.editing.name = e.target.value.slice(0, 12); });
     // HUD
     ['act1', 'act2'].forEach((id, i) => $(id).addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); doAction(G.actions[i]); this.hudSig = null; }));
+    $('hTasks').addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); this.tasksOpen = !this.tasksOpen; this.taskPeekT = 0; this.taskSig = null; this.infSig = null; AU.sfx('tick'); });
     $('inv').addEventListener('pointerdown', e => { const b = e.target.closest('.slot'); if (!b) return; e.stopPropagation(); e.preventDefault(); useItem(+b.dataset.i); this.invSig = null; });
     document.addEventListener('visibilitychange', () => { if (document.hidden && G.mode === 'play' && !G.net) this.pause(); });
     this.waveTitle(); this.openTitle();
@@ -276,7 +334,9 @@ const UI = {
     const st = (ok, ic) => ok ? '✅' : ic;
     const al = I.alarm ? `🔥 ${I.alarm.call ? 'fin' : 'appel'} ${Math.ceil(Math.max(0, (I.alarm.call ? I.alarm.dur : 32) - I.alarm.t))} s` : st(I.alarmUsed, '🔥');
     const head = P.out ? '🌳 TU ES DEHORS ! guide ton équipier' : P.jail ? '🔒 EN COLLE… (' + jailLeft + ' s)' : I.hunt ? (hideLeft ? '🫣 RESTE CACHÉ·E ' + hideLeft + ' s' : (I.coop ? '🚨 ON VOUS CHERCHE ! cachez-vous 20 s' : '🚨 ON TE CHERCHE ! cache-toi 20 s')) : '⚠️ ' + dots;
-    el.innerHTML = `<div class="hd">${head}</div><div class="tl">${st(I.keys, '🔑')}${kf} · ${st(I.plan, '🗺️')} · ${al}${G.P.keys ? ' · 🗝️×' + G.P.keys : ''}</div>` + (Q ? `<div class="tl">🤝 ${esc(Q.cfg.name || 'Équipier')} : ${qs}</div>` : '');
+    const objs = `${st(I.keys, '🔑')}${kf} ${st(I.plan, '🗺️')} ${al}${G.P.keys ? ' 🗝️×' + G.P.keys : ''}`;
+    const calm = !P.out && !P.jail && !I.hunt;
+    el.innerHTML = (calm ? `<div class="tl">⚠️${dots} · ${objs}</div>` : `<div class="hd">${head}</div><div class="tl">${objs}</div>`) + (Q ? `<div class="tl">🤝 ${esc(Q.cfg.name || 'Équipier')} : ${qs}</div>` : '');
     el.classList.toggle('all', I.keys);
   },
   launch(i, keepSeed) {
@@ -288,14 +348,14 @@ const UI = {
     $('inQuote').textContent = '« ' + pr.lines.start + ' »';
     $('inMission').innerHTML = '<b style="color:var(--yel)">Ta mission :</b> faire tes <b>3 tâches</b>, puis trouver <b>UNE</b> des 3 sorties secrètes.';
     portrait($('inProf'), pr.cfg, pr.v, 1);
-    $('inHints').innerHTML = ''; L.hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
+    $('inHints').innerHTML = ''; $('inHints').dataset.title = '🚪 Les 3 sorties secrètes'; L.hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     const extra = ['📋 D’abord, fais tes <b>3 tâches rigolotes</b> (cercles jaunes ⭐ sur la carte), puis file vers une sortie !', '🥸 Un <b>déguisement</b> est caché dans certains meubles : fouille !'];
     if (pr.tires) extra.push('💨 Il court vite… mais il s’essouffle !');
     if (pr.chatty) extra.push('🗣️ Elle parle tout le temps : écoute où elle est !');
     if (pr.hasKeys) extra.push('🔑 Elle a TOUTES les clés et connaît les petites cachettes.');
     if (pr.hear > 1.2) extra.push('👂 Très bonne oreille : avance doucement !');
     if (i === 0) extra.push('🧒 Les autres élèves jouent dans la cour, ils ne te dénonceront pas.');
-    if (G.seed != null) extra.unshift('🎲 <b>Plan surprise</b> : le collège n’est jamais le même ! Les indices ci-dessus restent vrais.');
+    if (G.seed != null) extra.unshift('🎲 <b>Plan surprise</b> : le collège n’est jamais le même ! Les indices des sorties restent vrais.');
     $('inTips').innerHTML = (extra.length ? extra.join('<br>') + '<br>' : '') + '👆 Un peu = marcher sans bruit · à fond = courir.';
     G.mode = 'intro'; this.show('sIntro'); this.hudSig = null; this.invSig = null; $('bGo').textContent = 'C’est parti !'; $('bGo').disabled = false;
     $('hint').classList.remove('hidden'); $('hint').style.opacity = 1; Input.used = false;
@@ -321,7 +381,7 @@ const UI = {
       '🔥 L’alarme incendie vide les étages… mais il y aura un appel dans la cour !',
       '🇬🇧 Au 2e, Miss Teacup ne t’envoie pas en colle : elle te fait une leçon d’anglais ! Bonne réponse = un objet magique en cadeau.',
       '🦴 Au 1er, M. Silex fait passer une interro d’histoire : bonne réponse = un animal de compagnie qui fait fuir les profs !'];
-    $('inHints').innerHTML = ''; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
+    $('inHints').innerHTML = ''; $('inHints').dataset.title = '💡 Comment jouer'; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
     $('inTips').innerHTML = '🎲 Le collège est différent à chaque partie.<br>👆 Un peu = marcher sans bruit · à fond = courir (ça s’entend !).';
     G.mode = 'intro'; this.show('sIntro'); this.hudSig = null; this.invSig = null; this.infSig = null; $('bGo').textContent = 'C’est parti !'; $('bGo').disabled = false;
     $('hint').classList.remove('hidden'); $('hint').style.opacity = 1; Input.used = false;
@@ -421,7 +481,7 @@ const UI = {
     const b = $('banner'); b.textContent = text; b.classList.remove('hidden');
     clearTimeout(this.bannerTimer); this.bannerTimer = setTimeout(() => b.classList.add('hidden'), 4200);
   },
-  bumpSlot(i) { const s = document.querySelectorAll('#inv .slot')[i]; if (!s) return; s.classList.remove('bump'); void s.offsetWidth; s.classList.add('bump'); AU.sfx('blip'); },
+  bumpSlot(i) { const s = document.querySelector('#inv .slot[data-i="' + i + '"]'); if (!s) return; s.classList.remove('bump'); void s.offsetWidth; s.classList.add('bump'); AU.sfx('blip'); },
   heart() { const h = $('hHeart'); h.style.transform = 'scale(1.5)'; setTimeout(() => h.style.transform = '', 110); },
   // ---------- HUD ----------
   hud(dt) {
@@ -445,7 +505,8 @@ const UI = {
     if (isig !== this.invSig) {
       this.invSig = isig; const inv = $('inv'); inv.innerHTML = '';
       for (let i = 0; i < 3; i++) {
-        const k = P.inv[i], b = document.createElement('button'); b.className = 'slot' + (k ? '' : ' empty'); b.dataset.i = i;
+        const k = P.inv[i]; if (!k) continue;   // pas de cases vides : moins d'encombrement
+        const b = document.createElement('button'); b.className = 'slot'; b.dataset.i = i;
         if (k) { const cv = document.createElement('canvas'); cv.width = 14; cv.height = 14; cv.getContext('2d').drawImage(itemCanvas(k), 0, 0); b.appendChild(cv); const s = document.createElement('span'); s.textContent = ITEMS[k].short; b.appendChild(s); b.setAttribute('aria-label', ITEMS[k].n); }
         inv.appendChild(b);
       }
@@ -485,11 +546,20 @@ const UI = {
     const t = G.net ? Math.max(0, Net.timeLeft) : G.time, ht = $('hTime');
     ht.textContent = (G.net ? '⏰ ' : '⏱ ') + Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
     ht.style.color = G.net && t < 30 ? '#ff8a96' : '';
-    if (G.inf) { /* objectifs gérés par hudInf */ } else if (G.tasks !== this.taskRef || (teach ? 'T' + (G.tasksRemote || 0) : G.tasks.map(t => t.done ? 1 : 0).join('')) !== this.taskSig) {
-      this.taskRef = G.tasks; this.taskSig = teach ? 'T' + (G.tasksRemote || 0) : G.tasks.map(t => t.done ? 1 : 0).join('');
+    const tOpen = !!this.tasksOpen || G.time < 6 || G.time < (this.taskPeekT || 0);
+    if (G.inf) { /* objectifs gérés par hudInf */ } else if (G.tasks !== this.taskRef || (teach ? 'T' + (G.tasksRemote || 0) : G.tasks.map(t => t.done ? 1 : 0).join('') + tOpen) !== this.taskSig) {
+      if (G.tasks === this.taskRef && !teach && G.tasksDone > (this.taskDoneN || 0)) { this.taskPeekT = G.time + 3.5; }
+      this.taskDoneN = G.tasksDone;
+      this.taskRef = G.tasks; this.taskSig = teach ? 'T' + (G.tasksRemote || 0) : G.tasks.map(t => t.done ? 1 : 0).join('') + (!!this.tasksOpen || G.time < 6 || G.time < (this.taskPeekT || 0));
       const el = $('hTasks'), n = G.tasks.length; el.classList.toggle('hidden', !n || G.mode === 'intro');
       if (teach) { const r = G.tasksRemote || 0; el.innerHTML = `<div class="hd">TÂCHES DE L’ÉLÈVE</div><div class="tl">📋 ${r}/${n} ${r >= n ? '😱 SORTIES OUVERTES' : '· sorties 🔒'}</div>`; el.classList.toggle('all', r >= n); }
-      else { el.innerHTML = `<div class="hd">📋 TÂCHES ${G.tasksDone}/${n}</div>` + G.tasks.map(t => `<div class="tl${t.done ? ' ok' : ''}">${t.done ? '✅' : t.def.icon} ${esc(t.def.name)}</div>`).join(''); el.classList.toggle('all', tasksLeft() === 0); }
+      else {
+        const open = this.taskSig.endsWith('true'), all = tasksLeft() === 0;
+        el.innerHTML = all ? `<div class="hd">📋 TÂCHES ${n}/${n} ✅</div><div class="tl">🚪 File vers une sortie !</div>`
+          : open ? `<div class="hd">📋 TÂCHES ${G.tasksDone}/${n}<span class="tg">▴</span></div>` + G.tasks.map(t => `<div class="tl${t.done ? ' ok' : ''}">${t.done ? '✅' : t.def.icon} ${esc(t.def.name)}</div>`).join('')
+          : `<div class="hd">📋 TÂCHES ${G.tasksDone}/${n}<span class="tg">▾</span></div><div class="ic">${G.tasks.map(t => t.done ? '✅' : t.def.icon).join('')}</div>`;
+        el.classList.toggle('all', all);
+      }
     }
     if (G.mode === 'intro') $('hTasks').classList.add('hidden'); else if (G.tasks.length) $('hTasks').classList.remove('hidden');
     $('hLocks').textContent = teach ? (T.hasKeys ? '🔑 ✔' : '🔑 ✘') : '🔑×' + locksLeft();

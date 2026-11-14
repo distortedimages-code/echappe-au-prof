@@ -115,15 +115,21 @@ ul.hints li{background:rgba(255,255,255,.06);border-radius:6px;padding:5px 8px;l
 @keyframes blink{50%{filter:brightness(1.5)}}
 .hudRight{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
 .hudRight>div{font-family:'Press Start 2P',ui-monospace,monospace;font-size:10px;background:rgba(20,11,38,.78);border:2px solid var(--ink);border-radius:6px;padding:5px 7px}
-#hHeart{font-size:14px!important;transition:transform .08s}
+#hHeart{font-size:13px!important;padding:2px 5px!important;transition:transform .08s}
+.hudRow{display:flex;gap:4px;align-items:center;min-width:0}
+.hudRow .chip{align-self:center;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.mini{font-family:'Press Start 2P',ui-monospace,monospace;font-size:9px;background:rgba(20,11,38,.78);border:2px solid var(--ink);border-radius:6px;padding:5px 6px;white-space:nowrap;flex:none}
 #hEffects{position:absolute;top:100px;right:8px;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
 #hEffects div{font-family:'Press Start 2P',ui-monospace,monospace;font-size:9px;background:rgba(20,11,38,.85);border:2px solid var(--cyan);border-radius:6px;padding:4px 6px}
 #hHidden{position:absolute;top:150px;left:50%;transform:translateX(-50%);font-family:'Press Start 2P',ui-monospace,monospace;font-size:10px;background:rgba(20,11,38,.85);border:2px solid var(--green);border-radius:8px;padding:6px 10px;white-space:nowrap}
-#hTasks{font-family:'VT323',ui-monospace,monospace;font-size:15px;line-height:1.02;background:rgba(20,11,38,.8);border:2px solid var(--yel);border-radius:6px;padding:3px 7px 4px;align-self:flex-start;max-width:min(56vw,300px)}
+#hTasks{font-family:'VT323',ui-monospace,monospace;font-size:15px;line-height:1.02;background:rgba(20,11,38,.8);border:2px solid var(--yel);border-radius:6px;padding:3px 7px 4px;align-self:flex-start;max-width:min(64vw,320px)}
 #hTasks .hd{font-family:'Press Start 2P',ui-monospace,monospace;font-size:7px;color:var(--yel);margin:2px 0 3px}
 #hTasks .tl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #hTasks .tl.ok{opacity:.5;text-decoration:line-through}
 #hTasks.all{border-color:var(--green);animation:blink .5s steps(2) 6}
+#hTasks{pointer-events:auto;cursor:pointer}
+#hTasks .ic{font-size:15px;letter-spacing:2px}
+#hTasks .hd .tg{opacity:.7;margin-left:6px}
 .btn.orange{background:#ff8a3a}
 #bDiv,#bPing{width:44px;height:40px;border:3px solid var(--ink);border-radius:9px;background:#d8f4ff;font-size:22px;box-shadow:0 3px 0 var(--ink);pointer-events:auto;animation:tkIn .4s;margin-top:4px}
 #bDiv{background:#ffe0c8}#bDiv.cd{opacity:.4;filter:grayscale(1)}
@@ -165,7 +171,7 @@ ul.hints li{background:rgba(255,255,255,.06);border-radius:6px;padding:5px 8px;l
 #lsDone{width:100%}
 #sLesson.hist .lsName{color:#8a4a1a}#sLesson.hist .lsChoices .choice{background:#f6e3c4}
 .lsPet{font-size:46px;line-height:1;margin:6px 0 2px;animation:lsPop .6s .2s both}
-#hPet{font-size:15px;background:rgba(20,11,38,.75);border:2px solid var(--ink);border-radius:8px;padding:2px 6px;color:#ff8fa8;text-align:center;white-space:nowrap}
+#hPet{font-family:'VT323',ui-monospace,monospace;font-size:15px;padding:2px 6px;color:#ff8fa8}
 #sPlan{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(10,6,20,.7);padding:12px}
 .plPanel{width:min(96vw,560px);background:var(--panel);border:3px solid var(--ink);border-radius:14px;box-shadow:0 5px 0 var(--ink);padding:10px;animation:tkIn .3s cubic-bezier(.2,1.6,.4,1)}
 .plHead{display:flex;align-items:center;justify-content:space-between;font-family:'Press Start 2P',ui-monospace,monospace;font-size:11px;color:var(--yel);margin-bottom:8px}
@@ -195,7 +201,9 @@ ul.hints li{background:rgba(255,255,255,.06);border-radius:6px;padding:5px 8px;l
 .act{min-width:120px;max-width:200px;border:3px solid var(--ink);border-radius:12px;background:var(--yel);color:var(--ink);box-shadow:0 5px 0 var(--ink);padding:8px 10px;text-align:center;font-family:'Press Start 2P',ui-monospace,monospace;font-size:10px;line-height:1.35;position:relative;overflow:hidden}
 .act .ai{font-size:22px;display:block;line-height:1}
 .act .as{display:block;font-family:'VT323',ui-monospace,monospace;font-size:17px;line-height:1;margin-top:2px;opacity:.85}
-.act.small{background:var(--cyan);min-width:110px}
+.act.small{background:var(--cyan);min-width:0;padding:6px 10px;font-size:9px}
+.act.small .ai{display:inline-block;font-size:18px;vertical-align:middle;margin-right:5px}
+.act.small .as{font-size:15px}
 .act:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink)}
 .act .pg{position:absolute;left:0;bottom:0;height:6px;background:var(--green)}
 #toast{position:absolute;left:50%;top:150px;transform:translateX(-50%);width:min(92%,440px);background:rgba(20,11,38,.92);border:3px solid var(--yel);border-radius:10px;padding:8px 12px;font-size:21px;line-height:1.05;text-align:center;box-shadow:0 4px 0 var(--ink);animation:pop .2s}
@@ -265,6 +273,29 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
 .spin{font-size:36px;animation:spin 1.2s linear infinite;display:inline-block;margin-bottom:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (min-width:700px){ .act{font-size:11px} #hRoom,.chip{font-size:10px} }
+
+/* briefing en pages (on glisse d'un écran à l'autre) */
+.inPanel{height:min(100%,700px);gap:8px!important;overflow:hidden!important;padding:12px 14px!important}
+.inTop{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px}
+.inSkip{font-family:'Press Start 2P',ui-monospace,monospace;font-size:8px;color:#cfc6ef;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.18);border-radius:6px;padding:6px 8px;flex:none}
+.inSkip.gone{visibility:hidden}
+.inView{flex:1;min-height:0;overflow:hidden;position:relative;touch-action:pan-y}
+.inTrack{display:flex;height:100%;transition:transform .32s cubic-bezier(.2,.9,.3,1);will-change:transform}
+.inTrack.drag{transition:none}
+.inPage{flex:0 0 100%;width:100%;height:100%;overflow-y:auto;touch-action:pan-y;display:flex;flex-direction:column;-webkit-overflow-scrolling:touch}
+.inBody{margin:auto 0;display:flex;flex-direction:column;gap:12px;padding:2px 2px 6px}
+.inPage h3{margin:0;font-family:'Press Start 2P',ui-monospace,monospace;font-size:13px;color:var(--yel);line-height:1.5;text-align:center}
+.inCard{display:flex;gap:12px;align-items:center;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 12px;font-size:21px;line-height:1.08}
+.inCard .em{font-size:34px;line-height:1;flex:none;width:44px;text-align:center}
+.inCard.tip{background:rgba(44,232,213,.08);border-color:rgba(44,232,213,.25);color:#e6e0ff}
+.inDots{display:flex;justify-content:center;gap:7px;min-height:12px}
+.inDots i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.22);border:2px solid var(--ink);cursor:pointer}
+.inDots i.on{background:var(--yel);transform:scale(1.25)}
+.inNav{display:flex;gap:8px;align-items:stretch}
+.inNav .btn{margin:0}
+#bInPrev{flex:none;width:58px;padding-left:0;padding-right:0}
+#bInNext,#bGo{flex:1}
+.inNav .hidden{display:none!important}
 </style>
 </head>
 <body>
@@ -275,8 +306,8 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
   <div id="hud" class="hidden">
     <div class="hudTop">
       <button id="bPause" class="hbtn" aria-label="Pause">❚❚</button>
-      <div class="hudInfo"><div id="hRoom">📍</div><div id="hStatus" class="chip">Calme</div><div id="hTasks" class="hidden"></div></div>
-      <div class="hudRight"><div id="hTime">0:00</div><div id="hLocks">🔒×3</div><div id="hPet" class="hidden"></div><div id="hHeart">🤍</div><button id="bPlan" class="hidden" aria-label="Plan du collège">🗺️</button><button id="bPing" class="hidden" aria-label="Appeler mon équipier">📍</button><button id="bDiv" class="hidden" aria-label="Faire diversion">🥁</button></div>
+      <div class="hudInfo"><div id="hRoom">📍</div><div class="hudRow"><div id="hStatus" class="chip">Calme</div><div id="hLocks" class="mini">🔑×3</div><div id="hHeart" class="mini">🤍</div><div id="hPet" class="mini hidden"></div></div><div id="hTasks" class="hidden"></div></div>
+      <div class="hudRight"><div id="hTime">0:00</div><button id="bPlan" class="hidden" aria-label="Plan du collège">🗺️</button><button id="bPing" class="hidden" aria-label="Appeler mon équipier">📍</button><button id="bDiv" class="hidden" aria-label="Faire diversion">🥁</button></div>
     </div>
     <div id="hEffects"></div>
     <div id="hHidden" class="hidden"></div>
@@ -394,14 +425,19 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
 
   <!-- Intro de niveau -->
   <div id="sIntro" class="overlay hidden">
-    <div class="panel">
-      <div class="px" id="inNum" style="font-size:10px;color:var(--pink)"></div>
-      <h2 class="px" id="inTitle"></h2>
-      <div class="prof"><canvas id="inProf" width="20" height="34"></canvas><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div><b class="px" id="inName" style="font-size:11px;color:var(--cyan)"></b><div class="tiny" id="inRole"></div></div><div class="quote" id="inQuote"></div></div></div>
-      <div id="inMission"><b style="color:var(--yel)">Ta mission :</b> trouver <b>UNE</b> des 3 sorties secrètes.</div>
-      <ul class="hints" id="inHints"></ul>
-      <div class="tips" id="inTips"></div>
-      <button class="btn big green" id="bGo">C’est parti !</button>
+    <div class="panel inPanel">
+      <div class="inTop"><div class="px" id="inNum" style="font-size:10px;color:var(--pink)"></div><button class="inSkip" id="bInSkip">Passer ⏭</button></div>
+      <div class="inView" id="inView"><div class="inTrack" id="inTrack">
+        <section class="inPage" id="inMain"><div class="inBody">
+          <h2 class="px" id="inTitle"></h2>
+          <div class="prof"><canvas id="inProf" width="20" height="34"></canvas><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div><b class="px" id="inName" style="font-size:11px;color:var(--cyan)"></b><div class="tiny" id="inRole"></div></div><div class="quote" id="inQuote"></div></div></div>
+          <div id="inMission"><b style="color:var(--yel)">Ta mission :</b> trouver <b>UNE</b> des 3 sorties secrètes.</div>
+        </div></section>
+      </div></div>
+      <ul class="hints hidden" id="inHints"></ul>
+      <div class="tips hidden" id="inTips"></div>
+      <div class="inDots" id="inDots"></div>
+      <div class="inNav"><button class="btn ghost" id="bInPrev" aria-label="Page précédente">◀</button><button class="btn big cyan" id="bInNext">Suivant ▶</button><button class="btn big green" id="bGo">C’est parti !</button></div>
     </div>
   </div>
 

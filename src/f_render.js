@@ -599,7 +599,7 @@ function drawOverlay() {
   }
   // objets qui volent vers le sac
   FX.flyers.forEach(f => {
-    const slot = document.querySelectorAll('#inv .slot')[f.slot]; if (!slot) return;
+    const slot = document.querySelector('#inv .slot[data-i="' + f.slot + '"]'); if (!slot) return;
     const r = slot.getBoundingClientRect(), tx = (r.left + r.width / 2) * d, ty = (r.top + r.height / 2) * d;
     if (f.sx == null) { [f.sx, f.sy] = toScreen(f.wx, f.wy); }
     const t = f.t, e = t * t * (3 - 2 * t), x = lerp(f.sx, tx, e), y = lerp(f.sy, ty, e) - Math.sin(Math.PI * t) * 90 * d, s = (1 + Math.sin(Math.PI * t) * 0.8) * 3 * d;
