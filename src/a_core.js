@@ -75,6 +75,30 @@ const AU = {
     const g = c.createGain(); g.gain.setValueAtTime(Math.max(0.0002, vol), t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     s.connect(f); f.connect(g); g.connect(dest || this.sfxG); s.start(t0, Math.random() * 0.5); s.stop(t0 + dur + 0.03);
   },
+  // un « tuyau » stéréo vers les bruitages (pan : -1 gauche … 1 droite)
+  panTo(p) { if (!this.ctx || !p || !this.ctx.createStereoPanner) return null; const n = this.ctx.createStereoPanner(); n.pan.value = clamp(p, -1, 1); n.connect(this.sfxG); return n; },
+  // bruits de pas selon le sol (mat) et la façon de marcher (kind)
+  foot(mat, kind, v = 1, pan = 0) {
+    if (!this.ctx || !this.set.sfx || v <= 0.01) return; const T = this, d = this.panTo(pan) || null, r = 0.9 + Math.random() * 0.2;
+    const adult = kind === 'adult', tiny = kind === 'tiny', k = adult ? 0.72 : tiny ? 1.6 : kind === 'kid' ? 1.15 : 1, run = kind === 'run';
+    switch (mat) {
+      case 'grass': T.noise(0.09, { vol: 0.2 * v, freq: 3000 * k * r, q: 0.7, dest: d }); T.noise(0.05, { vol: 0.12 * v, freq: 5200 * k, q: 0.8, at: 0.03, dest: d }); break;
+      case 'sand': for (let i = 0; i < 3; i++) T.noise(0.025, { vol: 0.16 * v, freq: 1900 * k * r, q: 1.4, at: i * 0.017, dest: d }); break;
+      case 'carpet': T.noise(0.07, { vol: 0.3 * v, freq: 420 * k * r, q: 0.5, type: 'lowpass', dest: d }); break;
+      case 'wood': case 'gym':
+        T.noise(0.06, { vol: 0.32 * v, freq: 650 * k * r, q: 1, dest: d }); T.tone(120 * k * r, 0.07, { type: 'sine', vol: 0.3 * v, to: 70 * k, dest: d });
+        if (mat === 'gym' && run && Math.random() < 0.18) T.tone(1700 * r, 0.08, { type: 'sine', vol: 0.06 * v, to: 2400, dest: d });
+        break;
+      default:   // carrelage, lino, bitume…
+        T.noise(0.035, { vol: 0.34 * v, freq: 2300 * k * r, q: 1.2, dest: d }); T.tone(190 * k * r, 0.03, { type: 'triangle', vol: 0.14 * v, to: 95 * k, dest: d });
+        if (adult) T.noise(0.02, { vol: 0.22 * v, freq: 4200 * r, q: 2, at: 0.05, dest: d });   // talon : « clac »
+    }
+  },
+  // les élèves bavardent : petits « blablabla » (sans voix)
+  babble(v = 1, pan = 0, high = false) {
+    if (!this.ctx || !this.set.sfx || v <= 0.02) return; const d = this.panTo(pan), base = (high ? 760 : 560) * (0.85 + Math.random() * 0.3);
+    for (let i = 0, n = 4 + (Math.random() * 3 | 0); i < n; i++) this.tone(base * (0.8 + Math.random() * 0.5), 0.06, { type: 'square', vol: 0.035 * v, at: i * 0.075, dest: d });
+  },
   sfx(name, v = 1) {
     if (!this.ctx || !this.set.sfx || v <= 0.01) return; const T = this;
     switch (name) {
@@ -97,6 +121,11 @@ const AU = {
       case 'found': [79, 83, 86, 91, 95].forEach((m, i) => T.tone(mtof(m), 0.12, { type: 'triangle', vol: 0.14, at: i * 0.07 })); break;
       case 'pouf': T.noise(0.45, { vol: 0.28, freq: 380, to: 3200, q: 0.6 }); break;
       case 'hide': T.noise(0.15, { vol: 0.15, freq: 700 }); T.tone(320, 0.12, { type: 'triangle', vol: 0.12, to: 150 }); break;
+      case 'locker': T.noise(0.08, { vol: 0.22, freq: 3200, q: 3 }); [523, 784, 1046].forEach((f, i) => T.tone(f, 0.25, { type: 'square', vol: 0.05, at: 0.02 + i * 0.01 })); T.tone(140, 0.12, { type: 'triangle', vol: 0.12, to: 90 }); break;
+      case 'wardrobe': T.tone(300, 0.35, { type: 'sawtooth', vol: 0.04, to: 520 }); T.noise(0.1, { vol: 0.16, freq: 500, at: 0.3 }); T.tone(110, 0.1, { type: 'triangle', vol: 0.14, at: 0.3, to: 70 }); break;
+      case 'rustle': for (let i = 0; i < 5; i++) T.noise(0.06, { vol: 0.12, freq: 3500 + Math.random() * 2000, q: 0.8, at: i * 0.05 }); break;
+      case 'trash': T.noise(0.12, { vol: 0.18, freq: 2400, q: 2 }); T.tone(660, 0.18, { type: 'square', vol: 0.04, to: 620 }); T.tone(990, 0.14, { type: 'square', vol: 0.025, at: 0.02 }); break;
+      case 'whoosh': T.noise(0.18, { vol: 0.12 * v, freq: 600, to: 2600, q: 0.6 }); break;
       case 'unhide': T.tone(160, 0.12, { type: 'triangle', vol: 0.12, to: 380 }); break;
       case 'heart': T.tone(62, 0.12, { type: 'sine', vol: 0.3 * v }); T.tone(55, 0.12, { type: 'sine', vol: 0.22 * v, at: 0.15 }); break;
       case 'ding': T.tone(mtof(84), 0.6, { type: 'sine', vol: 0.16 * v }); T.tone(mtof(79), 0.9, { type: 'sine', vol: 0.16 * v, at: 0.32 }); break;

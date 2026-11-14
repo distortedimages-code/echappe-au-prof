@@ -315,6 +315,13 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
 .sqCard.unk .nm{color:#8a80b0}
 .sqCard.r3:not(.unk){animation:sqShine 1.6s ease-in-out infinite}
 @keyframes sqShine{0%,100%{box-shadow:0 3px 0 var(--ink),0 0 0 rgba(255,210,63,0)}50%{box-shadow:0 3px 0 var(--ink),0 0 14px rgba(255,210,63,.8)}}
+
+/* messages : en bas, juste au-dessus des boutons, pour ne jamais cacher l'action */
+#msgs{position:absolute;left:0;right:0;bottom:calc(100% + 10px);display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+#msgs>#toast,#msgs>#banner,#msgs>#hint{position:static;left:auto;top:auto;bottom:auto;transform:none}
+#msgs>#toast,#msgs>#banner{width:min(100%,440px);font-size:17px;line-height:1.05;padding:5px 10px;animation:msgUp .3s cubic-bezier(.2,1.6,.4,1)}
+#msgs>#toast{background:rgba(20,11,38,.88)}
+@keyframes msgUp{from{transform:translateY(14px) scale(.85);opacity:0}to{transform:none;opacity:1}}
 </style>
 </head>
 <body>
@@ -330,9 +337,6 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     </div>
     <div id="hEffects"></div>
     <div id="hHidden" class="hidden"></div>
-    <div id="toast" class="hidden"></div>
-    <div id="banner" class="hidden"></div>
-    <div id="hint">Glisse ton doigt pour bouger</div>
     <div id="sPeek" class="hidden"><div class="pkPanel"><div class="pkHead"><span>👁️ Par le trou de la serrure…</span><button id="pkClose" aria-label="Arrêter de regarder">✖</button></div><canvas id="peekCv" width="300" height="300"></canvas><div class="pkHint">Bouge pour arrêter de regarder</div></div></div>
     <div id="sLesson" class="hidden"><div class="lsPanel">
       <div class="lsHead"><canvas id="lsProf" width="22" height="34"></canvas><div><div id="lsName" class="lsName">Miss Teacup</div><div id="lsSub" class="lsSub"></div></div><div id="lsFlag" class="lsFlag">🇬🇧</div></div>
@@ -366,6 +370,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       </div>
     </div>
     <div class="hudBottom">
+      <div id="msgs"><div id="hint">Glisse ton doigt pour bouger</div><div id="banner" class="hidden"></div><div id="toast" class="hidden"></div></div>
       <div id="inv"></div>
       <div id="acts"><button id="act2" class="act small hidden"></button><button id="act1" class="act hidden"></button></div>
     </div>

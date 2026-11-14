@@ -240,7 +240,7 @@ function stepCues(A, visible, dt, hearR) {
   A.stcT = A.running ? 0.27 : 0.44; A.stSide = (A.stSide || 0) ^ 1;
   const V0 = viewerA(), d = dist(A.x, A.y, V0.x, V0.y) / 16, hr = A.running ? 16 : hearR;
   if (d < hr) {
-    AU.sfx('tstep', clamp(1 - d / hr, 0, 1) * 0.9);
+    AU.foot(floorMat(A.x, A.y), A.isFug ? 'kid' : 'adult', clamp(1 - d / hr, 0, 1) * (A.isFug ? 0.6 : 1.1), panOf(A.x));
     if (!visible) cue(A.x, A.y, 'step', null, { ang: Math.hypot(A.vx || 0, A.vy || 0) > 1 ? Math.atan2(A.vy, A.vx) : (A.ang || 0), side: A.stSide, big: A.running, life: 1.6 });
   }
 }
@@ -283,7 +283,7 @@ function updateTeacherLocal(dt) {
     const moved = Math.hypot(T.x - ox, T.y - oy); T.dist = (T.dist || 0) + moved;
     T.vx = (T.x - ox) / dt; T.vy = (T.y - oy) / dt; T.moving = moved > 0.05; T.running = run && T.moving;
     T.ang = Math.atan2(ny, nx); T.face = faceFromAng(T.ang); T.state = T.running ? 'chase' : 'free';
-    if (T.moving) { T.stepT = (T.stepT || 0) - dt; if (T.stepT <= 0) { T.stepT = T.running ? 0.28 : 0.45; AU.sfx('tstep', 0.25); } }
+    if (T.moving) { T.stepT = (T.stepT || 0) - dt; if (T.stepT <= 0) { T.stepT = T.running ? 0.28 : 0.45; AU.foot(floorMat(T.x, T.y), 'adult', T.running ? 0.5 : 0.28, 0); } }
   } else { T.moving = false; T.running = false; T.state = 'free'; }
   for (const a of G.apples) {
     if (!a.eaten && dist(T.x, T.y, a.x, a.y) < 12) {

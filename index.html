@@ -315,6 +315,13 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
 .sqCard.unk .nm{color:#8a80b0}
 .sqCard.r3:not(.unk){animation:sqShine 1.6s ease-in-out infinite}
 @keyframes sqShine{0%,100%{box-shadow:0 3px 0 var(--ink),0 0 0 rgba(255,210,63,0)}50%{box-shadow:0 3px 0 var(--ink),0 0 14px rgba(255,210,63,.8)}}
+
+/* messages : en bas, juste au-dessus des boutons, pour ne jamais cacher l'action */
+#msgs{position:absolute;left:0;right:0;bottom:calc(100% + 10px);display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+#msgs>#toast,#msgs>#banner,#msgs>#hint{position:static;left:auto;top:auto;bottom:auto;transform:none}
+#msgs>#toast,#msgs>#banner{width:min(100%,440px);font-size:17px;line-height:1.05;padding:5px 10px;animation:msgUp .3s cubic-bezier(.2,1.6,.4,1)}
+#msgs>#toast{background:rgba(20,11,38,.88)}
+@keyframes msgUp{from{transform:translateY(14px) scale(.85);opacity:0}to{transform:none;opacity:1}}
 </style>
 </head>
 <body>
@@ -330,9 +337,6 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     </div>
     <div id="hEffects"></div>
     <div id="hHidden" class="hidden"></div>
-    <div id="toast" class="hidden"></div>
-    <div id="banner" class="hidden"></div>
-    <div id="hint">Glisse ton doigt pour bouger</div>
     <div id="sPeek" class="hidden"><div class="pkPanel"><div class="pkHead"><span>👁️ Par le trou de la serrure…</span><button id="pkClose" aria-label="Arrêter de regarder">✖</button></div><canvas id="peekCv" width="300" height="300"></canvas><div class="pkHint">Bouge pour arrêter de regarder</div></div></div>
     <div id="sLesson" class="hidden"><div class="lsPanel">
       <div class="lsHead"><canvas id="lsProf" width="22" height="34"></canvas><div><div id="lsName" class="lsName">Miss Teacup</div><div id="lsSub" class="lsSub"></div></div><div id="lsFlag" class="lsFlag">🇬🇧</div></div>
@@ -366,6 +370,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       </div>
     </div>
     <div class="hudBottom">
+      <div id="msgs"><div id="hint">Glisse ton doigt pour bouger</div><div id="banner" class="hidden"></div><div id="toast" class="hidden"></div></div>
       <div id="inv"></div>
       <div id="acts"><button id="act2" class="act small hidden"></button><button id="act1" class="act hidden"></button></div>
     </div>
@@ -571,6 +576,30 @@ const AU = {
     const g = c.createGain(); g.gain.setValueAtTime(Math.max(0.0002, vol), t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     s.connect(f); f.connect(g); g.connect(dest || this.sfxG); s.start(t0, Math.random() * 0.5); s.stop(t0 + dur + 0.03);
   },
+  // un « tuyau » stéréo vers les bruitages (pan : -1 gauche … 1 droite)
+  panTo(p) { if (!this.ctx || !p || !this.ctx.createStereoPanner) return null; const n = this.ctx.createStereoPanner(); n.pan.value = clamp(p, -1, 1); n.connect(this.sfxG); return n; },
+  // bruits de pas selon le sol (mat) et la façon de marcher (kind)
+  foot(mat, kind, v = 1, pan = 0) {
+    if (!this.ctx || !this.set.sfx || v <= 0.01) return; const T = this, d = this.panTo(pan) || null, r = 0.9 + Math.random() * 0.2;
+    const adult = kind === 'adult', tiny = kind === 'tiny', k = adult ? 0.72 : tiny ? 1.6 : kind === 'kid' ? 1.15 : 1, run = kind === 'run';
+    switch (mat) {
+      case 'grass': T.noise(0.09, { vol: 0.2 * v, freq: 3000 * k * r, q: 0.7, dest: d }); T.noise(0.05, { vol: 0.12 * v, freq: 5200 * k, q: 0.8, at: 0.03, dest: d }); break;
+      case 'sand': for (let i = 0; i < 3; i++) T.noise(0.025, { vol: 0.16 * v, freq: 1900 * k * r, q: 1.4, at: i * 0.017, dest: d }); break;
+      case 'carpet': T.noise(0.07, { vol: 0.3 * v, freq: 420 * k * r, q: 0.5, type: 'lowpass', dest: d }); break;
+      case 'wood': case 'gym':
+        T.noise(0.06, { vol: 0.32 * v, freq: 650 * k * r, q: 1, dest: d }); T.tone(120 * k * r, 0.07, { type: 'sine', vol: 0.3 * v, to: 70 * k, dest: d });
+        if (mat === 'gym' && run && Math.random() < 0.18) T.tone(1700 * r, 0.08, { type: 'sine', vol: 0.06 * v, to: 2400, dest: d });
+        break;
+      default:   // carrelage, lino, bitume…
+        T.noise(0.035, { vol: 0.34 * v, freq: 2300 * k * r, q: 1.2, dest: d }); T.tone(190 * k * r, 0.03, { type: 'triangle', vol: 0.14 * v, to: 95 * k, dest: d });
+        if (adult) T.noise(0.02, { vol: 0.22 * v, freq: 4200 * r, q: 2, at: 0.05, dest: d });   // talon : « clac »
+    }
+  },
+  // les élèves bavardent : petits « blablabla » (sans voix)
+  babble(v = 1, pan = 0, high = false) {
+    if (!this.ctx || !this.set.sfx || v <= 0.02) return; const d = this.panTo(pan), base = (high ? 760 : 560) * (0.85 + Math.random() * 0.3);
+    for (let i = 0, n = 4 + (Math.random() * 3 | 0); i < n; i++) this.tone(base * (0.8 + Math.random() * 0.5), 0.06, { type: 'square', vol: 0.035 * v, at: i * 0.075, dest: d });
+  },
   sfx(name, v = 1) {
     if (!this.ctx || !this.set.sfx || v <= 0.01) return; const T = this;
     switch (name) {
@@ -593,6 +622,11 @@ const AU = {
       case 'found': [79, 83, 86, 91, 95].forEach((m, i) => T.tone(mtof(m), 0.12, { type: 'triangle', vol: 0.14, at: i * 0.07 })); break;
       case 'pouf': T.noise(0.45, { vol: 0.28, freq: 380, to: 3200, q: 0.6 }); break;
       case 'hide': T.noise(0.15, { vol: 0.15, freq: 700 }); T.tone(320, 0.12, { type: 'triangle', vol: 0.12, to: 150 }); break;
+      case 'locker': T.noise(0.08, { vol: 0.22, freq: 3200, q: 3 }); [523, 784, 1046].forEach((f, i) => T.tone(f, 0.25, { type: 'square', vol: 0.05, at: 0.02 + i * 0.01 })); T.tone(140, 0.12, { type: 'triangle', vol: 0.12, to: 90 }); break;
+      case 'wardrobe': T.tone(300, 0.35, { type: 'sawtooth', vol: 0.04, to: 520 }); T.noise(0.1, { vol: 0.16, freq: 500, at: 0.3 }); T.tone(110, 0.1, { type: 'triangle', vol: 0.14, at: 0.3, to: 70 }); break;
+      case 'rustle': for (let i = 0; i < 5; i++) T.noise(0.06, { vol: 0.12, freq: 3500 + Math.random() * 2000, q: 0.8, at: i * 0.05 }); break;
+      case 'trash': T.noise(0.12, { vol: 0.18, freq: 2400, q: 2 }); T.tone(660, 0.18, { type: 'square', vol: 0.04, to: 620 }); T.tone(990, 0.14, { type: 'square', vol: 0.025, at: 0.02 }); break;
+      case 'whoosh': T.noise(0.18, { vol: 0.12 * v, freq: 600, to: 2600, q: 0.6 }); break;
       case 'unhide': T.tone(160, 0.12, { type: 'triangle', vol: 0.12, to: 380 }); break;
       case 'heart': T.tone(62, 0.12, { type: 'sine', vol: 0.3 * v }); T.tone(55, 0.12, { type: 'sine', vol: 0.22 * v, at: 0.15 }); break;
       case 'ding': T.tone(mtof(84), 0.6, { type: 'sine', vol: 0.16 * v }); T.tone(mtof(79), 0.9, { type: 'sine', vol: 0.16 * v, at: 0.32 }); break;
@@ -2666,13 +2700,27 @@ function gaitOf(a) {
 }
 function frameOf(a, g) { const L = POSE[g]; if (!L || L.length === 1) return 0; return Math.floor(((a.dist || 0) / STRIDE[g]) * L.length) % L.length; }
 // poussière / vitesse au contact des pieds
+// le bruit de chaque pas : le sien (doux en marchant sur la pointe des pieds), ceux des élèves tout près
+function stepSound(a, g) {
+  if (G.mode !== 'play' || a.hidden) return;
+  if (a === G.P) {
+    if (a.slip > 0 || (G.net && G.net.role === 'teacher')) return;
+    AU.foot(floorMat(a.x, a.y), a.small > 0 ? 'tiny' : g === 'run' ? 'run' : 'walk', g === 'run' ? 0.55 : g === 'sneak' ? 0.13 : 0.3, 0);
+    return;
+  }
+  if (!a.isKid || a.isWatcher) return;
+  const V0 = viewerA(), d = dist(a.x, a.y, V0.x, V0.y) / 16; if (d > 5) return;
+  if (G.time - (G.kidStepT || -1) < 0.11) return; G.kidStepT = G.time;
+  AU.foot(floorMat(a.x, a.y), 'kid', (g === 'run' ? 0.22 : 0.1) * (1 - d / 5), panOf(a.x));
+}
 function gaitFx(a, visible) {
   const g = gaitOf(a), f = frameOf(a, g);
   if (g !== a.lastG) {
-    if (a.lastG === 'idle' || a.lastG === 'tap' || a.lastG == null) { if (g === 'run') { squash(a, 6); if (visible) puff(a.x, a.y - 1, 4, '#e8e0d4'); } else if (g === 'sneak' || g === 'walk') squash(a, 2.5); }
+    if (a.lastG === 'idle' || a.lastG === 'tap' || a.lastG == null) { if (g === 'run') { squash(a, 6); if (visible) puff(a.x, a.y - 1, 4, '#e8e0d4'); if (a === G.P && !(a.slip > 0)) AU.sfx('whoosh', 0.35); } else if (g === 'sneak' || g === 'walk') squash(a, 2.5); }
     a.lastG = g; a.lastF = -1;
   }
   if (f !== a.lastF) {
+    if (CONTACT[g] && CONTACT[g].includes(f)) stepSound(a, g);
     if (visible && CONTACT[g] && CONTACT[g].includes(f)) {
       const back = a.face === 2 ? -4 : a.face === 3 ? 4 : 0;
       if (g === 'run') { for (let i = 0; i < 2; i++) part(a.x + back + rand(-2, 2), a.y - 1, 'puff', { vx: back * 4 + rand(-8, 8), vy: rand(-10, -3), life: 0.4, col: '#e6ddd0', size: 2 }); }
@@ -3007,7 +3055,7 @@ function stepCues(A, visible, dt, hearR) {
   A.stcT = A.running ? 0.27 : 0.44; A.stSide = (A.stSide || 0) ^ 1;
   const V0 = viewerA(), d = dist(A.x, A.y, V0.x, V0.y) / 16, hr = A.running ? 16 : hearR;
   if (d < hr) {
-    AU.sfx('tstep', clamp(1 - d / hr, 0, 1) * 0.9);
+    AU.foot(floorMat(A.x, A.y), A.isFug ? 'kid' : 'adult', clamp(1 - d / hr, 0, 1) * (A.isFug ? 0.6 : 1.1), panOf(A.x));
     if (!visible) cue(A.x, A.y, 'step', null, { ang: Math.hypot(A.vx || 0, A.vy || 0) > 1 ? Math.atan2(A.vy, A.vx) : (A.ang || 0), side: A.stSide, big: A.running, life: 1.6 });
   }
 }
@@ -3050,7 +3098,7 @@ function updateTeacherLocal(dt) {
     const moved = Math.hypot(T.x - ox, T.y - oy); T.dist = (T.dist || 0) + moved;
     T.vx = (T.x - ox) / dt; T.vy = (T.y - oy) / dt; T.moving = moved > 0.05; T.running = run && T.moving;
     T.ang = Math.atan2(ny, nx); T.face = faceFromAng(T.ang); T.state = T.running ? 'chase' : 'free';
-    if (T.moving) { T.stepT = (T.stepT || 0) - dt; if (T.stepT <= 0) { T.stepT = T.running ? 0.28 : 0.45; AU.sfx('tstep', 0.25); } }
+    if (T.moving) { T.stepT = (T.stepT || 0) - dt; if (T.stepT <= 0) { T.stepT = T.running ? 0.28 : 0.45; AU.foot(floorMat(T.x, T.y), 'adult', T.running ? 0.5 : 0.28, 0); } }
   } else { T.moving = false; T.running = false; T.state = 'free'; }
   for (const a of G.apples) {
     if (!a.eaten && dist(T.x, T.y, a.x, a.y) < 12) {
@@ -5067,6 +5115,10 @@ function playerViewAng(P) {
   if (P.vang == null || (!P.moving && faceFromAng(P.vang + (P.lookOff || 0)) !== P.face)) { P.vang = FACE_ANG[P.face] || 0; P.lookOff = 0; P.lookTo = 0; }
   return P.vang + (P.lookOff || 0);
 }
+const FLOOR_MAT = ['sand', 'grass', 'sand', 'hard', 'wood', 'hard', 'hard', 'carpet', 'gym', 'hard', 'hard', 'carpet'];
+function floorMat(x, y) { const m = G.m; if (!m || !m.fs) return 'hard'; const tx = Math.floor(x / 16), ty = Math.floor((y - 4) / 16); if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) return 'hard'; return FLOOR_MAT[m.fs[ty * m.w + tx]] || 'hard'; }
+// position gauche/droite d'un bruit par rapport à celui qu'on suit
+function panOf(x) { const V0 = viewerA(); return V0 ? clamp((x - V0.x) / (8 * 16), -0.85, 0.85) : 0; }
 function playerEye(P) { return [P.x, sightY(P.x, P.y - 7)]; }
 function easyOn() { return !!AU.set.easy && (!G.net || !!(G.inf && G.inf.coop)); }
 function castRay(ox, oy, ang, maxD) {
@@ -5252,6 +5304,7 @@ function npcChatter(dt) {
   if (k.isWatcher) { if (k.state === 'warn' || k.state === 'evac' || k.detect > 0.2) return; k.bub = { text: pick(PROF_CHAT), t: 0, dur: 2.4 }; return; }
   const six = Math.random() < 0.1, text = six ? pick(SIX_LINES) : pick(KID_LINES);
   k.bub = { text, t: 0, dur: 2.2 };
+  { const dd = dist(k.x, k.y, V0.x, V0.y) / 16; AU.babble(clamp(1 - dd / 10, 0, 1), panOf(k.x), true); }
   if (six) {
     k.sixT = 2.4;
     const nb = G.kids.find(o => o !== k && !o.isWatcher && o.vis && !o.bub && dist(o.x, o.y, k.x, k.y) < 3 * 16);
@@ -5473,7 +5526,7 @@ function updateTeacher(dt) {
     if (T.stepT <= 0) {
       T.stepT = T.state === 'chase' ? 0.26 : 0.44; T.stepSide ^= 1;
       const d = dist(T.x, T.y, P.x, P.y) / 16, hr = T.state === 'chase' ? 16 : 12;
-      if (d < hr) { AU.sfx('tstep', clamp(1 - d / hr, 0, 1) * 0.9); if (!G.tVis) cue(T.x, T.y, 'step', null, { ang: T.ang, side: T.stepSide, big: T.state === 'chase', life: 1.6 }); }
+      if (d < hr) { AU.foot(floorMat(T.x, T.y), 'adult', clamp(1 - d / hr, 0, 1) * 1.1, panOf(T.x)); if (!G.tVis) cue(T.x, T.y, 'step', null, { ang: T.ang, side: T.stepSide, big: T.state === 'chase', life: 1.6 }); }
     }
   }
   if (['patrol', 'look'].includes(T.state)) { T.chatT -= dt; if (T.chatT <= 0) { T.chatT = pr.chatty ? rand(4, 7) : rand(8, 13); say(pick(L.chat)); } }
@@ -5687,7 +5740,7 @@ function updatePlayer(dt) {
       P.stepT -= dt;
       if (P.stepT <= 0) {
         P.stepT = 0.3;
-        if (!(P.slip > 0)) { makeNoise(P.x, P.y, P.small > 0 ? 2.5 : 4.5, null, 'step'); AU.sfx('step', 0.7); }
+        if (!(P.slip > 0)) makeNoise(P.x, P.y, P.small > 0 ? 2.5 : 4.5, null, 'step');
         part(P.x - nx * 4, P.y, 'puff', { vx: -nx * 10 + rand(-5, 5), vy: -6, life: 0.4, col: P.slip > 0 ? '#bfefff' : '#d8d0c4', size: 2 });
         if (P.slip > 0) sparkle(P.x, P.y - 4, 2, '#bfefff');
       }
@@ -5725,7 +5778,7 @@ function hide(spot) {
   if (spot.k === K.DOOR) { const d = doorAt(spot.x, spot.y); if (d.locked) return; d.hideP = true; }
   FX.zips.push({ x0: P.x, y0: P.y, x1: spot.x * 16 + 8, y1: spot.y * 16 + 12, face: P.face, small: P.small > 0, t: 0 });
   P.hidden = spot; P.hideFrom = [P.x, P.y]; P.busy = null; P.unhideT = 0; spot.shake = 0.6;
-  AU.sfx('hide'); puff(spot.x * 16 + 8, spot.y * 16 + 8, 8);
+  AU.sfx(spot.k === K.LOCKER ? 'locker' : (spot.k === K.ARMOIRE || spot.k === K.STALL || spot.k === K.CABANE) ? 'wardrobe' : (spot.k === K.BUSH || spot.k === K.TREE) ? 'rustle' : spot.k === K.TRASH ? 'trash' : 'hide'); puff(spot.x * 16 + 8, spot.y * 16 + 8, 8);
   if (T.seeNow || (T.state === 'chase' && T.lostT < 0.25 && los(T.x, T.y - 12, P.x, P.y - 7) && dist(T.x, T.y, P.x, P.y) < T.prof.range * 16)) { T.knows = spot; say('Je sais où tu te caches, {n} !'); setMark(T, '!', 1); }
 }
 function unhide() {

@@ -56,6 +56,10 @@ function playerViewAng(P) {
   if (P.vang == null || (!P.moving && faceFromAng(P.vang + (P.lookOff || 0)) !== P.face)) { P.vang = FACE_ANG[P.face] || 0; P.lookOff = 0; P.lookTo = 0; }
   return P.vang + (P.lookOff || 0);
 }
+const FLOOR_MAT = ['sand', 'grass', 'sand', 'hard', 'wood', 'hard', 'hard', 'carpet', 'gym', 'hard', 'hard', 'carpet'];
+function floorMat(x, y) { const m = G.m; if (!m || !m.fs) return 'hard'; const tx = Math.floor(x / 16), ty = Math.floor((y - 4) / 16); if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) return 'hard'; return FLOOR_MAT[m.fs[ty * m.w + tx]] || 'hard'; }
+// position gauche/droite d'un bruit par rapport à celui qu'on suit
+function panOf(x) { const V0 = viewerA(); return V0 ? clamp((x - V0.x) / (8 * 16), -0.85, 0.85) : 0; }
 function playerEye(P) { return [P.x, sightY(P.x, P.y - 7)]; }
 function easyOn() { return !!AU.set.easy && (!G.net || !!(G.inf && G.inf.coop)); }
 function castRay(ox, oy, ang, maxD) {
@@ -241,6 +245,7 @@ function npcChatter(dt) {
   if (k.isWatcher) { if (k.state === 'warn' || k.state === 'evac' || k.detect > 0.2) return; k.bub = { text: pick(PROF_CHAT), t: 0, dur: 2.4 }; return; }
   const six = Math.random() < 0.1, text = six ? pick(SIX_LINES) : pick(KID_LINES);
   k.bub = { text, t: 0, dur: 2.2 };
+  { const dd = dist(k.x, k.y, V0.x, V0.y) / 16; AU.babble(clamp(1 - dd / 10, 0, 1), panOf(k.x), true); }
   if (six) {
     k.sixT = 2.4;
     const nb = G.kids.find(o => o !== k && !o.isWatcher && o.vis && !o.bub && dist(o.x, o.y, k.x, k.y) < 3 * 16);
@@ -462,7 +467,7 @@ function updateTeacher(dt) {
     if (T.stepT <= 0) {
       T.stepT = T.state === 'chase' ? 0.26 : 0.44; T.stepSide ^= 1;
       const d = dist(T.x, T.y, P.x, P.y) / 16, hr = T.state === 'chase' ? 16 : 12;
-      if (d < hr) { AU.sfx('tstep', clamp(1 - d / hr, 0, 1) * 0.9); if (!G.tVis) cue(T.x, T.y, 'step', null, { ang: T.ang, side: T.stepSide, big: T.state === 'chase', life: 1.6 }); }
+      if (d < hr) { AU.foot(floorMat(T.x, T.y), 'adult', clamp(1 - d / hr, 0, 1) * 1.1, panOf(T.x)); if (!G.tVis) cue(T.x, T.y, 'step', null, { ang: T.ang, side: T.stepSide, big: T.state === 'chase', life: 1.6 }); }
     }
   }
   if (['patrol', 'look'].includes(T.state)) { T.chatT -= dt; if (T.chatT <= 0) { T.chatT = pr.chatty ? rand(4, 7) : rand(8, 13); say(pick(L.chat)); } }
@@ -676,7 +681,7 @@ function updatePlayer(dt) {
       P.stepT -= dt;
       if (P.stepT <= 0) {
         P.stepT = 0.3;
-        if (!(P.slip > 0)) { makeNoise(P.x, P.y, P.small > 0 ? 2.5 : 4.5, null, 'step'); AU.sfx('step', 0.7); }
+        if (!(P.slip > 0)) makeNoise(P.x, P.y, P.small > 0 ? 2.5 : 4.5, null, 'step');
         part(P.x - nx * 4, P.y, 'puff', { vx: -nx * 10 + rand(-5, 5), vy: -6, life: 0.4, col: P.slip > 0 ? '#bfefff' : '#d8d0c4', size: 2 });
         if (P.slip > 0) sparkle(P.x, P.y - 4, 2, '#bfefff');
       }
@@ -714,7 +719,7 @@ function hide(spot) {
   if (spot.k === K.DOOR) { const d = doorAt(spot.x, spot.y); if (d.locked) return; d.hideP = true; }
   FX.zips.push({ x0: P.x, y0: P.y, x1: spot.x * 16 + 8, y1: spot.y * 16 + 12, face: P.face, small: P.small > 0, t: 0 });
   P.hidden = spot; P.hideFrom = [P.x, P.y]; P.busy = null; P.unhideT = 0; spot.shake = 0.6;
-  AU.sfx('hide'); puff(spot.x * 16 + 8, spot.y * 16 + 8, 8);
+  AU.sfx(spot.k === K.LOCKER ? 'locker' : (spot.k === K.ARMOIRE || spot.k === K.STALL || spot.k === K.CABANE) ? 'wardrobe' : (spot.k === K.BUSH || spot.k === K.TREE) ? 'rustle' : spot.k === K.TRASH ? 'trash' : 'hide'); puff(spot.x * 16 + 8, spot.y * 16 + 8, 8);
   if (T.seeNow || (T.state === 'chase' && T.lostT < 0.25 && los(T.x, T.y - 12, P.x, P.y - 7) && dist(T.x, T.y, P.x, P.y) < T.prof.range * 16)) { T.knows = spot; say('Je sais où tu te caches, {n} !'); setMark(T, '!', 1); }
 }
 function unhide() {

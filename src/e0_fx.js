@@ -36,13 +36,27 @@ function gaitOf(a) {
 }
 function frameOf(a, g) { const L = POSE[g]; if (!L || L.length === 1) return 0; return Math.floor(((a.dist || 0) / STRIDE[g]) * L.length) % L.length; }
 // poussière / vitesse au contact des pieds
+// le bruit de chaque pas : le sien (doux en marchant sur la pointe des pieds), ceux des élèves tout près
+function stepSound(a, g) {
+  if (G.mode !== 'play' || a.hidden) return;
+  if (a === G.P) {
+    if (a.slip > 0 || (G.net && G.net.role === 'teacher')) return;
+    AU.foot(floorMat(a.x, a.y), a.small > 0 ? 'tiny' : g === 'run' ? 'run' : 'walk', g === 'run' ? 0.55 : g === 'sneak' ? 0.13 : 0.3, 0);
+    return;
+  }
+  if (!a.isKid || a.isWatcher) return;
+  const V0 = viewerA(), d = dist(a.x, a.y, V0.x, V0.y) / 16; if (d > 5) return;
+  if (G.time - (G.kidStepT || -1) < 0.11) return; G.kidStepT = G.time;
+  AU.foot(floorMat(a.x, a.y), 'kid', (g === 'run' ? 0.22 : 0.1) * (1 - d / 5), panOf(a.x));
+}
 function gaitFx(a, visible) {
   const g = gaitOf(a), f = frameOf(a, g);
   if (g !== a.lastG) {
-    if (a.lastG === 'idle' || a.lastG === 'tap' || a.lastG == null) { if (g === 'run') { squash(a, 6); if (visible) puff(a.x, a.y - 1, 4, '#e8e0d4'); } else if (g === 'sneak' || g === 'walk') squash(a, 2.5); }
+    if (a.lastG === 'idle' || a.lastG === 'tap' || a.lastG == null) { if (g === 'run') { squash(a, 6); if (visible) puff(a.x, a.y - 1, 4, '#e8e0d4'); if (a === G.P && !(a.slip > 0)) AU.sfx('whoosh', 0.35); } else if (g === 'sneak' || g === 'walk') squash(a, 2.5); }
     a.lastG = g; a.lastF = -1;
   }
   if (f !== a.lastF) {
+    if (CONTACT[g] && CONTACT[g].includes(f)) stepSound(a, g);
     if (visible && CONTACT[g] && CONTACT[g].includes(f)) {
       const back = a.face === 2 ? -4 : a.face === 3 ? 4 : 0;
       if (g === 'run') { for (let i = 0; i < 2; i++) part(a.x + back + rand(-2, 2), a.y - 1, 'puff', { vx: back * 4 + rand(-8, 8), vy: rand(-10, -3), life: 0.4, col: '#e6ddd0', size: 2 }); }
