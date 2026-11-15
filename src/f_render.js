@@ -89,7 +89,7 @@ function drawSprite(c, cfg, v, a, o = {}) {
 function drawSprite0(c, cfg, v, a, o = {}) {
   const scale = o.scale || 1, alpha = o.alpha == null ? 1 : o.alpha;
   const g = o.gait || gaitOf(a), fr = o.frame != null ? o.frame : frameOf(a, g), pose = poseOf(g, fr);
-  const face = o.face != null ? o.face : a.face, dir = face === 3 ? 2 : face, side = dir === 2;
+  const dig = g === 'dig' && a.digT > 0, face = o.face != null ? o.face : dig && a.digFace != null ? a.digFace : a.face, dir = face === 3 ? 2 : face, side = dir === 2;
   let vv = v; if (a.blink > 0 && dir !== 1 && !o.noBlink) vv = Object.assign({}, v || {}, { eyes: 3 });
   let cv = charCanvas(cfg, dir, fr, vv, g); if (o.tint) cv = tinted(cv, o.tint);
   const hz = (o.hz != null ? o.hz : (a.hz || 0)) + (o.noPoseBob ? 0 : pose.bob * scale), x = a.x + (o.dx || 0), y = a.y;
@@ -100,8 +100,14 @@ function drawSprite0(c, cfg, v, a, o = {}) {
   if ((g === 'idle' || g === 'tap') && !o.still) sy *= 1 + Math.sin(G.time * 3.4 + (a.ph || 0)) * 0.022;
   if (a.spin > 0 && !o.noSpin) sx *= Math.cos(a.spin * 22);
   const w = 20 * scale, h = 34 * scale;
-  c.save(); c.globalAlpha = alpha; c.translate(rp(x), rp(y - hz + (o.bob || 0)));
+  // en fouillant : on se penche dans le meuble et on gigote
+  const lx = dig ? (a.digLx || 0) : 0, ly = dig ? (a.digLy || 0) : 0;
+  c.save(); c.globalAlpha = alpha;
+  // de dos, la tête et les épaules disparaissent DANS le meuble : il ne reste que les jambes qui gigotent
+  if (dig && face === 1 && a.digSrc && a.digDive && !o.noClip) { const cy = Math.floor(a.digSrc[1] / 16) * 16 + 16 - 1; c.beginPath(); c.rect(x - 24, cy, 48, 80); c.clip(); }
+  c.translate(rp(x + lx), rp(y - hz + (o.bob || 0) + ly));
   let rot = o.rot || 0;
+  if (dig && !o.noLean) rot += Math.sin(G.time * 24 + (a.ph || 0)) * 0.06;
   if (!o.noLean) {
     if (side) rot += (LEAN[g] || 0) * (face === 3 ? -1 : 1);
     if (g === 'sneak') rot += Math.sin((a.dist || 0) / STRIDE.sneak * Math.PI * 2) * 0.08;
@@ -413,6 +419,8 @@ function renderGame(dt) {
   // un objet par terre juste derrière un arbre resterait caché : on le garde visible
   const behindFront = (x, y) => { const k = G.m.get(Math.floor(x / 16), Math.floor(y / 16) + 1); return FRONT_KINDS[k] ? y + 24 : y; };
   G.items.forEach(it => { if (inV(it.x, it.y)) ents.push([behindFront(it.x, it.y), () => drawItemW(ctx, it)]); });
+  // le bazar sorti des meubles pendant les fouilles
+  (G.m.junk || []).forEach(j => { if (inV(j.x, j.y)) ents.push([j.head ? j.head.y + 0.6 : j.y, () => drawJunk(ctx, j)]); });
   G.apples.forEach(a => inV(a.x, a.y) && ents.push([behindFront(a.x, a.y), () => { const w = Math.sin(G.time * 4) * 0.12; ctx.save(); ctx.translate(a.x, a.y - 6); ctx.rotate(w); ctx.drawImage(itemCanvas('apple'), -7, -7); ctx.restore(); }]));
   G.kids.forEach(k => {
     if (!k.vis || !inV(k.x, k.y)) return;

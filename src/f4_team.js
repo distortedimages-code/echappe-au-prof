@@ -189,7 +189,7 @@ function ccNetTick(dt) {
   N.sendT -= dt; N.kidsT -= dt;
   if (N.sendT <= 0) {
     N.sendT = 0.05;
-    N.send({ t: 's', x: +P.x.toFixed(1), y: +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0,
+    N.send({ t: 's', rm: digNet(), x: +P.x.toFixed(1), y: +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0,
       u: P.under ? 1 : 0, lf: P.lift > 0 ? Math.round(P.lift) : 0, bd: P.board ? 1 : 0, out: P.out ? 1 : 0, jail: P.jail ? 1 : 0, ls: P.lesson ? 1 : 0, dg: P.disguised ? 1 : 0, pk: P.pet && P.pet.leaveT == null ? P.pet.i : -1, pc: P.pet ? P.pet.charges : 0, sq: squishyCount(P), sqi: P.sqIds && P.sqIds.length ? P.sqIds[0] : 0 });
     if (N.isHost) N.send({ t: 'ai', x: +T.x.toFixed(1), y: +T.y.toFixed(1), a: +T.ang.toFixed(2), f: T.face, m: T.moving ? 1 : 0, r: T.running ? 1 : 0, st: T.state, dk: G.dark ? 1 : 0, pu: G.power ? G.power.uses : 0 });
   }
@@ -304,7 +304,7 @@ function cgNetTick(dt) {
     N.sendT = 0.05;
     N.send({ t: 'cgT', x: +T.x.toFixed(1), y: +T.y.toFixed(1), a: +T.ang.toFixed(2), f: T.face, m: T.moving ? 1 : 0, r: T.running ? 1 : 0, st: T.state });
     if (N.isHost) {
-      N.send({ t: 's', x: +P.x.toFixed(1), y: +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, out: P.out ? 1 : 0 });
+      N.send({ t: 's', rm: digNet(), x: +P.x.toFixed(1), y: +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, out: P.out ? 1 : 0 });
       const S = G.solo, sig = [S.phase, S.caught, S.out, S.lives, S.wave, P.cfg.name, G.tasksDone].join('|');
       if (sig !== N.cgSig) { N.cgSig = sig; N.send({ t: 'cgS', s: { phase: S.phase, caught: S.caught, out: S.out, lives: S.lives, wave: S.wave }, cfg: P.cfg, td: G.tasksDone, tl: Math.round(N.timeLeft) }); }
     }

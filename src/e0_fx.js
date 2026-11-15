@@ -28,13 +28,14 @@ function animStep(a, dt) {
   if (a.spin > 0) a.spin -= dt;
 }
 function gaitOf(a) {
+  if (a.digT > 0) return 'dig';
   if (a.skidT > 0) return 'skid';
   if (!a.moving) return a.tapping ? 'tap' : 'idle';
   if (a.isTeacher) return a.state === 'chase' ? 'run' : 'walk';
   if (a.isKid) return a.runK ? 'run' : 'walk';
   return a.running ? 'run' : 'sneak';
 }
-function frameOf(a, g) { const L = POSE[g]; if (!L || L.length === 1) return 0; return Math.floor(((a.dist || 0) / STRIDE[g]) * L.length) % L.length; }
+function frameOf(a, g) { if (g === 'dig') return Math.floor(G.time * 9 + (a.ph || 0) * 3) % 4; const L = POSE[g]; if (!L || L.length === 1) return 0; return Math.floor(((a.dist || 0) / STRIDE[g]) * L.length) % L.length; }
 // poussière / vitesse au contact des pieds
 // le bruit de chaque pas : le sien (doux en marchant sur la pointe des pieds), ceux des élèves tout près
 function stepSound(a, g) {

@@ -203,7 +203,7 @@ const UI = {
     tap('bGo', () => { if (G.net && G.net.solo) { Solo.go(); return; } if (G.net) { Net.setReady(); return; } G.mode = 'play'; this.show('play'); AU.play('sneak'); FX.iris = { mode: 'in', t: 0, dur: 0.75 }; this.hudSig = null; this.invSig = null; if (G.L.def.prof === 4) G.intercomT = 12; });
     tap('bPause', () => this.pause());
     tap('pResume', () => { if (!netLive()) G.mode = this.pausedFrom || 'play'; this.show('play'); });
-    tap('pRestart', () => { if (G.net && G.net.solo) { Solo.start(Solo.lv); return; } if (G.inf) this.launchInf(true); else this.launch(G.lvl, true); });
+    tap('pRestart', () => { if (G.net && G.net.solo) { Solo.start(Solo.lv); return; } if (G.inf) this.launchInf(); else this.launch(G.lvl); });
     tap('pLevels', () => { if (G.net && G.net.solo) { Solo.quit(); AU.play('menu'); Solo.levels(); return; } if (G.inf) { G.inf = null; G.mode = 'menu'; AU.play('menu'); this.openTitle(); return; } if (G.net) { Net.close(); G.net = null; G.mode = 'menu'; this.openTitle(); return; } AU.play('menu'); this.openLevels(); G.mode = 'menu'; });
     document.querySelectorAll('.tog').forEach(b => {
       b.addEventListener('click', () => { AU.init(); const k = b.dataset.k; AU.set[k] = !AU.set[k]; AU.applySet(); this.syncTogs(); if (k === 'crt') bakePost(); if (k === 'music' && AU.set.music && G.mode === 'menu') AU.play('menu'); });
@@ -295,7 +295,6 @@ const UI = {
     G.mode = 'menu'; this.show('sLevels'); AU.play('menu');
     $('lvlH').textContent = '🏫 Choisis ton niveau'; document.querySelector('#sLevels .who').classList.remove('hidden');
     const c = this.cfg(); if (c) { portrait($('whoCv'), c, null, 1); $('whoName').textContent = c.name; }
-    this.paintProc($('bProc'));
     const list = $('lvlList'); list.innerHTML = '';
     LEVELS.forEach((L, i) => {
       const pr = PROFS[L.prof], lock = i + 1 > this.prog.unlocked && !L.bonus, st = this.prog.stars[i] || 0;
@@ -307,17 +306,13 @@ const UI = {
       b.style.animationDelay = (i * 0.07) + 's'; list.appendChild(b);
     });
   },
-  procOn() { return store.get('proc', true) !== false; },
+  // un nouveau plan à chaque partie, toujours (plus de plans fixes ni de « même plan »)
+  procOn() { return true; },
   // mode facile : pas de brouillard, on voit tout le collège (solo et en équipe)
   paintEasy(b) {
     if (!b) return; const on = !!AU.set.easy; b.classList.toggle('on', on);
     b.innerHTML = `<span class="pi">${on ? '👀' : '🌫️'}</span><span><b>${on ? 'MODE FACILE : TOUT VOIR' : 'CHAMP DE VISION'}</b>${on ? 'Pas de brouillard : tu vois tout le collège et les profs.' : 'Tu ne vois que ce qui est autour de toi. Touche pour tout voir.'}</span><span class="sw"></span>`;
     b.onclick = () => { AU.init(); AU.sfx('tick'); AU.set.easy = !AU.set.easy; AU.applySet(); this.paintEasy($('bEasy')); this.paintEasy($('pEasy')); };
-  },
-  paintProc(b) {
-    if (!b) return; const on = this.procOn(); b.classList.toggle('on', on);
-    b.innerHTML = `<span class="pi">${on ? '🎲' : '🗺️'}</span><span><b>${on ? 'PLANS SURPRISE' : 'PLANS FIXES'}</b>${on ? 'Un nouveau plan du collège à chaque partie !' : 'Toujours les mêmes plans dessinés à la main.'}</span><span class="sw"></span>`;
-    b.onclick = () => { AU.init(); AU.sfx('tick'); store.set('proc', !this.procOn()); this.paintProc(b); };
   },
   hudInf() {
     const I = G.inf, el = $('hTasks');
@@ -361,8 +356,8 @@ const UI = {
     el.innerHTML = (calm ? `<div class="tl">⚠️${dots} · ${objs}</div>` : `<div class="hd">${head}</div><div class="tl">${objs}</div>`) + (Q ? `<div class="tl">🤝 ${esc(Q.cfg.name || 'Équipier')} : ${qs}</div>` : '');
     el.classList.toggle('all', I.keys);
   },
-  launch(i, keepSeed) {
-    startLevel(i, this.cfg(), null, { seed: keepSeed && G.seed != null ? G.seed : (this.procOn() ? newSeed() : null) });
+  launch(i) {
+    startLevel(i, this.cfg(), null, { seed: newSeed() });
     const L = LEVELS[i], pr = PROFS[L.prof];
     $('inNum').textContent = (L.bonus ? '🚌 SORTIE SCOLAIRE' : 'NIVEAU ' + (i + 1)) + ' · ' + L.place.toUpperCase();
     $('inTitle').textContent = L.title;
@@ -390,8 +385,8 @@ const UI = {
     $('toast').classList.add('hidden'); $('banner').classList.add('hidden');
     AU.play('sneak');
   },
-  launchInf(same) {
-    try { infStart(this.cfg(), same && G.inf ? G.inf.seed : null); }
+  launchInf() {
+    try { infStart(this.cfg(), null); }
     catch (e) { console.error(e); this.toast('Oups, le collège n’a pas pu être construit… réessaie !', 2.5); return; }
     const I = G.inf;
     $('inNum').textContent = '🕵️ MODE INFILTRATION · 4 ÉTAGES';
@@ -461,14 +456,12 @@ const UI = {
         <div class="prof"><canvas id="rProf" width="20" height="34"></canvas><div class="quote"></div></div>
         <div class="stats"><span>⏱️ ${mm}</span><span>👀 vu ${G.spotted}×</span></div>
         <div class="tips">💡 ${esc(pick(['Marche doucement (joystick à moitié) : le prof ne t’entend pas.', 'Cache-toi seulement quand le prof ne te voit pas, sinon il fonce sur ta cachette !', 'Ferme une porte à clé derrière toi pour gagner du temps.', 'Les traces orange montrent où le prof marche, même à travers les murs.', 'La pomme dormeuse l’endort 8 secondes : pose-la sur son chemin.', 'Le gâteau te fait rétrécir : tu passes sous les portes fermées !']))}</div>
-        <button class="btn big green" id="rAgain">↻ Réessayer${G.seed != null ? ' (même plan)' : ''}</button>
-        ${G.seed != null ? '<button class="btn" id="rNew">🎲 Nouveau plan</button>' : ''}
+        <button class="btn big green" id="rAgain">↻ Réessayer</button>
         <button class="btn ghost" id="rLv">🏫 Niveaux</button>`;
       portrait($('rProf'), pr.cfg, pr.v, 1);
       p.querySelector('.quote').textContent = '« ' + pr.lines.caught + ' »';
     }
-    $('rAgain').onclick = () => { AU.sfx('blip'); this.launch(i, !win); };
-    if ($('rNew')) $('rNew').onclick = () => { AU.sfx('blip'); this.launch(i); };
+    $('rAgain').onclick = () => { AU.sfx('blip'); this.launch(i); };
     $('rLv').onclick = () => { AU.sfx('blip'); this.openLevels(); };
     this.show('sResult');
   },
@@ -482,22 +475,19 @@ const UI = {
         <div class="stars">${[0, 1, 2].map(k => `<span class="${k < stars ? '' : 'off'}">⭐</span>`).join('')}</div>
         <div class="stats"><span>⏱️ ${mm}</span><span>⚠️ ${I.warn}/3</span><span>${I.keys ? '🔑' : ''}${I.plan ? '🗺️' : ''}${I.alarmUsed ? '🔥' : ''}</span></div>
         <div class="tips" style="text-align:center">⭐ évadé·e · ⭐ jamais poursuivi·e · ⭐ 1 avertissement max</div>
-        <button class="btn big green" id="rAgain">🎲 Un autre collège</button>
-        <div class="row"><button class="btn" id="rSame">↻ Même collège</button><button class="btn ghost" id="rLv">🏠 Menu</button></div>`;
-      $('rAgain').onclick = () => { AU.sfx('blip'); this.launchInf(false); };
-      $('rSame').onclick = () => { AU.sfx('blip'); this.launchInf(true); };
+        <button class="btn big green" id="rAgain">↻ Rejouer</button>
+        <button class="btn ghost" id="rLv">🏠 Menu</button>`;
+      $('rAgain').onclick = () => { AU.sfx('blip'); this.launchInf(); };
     } else {
       p.innerHTML = `<div class="bigtitle" style="color:var(--red)">RETOUR<br>EN CLASSE !</div>
         <div class="prof"><canvas id="rProf" width="20" height="34"></canvas><div class="quote"></div></div>
         <div class="stats"><span>⏱️ ${mm}</span><span>📍 ${INF_FLOOR_META[I.cur].name}</span></div>
         <div class="tips">💡 ${esc(pick(['File quand la maîtresse écrit au tableau : elle te tourne le dos.', 'Le plan d’évacuation montre où sont tous les profs.', 'L’alarme incendie vide les étages… sois dans le rang au moment de l’appel !', 'Le trousseau ouvre la grille du 1er étage ET le portail.', 'Cache-toi dans un casier quand le surveillant approche.']))}</div>
-        <button class="btn big green" id="rAgain">↻ Réessayer (même collège)</button>
-        <button class="btn" id="rNew">🎲 Un autre collège</button>
+        <button class="btn big green" id="rAgain">↻ Réessayer</button>
         <button class="btn ghost" id="rLv">🏠 Menu</button>`;
       portrait($('rProf'), pr.cfg, pr.v, 1);
       p.querySelector('.quote').textContent = '« ' + (pr.lines.caught || 'En retenue !') + ' »';
-      $('rAgain').onclick = () => { AU.sfx('blip'); this.launchInf(true); };
-      $('rNew').onclick = () => { AU.sfx('blip'); this.launchInf(false); };
+      $('rAgain').onclick = () => { AU.sfx('blip'); this.launchInf(); };
     }
     $('rLv').onclick = () => { AU.sfx('blip'); G.inf = null; G.mode = 'menu'; AU.play('menu'); this.openTitle(); };
     this.show('sResult');

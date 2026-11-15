@@ -61,7 +61,7 @@ const Multi = {
     b.querySelectorAll('.role').forEach(r => r.onclick = () => { AU.sfx('tick'); this.role = r.dataset.r; paint(); });
     b.querySelectorAll('#mClassic .lvlpick button').forEach(r => r.onclick = () => { AU.sfx('tick'); this.level = +r.dataset.l; paint(); });
     b.querySelectorAll('#mTeamLv button').forEach(r => r.onclick = () => { AU.sfx('tick'); this.teamLevel = +r.dataset.t; paint(); });
-    paint(); UI.paintProc($('mProc'));
+    paint();
     $('mGo').onclick = () => { AU.init(); AU.sfx('blip'); this.status('Création de la partie…', true); Net.mode = this.mode; Net.teamLevel = this.teamLevel; Net.host(this.role, this.level); };
     $('mBack').onclick = () => { AU.sfx('blip'); this.menu(); };
   },

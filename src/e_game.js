@@ -465,6 +465,7 @@ function updateTeacher(dt) {
       if (T.st <= 0) {
         const spot = T.searchQ[T.searchI];
         if (spot && P.hidden === spot) { caught('found'); return; }
+        if (spot && Math.random() < 0.25 && G.m.get(spot.x, spot.y) !== K.DOOR) junkThrow(T, spot.x * 16 + 8, spot.y * 16 + 8, true);   // une chaussette sur la tête du prof !
         T.searchI++; T.state = 'search'; T.path = null;
       }
       break;
@@ -897,7 +898,7 @@ function doAction(a) {
       const key = a.ty * G.m.w + a.tx;
       AU.sfx('search', 0.6); makeNoise(a.tx * 16 + 8, a.ty * 16 + 8, 2.5, 'frrr…');
       P.busy = {
-        label: 'Je fouille…', dur: 1.1, t: 0, done: () => {
+        label: 'Je fouille…', dur: 1.1, t: 0, dig: [a.tx * 16 + 8, a.ty * 16 + 8], done: () => {
           G.searched.add(key);
           const ex = a.ex;
           if (G.inf && infSearchDesk(a, key)) return;
@@ -925,7 +926,7 @@ function doAction(a) {
           } else if (!G.stash && Math.random() < 0.18 && G.found < 2 && P.inv.length < 3) {
             G.found++; const kd = pick(ITEM_KEYS); P.inv.push(kd); AU.sfx('pickup'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 12);
             if (kd === 'squishy') squishyGot(P); else toast('😮 Trouvé : ' + ITEMS[kd].n + ' ! ' + ITEMS[kd].d, 3);
-          } else { AU.sfx('fail'); toast(pick(SEARCH_MSG) + (ex ? ' Pas de passage ici…' : ''), 1.8); }
+          } else { AU.sfx('fail'); toast(pick(SEARCH_MSG) + (ex ? ' Pas de passage ici…' : ''), 1.8); junkOnHead(P, a.tx, a.ty); }
         }
       };
       break;
@@ -1042,7 +1043,7 @@ function update(dt) {
     if (AU.songName === 'chase' && G.T.state !== 'chase' && G.T.state !== 'edge' && !['tired'].includes(G.T.state)) AU.play('sneak');
     if (AU.songName == null || AU.songName === 'menu') AU.play('sneak');
     }
-    if (G.mode === 'play') { npcChatter(dt); cuteTick(dt); lifeFootBall(dt); gagsUpdate(dt); }
+    if (G.mode === 'play') { npcChatter(dt); cuteTick(dt); lifeFootBall(dt); gagsUpdate(dt); digUpdate(dt); }
   } else if (G.mode === 'escape') {
     G.escT += dt; const P = G.P, t = Math.min(1, G.escT / 0.8);
     const ex0 = P.x, ey0 = P.y; P.x = lerp(G.escFrom[0], G.escTo[0], t); P.y = lerp(G.escFrom[1], G.escTo[1], t); P.moving = t < 1; P.running = true; P.dist = (P.dist || 0) + Math.hypot(P.x - ex0, P.y - ey0) + dt * 30; P.skidT = 0;

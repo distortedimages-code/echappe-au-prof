@@ -90,10 +90,16 @@ const POSE = {
     { n: [-1, 0.15], f: [3, 1], na: [4, -3], fa: [3, -4], bob: 2.8, sq: -0.02, arms: 'sneak' },
     { n: [-2, 0.3], f: [3, 0.15], na: [3.5, -3.5], fa: [3, -3.5], bob: 0.8, sq: 0.1, arms: 'sneak' }],
   skid: [{ n: [5, 0], f: [-1, 0.5], na: [-3, -4], fa: [-2, -3], bob: 0, sq: 0.12, arms: 'skid' }],
+  // fouiller : les bras plongent dans le meuble, l'un après l'autre, et on se met sur la pointe des pieds
+  dig: [
+    { n: [0.5, 0], f: [-0.5, 0.7], na: [6, -9], fa: [3, -3], bob: 0, sq: 0.07, arms: 'dig' },
+    { n: [0.5, 0.7], f: [-0.5, 0], na: [4, -4], fa: [5, -7], bob: 1.2, sq: -0.05, arms: 'dig' },
+    { n: [0.5, 0], f: [-0.5, 0.7], na: [5, -5], fa: [6, -9], bob: 0.4, sq: 0.08, arms: 'dig' },
+    { n: [0.5, 0.7], f: [-0.5, 0], na: [6, -8], fa: [4, -3], bob: 1.6, sq: -0.04, arms: 'dig' }],
 };
 const STRIDE = { walk: 20, run: 30, sneak: 14 };
 const CONTACT = { walk: [0, 2], run: [0, 3], sneak: [1, 3] };
-const LEAN = { run: 0.17, walk: 0.03, sneak: 0.07, skid: -0.26, idle: 0, tap: 0 };
+const LEAN = { run: 0.17, walk: 0.03, sneak: 0.07, skid: -0.26, idle: 0, tap: 0, dig: 0.1 };
 function poseOf(gait, frame) {
   if (gait === 'basic') return frame === 1 ? POSE.walk[0] : frame === 2 ? POSE.walk[2] : POSE.idle[0];
   const L = POSE[gait] || POSE.idle; return L[((frame % L.length) + L.length) % L.length];
@@ -213,9 +219,21 @@ function drawCharInto(x, c, dir, frame, v, gait) {
     if (W) { x.clearRect(tx0, T, 1, 1); x.clearRect(tx1, T, 1, 1); R(tx0 + 2, T + TR - 2, tw - 4, 1, td); }
     // bras
     let handY = T + TR - 1;
+    const late = [];
     const armF = (ax, out, [dx, dy], isRight) => {
       if (pose.arms === 'sneak') { R(ax, T, 1, 3, sleeveC); R(ax - out, T + 2, 1, 1, sleeveC); R(ax - out * 2, T + 1, 1, 2, sk); if (isRight) handY = T + 1; return; }
       if (pose.arms === 'skid') { R(ax + out, T - 3, 1, 4, sleeveC); R(ax + out, T - 4, 1, 1, sk); R(ax + out * 2, T - 5, 1, 1, sk); if (isRight) handY = T - 4; return; }
+      // de dos, les bras levés plongent dans le meuble (de face, ils se raccourcissent vers nous : voir plus bas)
+      if (pose.arms === 'dig' && back) {
+        const h = clamp(Math.round(-dy), 0, 9);
+        if (h >= 3) {
+          // dessiné après la tête : les bras qui plongent dans le meuble restent bien visibles par-dessus les cheveux
+          // (au-dessus de l'épaule, le bras s'écarte d'un pixel, la main encore d'un)
+          late.push(() => { for (let y = T - h; y <= T + 1; y++) R(y >= T ? ax : y === T - h ? ax + out * 2 : ax + out, y, 1, 1, y > T - h && T + 1 - y < sleeveN ? sleeveC : sk); });
+          if (isRight) handY = T - h; return;
+        }
+      }
+      if (pose.arms === 'dig' && !back) { dy = -dy >= 7 ? -3 : 0; dx = 0; }   // de face : une main plonge vers nous, puis l'autre
       const fore = clamp(Math.round(-dy), 0, 3), len = TR - fore, ox = Math.abs(dx) >= 3 ? out : 0;
       R(ax + ox, T, 1, len, sk); R(ax + ox, T, 1, Math.min(sleeveN, len - 1), sleeveC);
       if (c.top === 5 && sleeveN > 2) for (let r = 1; r < len - 1; r += 2) R(ax + ox, T + r, 1, 1, tc);
@@ -245,6 +263,7 @@ function drawCharInto(x, c, dir, frame, v, gait) {
       if (c.acc === 6) { R(tx0 + 1, T + 1, tw - 2, TR - 1, ac); R(tx0 + 2, T + 2, tw - 4, 1, ad); R(tx0 + 3, T + TR - 2, tw - 6, 1, ad); }
       if (c.acc === 7) { R(tx0 - 1, T, tw + 2, TR + 4, ac); R(tx0 - 1, T + TR + 3, tw + 2, 1, ad); }
     }
+    late.forEach(f => f());
   } else {
     // ---------- profil droit ----------
     const stx0 = W ? 4 : 7, stw = W ? 11 : 6, stx1 = stx0 + stw - 1, hipX = 9.5;
