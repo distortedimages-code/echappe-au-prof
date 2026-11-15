@@ -159,6 +159,7 @@ function startLevel(idx, cfg, setup, opts) {
     L.kidSpots = L.itemSpots.filter(([x, y]) => { const f = L.m.fs[y * L.m.w + x]; return f === FS.ASPHALT || f === FS.GRASS || f === FS.SAND; });
   } else if (opts && opts.robots) { spawnItems(); spawnRobots(L.robots || 6); }
   else { spawnItems(); spawnKids(L.kids || 0); }
+  if (!setup) lifeSetup();
   G.tasks = (setup && setup.tasks ? setup.tasks.map(i => L.taskPool[i]).filter(Boolean) : shuffle(L.taskPool.slice()).slice(0, 3)).map(t => Object.assign({ def: TASKDEFS[t.id], done: false, room: L.m.roomAt(t.x, t.y) }, t)); G.tasksDone = 0; G.tasksRemote = 0;
   { const keys = []; for (let y = 0; y < L.m.h; y++) for (let x = 0; x < L.m.w; x++) { const key = y * L.m.w + x; if (!SEARCHABLE_KINDS.has(L.m.get(x, y)) || L.candAt.has(key) || G.tasks.some(t => t.x === x && t.y === y)) continue; if ([[0, 1], [0, -1], [1, 0], [-1, 0]].some(([dx, dy]) => L.reach[(y + dy) * L.m.w + x + dx] >= 0 && L.m.get(x + dx, y + dy) === K.FLOOR)) keys.push(key); } G.disguiseAt = new Set(shuffle(keys).slice(0, 2)); }
   spawnPigeons(); FX.reset(); G.camX = null;
@@ -330,6 +331,8 @@ function updateTeacher(dt) {
   if (T.state === 'scared') { teacherScared(T, dt); return; }
   // un squishy lui a explosé à la figure : il ne voit plus rien
   if (T.state === 'blind') { teacherBlind(T, dt); return; }
+  // il a glissé dans une flaque…
+  if (T.slipT > 0) { T.slipT -= dt; T.moving = false; T.running = false; return; }
   if (T.state === 'count') {
     T.st -= dt; T.moving = false;
     const n = 3 - Math.ceil(T.st - 0.3);
@@ -506,6 +509,9 @@ function updateKids(dt) {
       case 'evac': infEvacStep(k, dt); break;
       case 'sit': case 'crowd': k.moving = false; if (k.bub) { k.bub.t += dt; if (k.bub.t > k.bub.dur) k.bub = null; } break;
       case 'jump': k.moving = false; k.face = 0; break;
+      case 'foot': lifeFoot(k, dt); break;
+      case 'pairF': lifePairF(k, dt); break;
+      case 'bench': k.moving = false; k.face = 0; if (k.bub) { k.bub.t += dt; if (k.bub.t > k.bub.dur) k.bub = null; } break;
       case 'ball': if (G.ball) { const o = G.kids[G.ball.from === i ? G.ball.to : G.ball.from]; k.face = o.x > k.x ? 2 : 3; } k.moving = false; break;
       case 'robot': {
         if (!k.route) break;
@@ -946,7 +952,7 @@ function update(dt) {
     if (AU.songName === 'chase' && G.T.state !== 'chase' && !['tired'].includes(G.T.state)) AU.play('sneak');
     if (AU.songName == null || AU.songName === 'menu') AU.play('sneak');
     }
-    if (G.mode === 'play') { npcChatter(dt); cuteTick(dt); }
+    if (G.mode === 'play') { npcChatter(dt); cuteTick(dt); lifeFootBall(dt); gagsUpdate(dt); }
   } else if (G.mode === 'escape') {
     G.escT += dt; const P = G.P, t = Math.min(1, G.escT / 0.8);
     const ex0 = P.x, ey0 = P.y; P.x = lerp(G.escFrom[0], G.escTo[0], t); P.y = lerp(G.escFrom[1], G.escTo[1], t); P.moving = t < 1; P.running = true; P.dist = (P.dist || 0) + Math.hypot(P.x - ex0, P.y - ey0) + dt * 30; P.skidT = 0;

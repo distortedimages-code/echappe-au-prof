@@ -334,7 +334,10 @@ function renderGame(dt) {
   G.kids.forEach(k => { if (k.vis && k.isWatcher && !k.gone && k.state !== 'evac') { ctx.globalAlpha = 0.75; drawCone(ctx, k); ctx.globalAlpha = 1; } });
   if (!G.L.outdoor) { for (const mo of FX.motes) { const a = Math.sin(mo.t / mo.life * Math.PI) * (0.35 + 0.25 * Math.sin(G.time * 3 + mo.ph)); ctx.fillStyle = `rgba(255,240,200,${a})`; ctx.fillRect(mo.x, mo.y, 0.8, 0.8); } }
   // 4) entités triées par profondeur
+  drawPuddles(ctx);
   const ents = [];
+  (G.m.npcGags || []).forEach(g => { if (g.vis) ents.push([g.y, () => occlude(ctx, g, () => drawGag(ctx, g))]); });
+  if (G.foot && G.eye && (easyOn() || (Math.hypot(G.foot.x - G.eye[0], G.foot.y - G.eye[1]) < visRAt(Math.atan2(G.foot.y - G.eye[1], G.foot.x - G.eye[0])) && los(G.eye[0], G.eye[1], G.foot.x, G.foot.y - 2)))) ents.push([G.foot.y, () => drawFootBall(ctx)]);
   G.items.forEach(it => ents.push([it.y, () => drawItemW(ctx, it)]));
   G.apples.forEach(a => ents.push([a.y, () => { const w = Math.sin(G.time * 4) * 0.12; ctx.save(); ctx.translate(a.x, a.y - 6); ctx.rotate(w); ctx.drawImage(itemCanvas('apple'), -7, -7); ctx.restore(); }]));
   G.kids.forEach(k => {
@@ -342,7 +345,7 @@ function renderGame(dt) {
     ents.push([k.y, () => occlude(ctx, k, () => {
       const bob = k.beh === 'jump' ? -Math.abs(Math.sin(G.time * 6 + k.ph)) * 5 : 0;
       if (k.beh === 'jump') { const up = Math.sin(G.time * 6 + k.ph) > 0; ctx.strokeStyle = '#e43b44'; ctx.lineWidth = 0.9; ctx.beginPath(); if (up) ctx.ellipse(k.x, k.y - 2, 8, 3, 0, 0.1, Math.PI - 0.1); else ctx.ellipse(k.x, k.y - 22 + bob, 8, 4, 0, Math.PI + 0.1, -0.1); ctx.stroke(); }
-      if (k.beh === 'sit') { drawSprite(ctx, k.cfg, null, k, { sy: 0.86, bob: 2, noShadow: true }); if (k.sixT > 0) drawSixSeven(ctx, k, 3); return; }
+      if (k.beh === 'sit' || k.beh === 'bench') { drawSprite(ctx, k.cfg, null, k, { sy: 0.86, bob: 2, noShadow: true }); if (k.sixT > 0) drawSixSeven(ctx, k, 3); return; }
       drawSprite(ctx, k.cfg, k.v || null, k, { bob, sy: k.beh === 'jump' && bob > -1 ? 0.9 : 1 });
       if (k.sixT > 0) drawSixSeven(ctx, k, 0);
       if (k.isWatcher && k.markT > 0 && k.mark) txt(ctx, k.mark, k.x, k.y - 40, 9, k.mark === '!' ? '#e43b44' : '#ffd23f');
@@ -428,6 +431,7 @@ function drawTeacher(c, T, extra) {
   if (T.state === 'tired') { o.sy = (o.sy || 1) * (0.86 + Math.sin(G.time * 10) * 0.03); o.rot = 0.12 * (T.face === 3 ? -1 : 1); }
   if (T.state === 'check') o.dx = Math.sin(G.time * 30) * 0.8;
   if (T.state === 'count') o.dx = Math.sin(G.time * 20) * 0.3;
+  if (T.slipT > 0) o.rot = (T.slipT > 0.5 ? Math.min(1.35, (1.6 - T.slipT) * 5) : T.slipT * 2.7) * (T.face === 3 ? -1 : 1);
   const bl = isBlind(T); if (bl) { v = Object.assign({}, pr.v, { eyes: 6 }); Object.assign(o, { face: 0, noBlink: true, rot: Math.sin(G.time * 5) * 0.12, hz: Math.abs(Math.sin(G.time * 6)) * 1.2 }); }
   drawSprite(c, pr.cfg, v, T, o);
   if (bl) drawBlindGoo(c, T);
@@ -541,7 +545,7 @@ function drawOverlay() {
     txt(c, '▼', qx, qy + bob, Math.round(12 * d), '#3fd06a'); txt(c, 'TOI', qx, qy - 13 * d + bob, Math.round(8 * d), '#ffffff');
   }
   // bulles des élèves (« C'est pas moi ! »)
-  G.kids.forEach(k => {
+  G.kids.concat(G.m.npcGags || []).forEach(k => {
     if (!k.bub || !k.vis) return;
     const b = k.bub, al = Math.min(1, (b.dur - b.t) * 4), sc = b.t < 0.16 ? easeOutBack(b.t / 0.16) : 1, F2 = Math.round(8 * d);
     c.font = F2 + 'px ' + FONT; const w = c.measureText(b.text).width + F2 * 1.4, h = F2 * 2;

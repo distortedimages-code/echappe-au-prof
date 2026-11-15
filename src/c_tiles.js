@@ -96,6 +96,7 @@ function drawWallDecor(c, px, py, d, i) {
     case 'alarm': R(4, 4, 8, 9, '#1a1028'); R(5, 5, 6, 7, '#e43b44'); R(6, 6, 4, 3, '#ffffff'); R(7, 7, 2, 1, '#e43b44'); R(6, 10, 4, 1, '#ff9fa8'); R(5, 5, 6, 1, '#ff6b74'); break;
     case 'evac': R(1, 3, 14, 11, '#1a6b3a'); R(2, 4, 12, 9, '#f6f2e0'); R(3, 5, 4, 3, '#9ad0a0'); R(8, 5, 4, 3, '#9ad0a0'); R(3, 9, 9, 1, '#63c74d'); R(11, 9, 1, 3, '#e43b44'); R(10, 11, 3, 1, '#e43b44'); break;
     case 'stairsign': R(3, 4, 10, 8, '#2f9e5a'); R(4, 5, 8, 6, '#3fc070'); R(6, 6, 1, 4, '#ffffff'); R(6, 9, 4, 1, '#ffffff'); R(9, 6, 1, 3, '#ffffff'); break;
+    default: drawWallDecorX(c, px, py, d, i, R);
   }
 }
 function drawFurniture(c, k, px, py, tx, ty, m, L) {
@@ -204,20 +205,23 @@ function drawFloorDecor(c, d) {
       c.strokeStyle = 'rgba(61,123,255,0.7)'; c.beginPath(); c.arc(px + d.w * 8, py + d.h * 8, 26, 0, 7); c.stroke(); break;
     case 'stairs': for (let i = 0; i < d.h * 4; i++) { c.fillStyle = i % 2 ? '#a8a090' : '#c8c0b0'; c.fillRect(px, py + i * 4, d.w * 16, 4); } c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(px, py, 3, d.h * 16); break;
     case 'rug': c.fillStyle = d.col || '#7b45a8'; c.fillRect(px + 2, py + 2, d.w * 16 - 4, d.h * 16 - 4); c.fillStyle = shade(d.col || '#7b45a8', 0.3); c.fillRect(px + 4, py + 4, d.w * 16 - 8, 1); c.fillRect(px + 4, py + d.h * 16 - 5, d.w * 16 - 8, 1); break;
+    default: drawFloorDecorX(c, d, px, py);
   }
 }
 const OVERHANG = 9;
 const TALL_KINDS = new Set([K.WALL, K.LOCKER, K.ARMOIRE, K.SHELF, K.STALL, K.COPIER, K.PILLAR, K.X_WINDOW, K.X_DOOR, K.X_ELEV]);
 function isWallish(k) { return k === K.WALL || k === K.X_WINDOW || k === K.X_DOOR || k === K.X_ELEV || k === K.LOCKER; }
 function renderMapCanvas(L) {
-  const m = L.m; const [cv, c] = mkCanvas(m.w * 16, m.h * 16);
+  const m = L.m; dressMap(L); const [cv, c] = mkCanvas(m.w * 16, m.h * 16);
   // 1) sols
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
     const k = m.get(x, y); if (k === K.WALL) continue;
     drawFloorTile(c, x * 16, y * 16, m.fs[y * m.w + x], x, y);
   }
-  // 2) décor au sol
+  // 2) usure, petits détails, puis décor au sol, puis ombres au pied des murs
+  floorDetails(c, m);
   m.fdecor.forEach(d => drawFloorDecor(c, d));
+  aoPass(c, m);
   // 3) murs + objets (de haut en bas)
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
     const k = m.get(x, y), px = x * 16, py = y * 16;

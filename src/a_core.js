@@ -125,6 +125,8 @@ const AU = {
       case 'wardrobe': T.tone(300, 0.35, { type: 'sawtooth', vol: 0.04, to: 520 }); T.noise(0.1, { vol: 0.16, freq: 500, at: 0.3 }); T.tone(110, 0.1, { type: 'triangle', vol: 0.14, at: 0.3, to: 70 }); break;
       case 'rustle': for (let i = 0; i < 5; i++) T.noise(0.06, { vol: 0.12, freq: 3500 + Math.random() * 2000, q: 0.8, at: i * 0.05 }); break;
       case 'trash': T.noise(0.12, { vol: 0.18, freq: 2400, q: 2 }); T.tone(660, 0.18, { type: 'square', vol: 0.04, to: 620 }); T.tone(990, 0.14, { type: 'square', vol: 0.025, at: 0.02 }); break;
+      case 'kidscream': T.tone(820, 0.22, { type: 'square', vol: 0.05 * v, to: 1500 }); T.tone(1500, 0.3, { type: 'square', vol: 0.045 * v, to: 1100, at: 0.2 }); T.noise(0.3, { vol: 0.05 * v, freq: 2500, q: 2 }); break;
+      case 'splash': T.noise(0.22, { vol: 0.2 * v, freq: 1300, to: 500, q: 1.2 }); T.tone(320, 0.12, { type: 'sine', vol: 0.1 * v, to: 120 }); for (let i = 0; i < 3; i++) T.tone(1800 + i * 400, 0.05, { type: 'sine', vol: 0.03 * v, at: 0.05 + i * 0.04 }); break;
       case 'whoosh': T.noise(0.18, { vol: 0.12 * v, freq: 600, to: 2600, q: 0.6 }); break;
       case 'unhide': T.tone(160, 0.12, { type: 'triangle', vol: 0.12, to: 380 }); break;
       case 'heart': T.tone(62, 0.12, { type: 'sine', vol: 0.3 * v }); T.tone(55, 0.12, { type: 'sine', vol: 0.22 * v, at: 0.15 }); break;

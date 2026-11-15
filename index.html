@@ -626,6 +626,8 @@ const AU = {
       case 'wardrobe': T.tone(300, 0.35, { type: 'sawtooth', vol: 0.04, to: 520 }); T.noise(0.1, { vol: 0.16, freq: 500, at: 0.3 }); T.tone(110, 0.1, { type: 'triangle', vol: 0.14, at: 0.3, to: 70 }); break;
       case 'rustle': for (let i = 0; i < 5; i++) T.noise(0.06, { vol: 0.12, freq: 3500 + Math.random() * 2000, q: 0.8, at: i * 0.05 }); break;
       case 'trash': T.noise(0.12, { vol: 0.18, freq: 2400, q: 2 }); T.tone(660, 0.18, { type: 'square', vol: 0.04, to: 620 }); T.tone(990, 0.14, { type: 'square', vol: 0.025, at: 0.02 }); break;
+      case 'kidscream': T.tone(820, 0.22, { type: 'square', vol: 0.05 * v, to: 1500 }); T.tone(1500, 0.3, { type: 'square', vol: 0.045 * v, to: 1100, at: 0.2 }); T.noise(0.3, { vol: 0.05 * v, freq: 2500, q: 2 }); break;
+      case 'splash': T.noise(0.22, { vol: 0.2 * v, freq: 1300, to: 500, q: 1.2 }); T.tone(320, 0.12, { type: 'sine', vol: 0.1 * v, to: 120 }); for (let i = 0; i < 3; i++) T.tone(1800 + i * 400, 0.05, { type: 'sine', vol: 0.03 * v, at: 0.05 + i * 0.04 }); break;
       case 'whoosh': T.noise(0.18, { vol: 0.12 * v, freq: 600, to: 2600, q: 0.6 }); break;
       case 'unhide': T.tone(160, 0.12, { type: 'triangle', vol: 0.12, to: 380 }); break;
       case 'heart': T.tone(62, 0.12, { type: 'sine', vol: 0.3 * v }); T.tone(55, 0.12, { type: 'sine', vol: 0.22 * v, at: 0.15 }); break;
@@ -1221,6 +1223,153 @@ function itemCanvas(kind) {
   ITEM_CACHE[kind] = cv; return cv;
 }
 
+// ================= HABILLAGE DES DÉCORS =================
+// Ajouté au moment de dessiner la carte : affiches, miroirs, porte-manteaux…, usure du sol,
+// ombres au pied des murs, marelle et cages de foot dans la cour, et l'urinoir de l'élève-gag.
+function dressMap(L) {
+  const m = L.m; if (m.dressed) return; m.dressed = true;
+  const R = mulberry(((m.w * 73856093) ^ (m.h * 19349663) ^ (m.rooms.length * 83492791)) >>> 0), rf = () => R();
+  const used = new Set(); m.decor.forEach(d => { for (let i = 0; i < (d.w || 1); i++) used.add((d.x + i) + ',' + d.y); });
+  const face = (x, y) => m.get(x, y) === K.WALL && !isWallish(m.get(x, y + 1)) && !KP[m.get(x, y + 1)].solid && m.get(x, y + 1) !== K.DOOR;
+  const put = (x, y, t, o) => { if (used.has(x + ',' + y) || !face(x, y)) return false; used.add(x + ',' + y); m.decor.push(Object.assign({ x, y, t }, o || {})); return true; };
+  const indoor = (x, y) => { const f = m.fs[y * m.w + x]; return f !== FS.GRASS && f !== FS.ASPHALT && f !== FS.SAND && f !== FS.PREAU; };
+  m.npcGags = []; m.puddles = [];
+  // --- murs des salles, selon le type de salle ---
+  const KIND = [
+    [/Toilettes/, ['mirror', 'sink', 'dryer', 'mirror', 'sink'], 0.75],
+    [/Douches/, ['mirror', 'tp', 'dryer'], 0.4],
+    [/Cantine|Réfectoire|Self/, ['menu', 'poster', 'drawing', 'clock'], 0.5],
+    [/CDI|Biblio/, ['silence', 'poster', 'cork', 'frame'], 0.45],
+    [/profs|Bureau|Direction|Secrétariat|Vie scolaire|Infirmerie|Principal|Loge|Accueil/, ['calendar', 'cork', 'frame', 'clock'], 0.45],
+    [/sport|Gymnase|Vestiaire/, ['scoreboard', 'trophy', 'poster'], 0.35],
+    [/Salle|Classe|Labo|Musique|Arts|Français|Maths|Anglais|Histoire|Sciences|SVT|Techno/, ['alphabet', 'drawing', 'cork', 'poster', 'drawing', 'map'], 0.5]
+  ];
+  m.rooms.forEach(r => {
+    const kd = KIND.find(([re]) => re.test(r.name)); if (!kd) return;
+    const [, list, dens] = kd; let n = 0;
+    for (let x = r.x; x < r.x + r.w; x++) if (rf() < dens && put(x, r.y - 1, list[n % list.length])) n++;
+  });
+  // --- l'élève aux toilettes (devant un urinoir) ---
+  m.rooms.filter(r => /^Toilettes/.test(r.name)).forEach(r => {
+    const xs = []; for (let x = r.x; x < r.x + r.w; x++) if (m.get(x, r.y) === K.FLOOR && m.get(x, r.y - 1) === K.WALL && !m.decor.some(d => d.x === x && d.y === r.y - 1 && d.t !== 'mirror' && d.t !== 'sink' && d.t !== 'dryer')) xs.push(x);
+    if (!xs.length) return; const x = xs[Math.floor(rf() * xs.length)];
+    m.decor = m.decor.filter(d => !(d.x === x && d.y === r.y - 1)); used.add(x + ',' + (r.y - 1));
+    m.decor.push({ x, y: r.y - 1, t: 'urinal' });
+    m.npcGags.push({ kind: 'pipi', x: x * 16 + 8, y: r.y * 16 + 11, home: [x * 16 + 8, r.y * 16 + 11], face: 1, st: 0, state: 'busy', cd: 0, n: 0, ph: rf() * 6, cfg: randomChar('', rf), anim: 0, moving: false });
+  });
+  // --- couloirs (murs sans salle) ---
+  for (let y = 1; y < m.h - 1; y++) for (let x = 1; x < m.w - 1; x++) {
+    if (!face(x, y) || used.has(x + ',' + y) || !indoor(x, y + 1) || m.roomAt(x, y + 1)) continue;
+    if (rf() < 0.16) put(x, y, pick2(rf, ['hooks', 'hooks', 'cork', 'extinguisher', 'drawing', 'trophy']));
+  }
+  // --- la cour : marelle, cages de foot, dessins à la craie ---
+  const court = m.fdecor.find(d => d.t === 'court');
+  if (court) { m.fdecor.push({ x: court.x, y: court.y + (court.h >> 1) - 1, t: 'goal', side: 0 }); m.fdecor.push({ x: court.x + court.w - 1, y: court.y + (court.h >> 1) - 1, t: 'goal', side: 1 }); }
+  let marelle = 0;
+  for (let y = 1; y < m.h - 5 && marelle < 1; y++) for (let x = 1; x < m.w - 1 && marelle < 1; x++) {
+    let ok = true; for (let j = 0; j < 4 && ok; j++) { const k = m.get(x, y + j), f = m.fs[(y + j) * m.w + x]; if (k !== K.FLOOR || f !== FS.ASPHALT || m.roomAt(x, y + j) === 'Terrain de basket') ok = false; }
+    if (ok && rf() < 0.08) { m.fdecor.push({ x, y, t: 'marelle' }); marelle++; }
+  }
+  for (let y = 1; y < m.h - 1; y++) for (let x = 1; x < m.w - 1; x++) if (m.get(x, y) === K.FLOOR && m.fs[y * m.w + x] === FS.ASPHALT && rf() < 0.012) m.fdecor.push({ x, y, t: 'doodle', v: Math.floor(rf() * 4) });
+}
+function pick2(rf, a) { return a[Math.floor(rf() * a.length)]; }
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+// petits détails d'usure sur les sols (chewing-gum, papiers, traces, fissures…)
+function floorDetails(c, m) {
+  for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+    if (m.get(x, y) !== K.FLOOR) continue;
+    const f = m.fs[y * m.w + x], h = hash2(x * 3 + 11, y * 7 + 3), h2 = hash2(x + 101, y + 57), px = x * 16, py = y * 16;
+    const R = (a, b, w, hh, col) => { c.fillStyle = col; c.fillRect(px + a, py + b, w, hh); };
+    const ax = (h2 * 11 | 0) + 2, ay = (h * 11 | 0) + 2;
+    if (f === FS.ASPHALT) {
+      if (h < 0.06) { R(ax, ay, 3, 1, '#6c6f80'); R(ax + 3, ay + 1, 2, 1, '#6c6f80'); R(ax + 5, ay + 2, 1, 2, '#6c6f80'); }   // fissure
+      else if (h < 0.075) { R(ax, ay, 3, 2, '#c58a3a'); R(ax + 1, ay - 1, 1, 1, '#9a6a2a'); }   // feuille morte
+      else if (h < 0.085) R(ax, ay, 2, 2, '#ff8fc0');   // chewing-gum
+    } else if (f === FS.GRASS) {
+      if (h < 0.05) { R(ax, ay, 1, 1, '#ffffff'); R(ax + 1, ay + 1, 1, 1, '#ffd23f'); R(ax + 2, ay, 1, 1, '#ffffff'); }   // pâquerette
+      else if (h < 0.08) { R(ax, ay, 1, 3, '#3f8a38'); R(ax + 2, ay + 1, 1, 2, '#3f8a38'); }
+    } else if (f !== FS.SAND && f !== FS.CARPET) {
+      if (h < 0.05) { c.fillStyle = 'rgba(40,20,10,0.10)'; c.fillRect(px + ax, py + ay, 4, 1); c.fillRect(px + ax + 2, py + ay + 2, 3, 1); }   // traces de semelles
+      else if (h < 0.065) { R(ax, ay, 3, 3, '#f4f4f4'); R(ax + 1, ay + 1, 1, 1, '#c8c8c8'); }   // boulette de papier
+      else if (h < 0.075) R(ax, ay, 2, 2, '#ff8fc0');   // chewing-gum collé
+      else if (h < 0.085 && f === FS.TILE) { c.fillStyle = 'rgba(120,150,170,0.25)'; c.fillRect(px + 1, py + 1, 14, 14); }   // carreau plus sombre
+    } else if (f === FS.CARPET && h < 0.05) { c.fillStyle = 'rgba(0,0,0,0.12)'; c.fillRect(px + ax, py + ay, 5, 3); }
+  }
+}
+// ombre douce sur le sol au pied des murs et des grands meubles (et un peu sur les côtés)
+function aoPass(c, m) {
+  const tall = k => TALL_KINDS.has(k) || k === K.FENCE;
+  for (let y = 1; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+    const k = m.get(x, y); if (k !== K.FLOOR && k !== K.DOOR) continue;
+    const px = x * 16, py = y * 16, outdoor = m.fs[y * m.w + x] === FS.GRASS || m.fs[y * m.w + x] === FS.ASPHALT || m.fs[y * m.w + x] === FS.SAND;
+    const a = outdoor ? 0.16 : 0.24;
+    if (tall(m.get(x, y - 1))) { for (let i = 0; i < 5; i++) { c.fillStyle = 'rgba(16,8,32,' + (a * (1 - i / 5)).toFixed(3) + ')'; c.fillRect(px, py + i, 16, 1); } }
+    if (tall(m.get(x - 1, y))) { c.fillStyle = 'rgba(16,8,32,' + (a * 0.6).toFixed(3) + ')'; c.fillRect(px, py, 2, 16); }
+    if (tall(m.get(x + 1, y))) { c.fillStyle = 'rgba(16,8,32,' + (a * 0.35).toFixed(3) + ')'; c.fillRect(px + 15, py, 1, 16); }
+  }
+}
+function drawWallDecorX(c, px, py, d, i, R) {
+  const h = hash2(d.x * 5 + 1, d.y * 9 + 2);
+  switch (d.t) {
+    case 'mirror': R(4, 4, 8, 7, '#8a96a6'); R(5, 5, 6, 5, '#cfe9f8'); R(6, 5, 1, 3, '#ffffff'); R(9, 8, 1, 1, '#ffffff'); break;
+    case 'sink': R(7, 7, 2, 3, '#9aa8b8'); R(7, 7, 3, 1, '#b8c4d0'); R(3, 11, 10, 3, '#f4f6f8'); R(4, 11, 8, 1, '#c8d4dc'); R(3, 13, 10, 1, '#d6dee4'); if (h > 0.5) R(9, 10, 1, 1, '#7fd8ff'); break;
+    case 'urinal': R(7, 3, 2, 3, '#b8c4cc'); R(5, 6, 6, 8, '#f4f6f8'); R(6, 7, 4, 6, '#dde6ec'); R(5, 6, 6, 1, '#ffffff'); R(7, 12, 2, 1, '#c8d4dc'); R(5, 13, 6, 1, '#c8d4dc'); break;
+    case 'dryer': R(4, 6, 8, 5, '#e8e8ec'); R(4, 6, 8, 1, '#ffffff'); R(5, 10, 6, 1, '#9a9aa4'); R(6, 8, 4, 1, '#c8c8d0'); R(10, 7, 1, 1, '#63c74d'); break;
+    case 'tp': R(6, 8, 4, 4, '#ffffff'); R(6, 9, 4, 1, '#dddddd'); R(5, 8, 1, 1, '#9aa8b8'); R(10, 8, 1, 1, '#9aa8b8'); R(7, 12, 2, 3, '#f4f4f4'); break;
+    case 'cork': R(1, 4, 14, 9, '#a87440'); R(2, 5, 12, 7, '#d9a868'); R(3, 6, 3, 3, '#fff6a0'); R(7, 6, 3, 4, '#a8e0ff'); R(11, 7, 2, 3, '#ffb3d6'); R(4, 6, 1, 1, '#e43b44'); R(8, 6, 1, 1, '#3d7bff'); R(11, 7, 1, 1, '#63c74d'); R(3, 10, 3, 1, '#ffffff'); break;
+    case 'hooks': {
+      R(0, 6, 16, 1, '#8a8a94'); R(3, 5, 1, 2, '#6a6a74'); R(11, 5, 1, 2, '#6a6a74');
+      const cols = ['#e43b44', '#3d7bff', '#63c74d', '#fec43a', '#7b45a8', '#f77622', '#2ce8d5'], a = cols[(h * 7) | 0], b = cols[((h * 13) | 0) % 7];
+      if (h > 0.25) { R(1, 7, 5, 6, a); R(2, 7, 3, 1, shade(a, 0.2)); R(1, 12, 5, 1, shade(a, -0.25)); }   // veste
+      if (h < 0.8) { R(9, 7, 5, 5, b); R(10, 8, 3, 2, shade(b, 0.25)); R(9, 11, 5, 1, shade(b, -0.3)); R(10, 6, 3, 1, shade(b, -0.3)); }   // sac à dos
+      break;
+    }
+    case 'extinguisher': R(9, 4, 3, 1, '#222'); R(10, 5, 1, 2, '#222'); R(6, 6, 4, 8, '#e43b44'); R(6, 6, 4, 1, '#ff6b74'); R(7, 5, 2, 1, '#333'); R(7, 9, 2, 2, '#ffffff'); R(6, 13, 4, 1, '#a82a30'); break;
+    case 'alphabet': { const cols = ['#e43b44', '#3d7bff', '#fec43a', '#63c74d', '#ff6fb5', '#2ce8d5']; R(0, 4, 16, 5, '#fff6e0'); R(0, 4, 16, 1, '#e8d8b8'); for (let k = 0; k < 4; k++) { R(1 + k * 4, 5, 3, 3, cols[(i * 4 + k + d.x) % 6]); R(2 + k * 4, 6, 1, 1, '#ffffff'); } break; }
+    case 'drawing': {
+      R(3, 4, 10, 9, '#ffffff'); R(3, 4, 3, 1, 'rgba(255,255,255,0.7)');
+      const v = (h * 4) | 0;
+      if (v === 0) { R(4, 5, 2, 2, '#ffd23f'); R(7, 8, 4, 3, '#e43b44'); R(8, 7, 2, 1, '#7a4b2a'); R(4, 11, 8, 1, '#63c74d'); }   // maison
+      else if (v === 1) { R(6, 6, 4, 4, '#ffd23f'); R(7, 7, 1, 1, '#222'); R(8, 7, 1, 1, '#222'); R(7, 9, 2, 1, '#e43b44'); }   // smiley
+      else if (v === 2) { R(5, 6, 1, 6, '#7a4b2a'); R(4, 5, 3, 3, '#63c74d'); R(9, 8, 3, 3, '#ff6fb5'); R(10, 7, 1, 1, '#63c74d'); }   // arbre + fleur
+      else { R(5, 6, 6, 3, '#3d7bff'); R(4, 9, 8, 2, '#3d7bff'); R(6, 11, 1, 1, '#222'); R(10, 11, 1, 1, '#222'); }   // voiture
+      break;
+    }
+    case 'menu': R(2, 4, 12, 9, '#2f3a46'); R(2, 4, 12, 1, '#7a4b2a'); R(4, 6, 8, 1, '#ffffff'); R(4, 8, 6, 1, '#ffd23f'); R(4, 10, 7, 1, '#ffffff'); break;
+    case 'silence': R(2, 5, 12, 6, '#e43b44'); R(3, 6, 10, 4, '#ff6b74'); R(4, 7, 8, 2, '#ffffff'); R(7, 7, 2, 2, '#e43b44'); break;
+    case 'calendar': R(4, 4, 8, 9, '#ffffff'); R(4, 4, 8, 2, '#e43b44'); for (let k = 0; k < 9; k++) R(5 + (k % 3) * 2, 7 + ((k / 3) | 0) * 2, 1, 1, k === 4 ? '#e43b44' : '#9a9aa4'); break;
+    case 'trophy': R(1, 11, 14, 1, '#7a4b2a'); R(3, 6, 3, 4, '#ffd23f'); R(2, 6, 1, 2, '#ffd23f'); R(6, 6, 1, 2, '#ffd23f'); R(4, 10, 1, 1, '#c8a84a'); R(9, 7, 4, 3, '#c0c8d8'); R(10, 10, 2, 1, '#9aa0b0'); R(3, 6, 1, 1, '#fff6a0'); break;
+    case 'scoreboard': R(2, 4, 12, 7, '#1a1a24'); R(2, 4, 12, 1, '#3a3a48'); R(4, 6, 2, 3, '#ff4040'); R(10, 6, 2, 3, '#ff4040'); R(7, 7, 2, 1, '#ffd23f'); break;
+  }
+}
+function drawFloorDecorX(c, d, px, py) {
+  switch (d.t) {
+    case 'goal': {   // petite cage de foot (vue de dessus)
+      c.fillStyle = '#ffffff'; const x = px + (d.side ? 10 : 0), y = py + 2;
+      c.fillRect(x, y, 6, 1); c.fillRect(x, y + 27, 6, 1); c.fillRect(d.side ? x + 5 : x, y, 1, 28);
+      c.fillStyle = 'rgba(255,255,255,0.35)'; for (let i = 3; i < 27; i += 3) c.fillRect(x, y + i, 6, 1); for (let i = 1; i < 6; i += 2) c.fillRect(x + i, y, 1, 28);
+      break;
+    }
+    case 'marelle': {   // marelle à la craie
+      c.fillStyle = 'rgba(255,255,255,0.85)';
+      const box = (bx, by) => { c.fillRect(bx, by, 10, 1); c.fillRect(bx, by + 10, 10, 1); c.fillRect(bx, by, 1, 10); c.fillRect(bx + 10, by, 1, 11); };
+      box(px + 3, py + 52); box(px + 3, py + 41); box(px - 2, py + 30); box(px + 8, py + 30); box(px + 3, py + 19);
+      c.fillRect(px + 2, py + 6, 12, 1); c.fillRect(px + 2, py + 6, 1, 13); c.fillRect(px + 13, py + 6, 1, 13); c.fillRect(px + 2, py + 18, 12, 1);   // « ciel »
+      c.fillStyle = 'rgba(255,214,90,0.9)'; c.fillRect(px + 7, py + 56, 2, 2);
+      break;
+    }
+    case 'doodle': {   // dessin à la craie
+      const col = ['rgba(255,255,255,0.75)', 'rgba(255,170,210,0.8)', 'rgba(150,220,255,0.8)', 'rgba(255,230,120,0.8)'][d.v];
+      c.fillStyle = col;
+      if (d.v === 0) { c.fillRect(px + 5, py + 5, 6, 1); c.fillRect(px + 5, py + 10, 6, 1); c.fillRect(px + 4, py + 6, 1, 4); c.fillRect(px + 11, py + 6, 1, 4); c.fillRect(px + 6, py + 7, 1, 1); c.fillRect(px + 9, py + 7, 1, 1); c.fillRect(px + 7, py + 9, 2, 1); }
+      else if (d.v === 1) { c.fillRect(px + 7, py + 4, 2, 2); c.fillRect(px + 4, py + 6, 8, 2); c.fillRect(px + 5, py + 8, 6, 1); c.fillRect(px + 6, py + 9, 4, 1); c.fillRect(px + 7, py + 10, 2, 1); }
+      else if (d.v === 2) { for (let i = 0; i < 4; i++) { c.fillRect(px + 3 + i * 3, py + 8 - (i % 2) * 3, 3, 1); } }
+      else { c.fillRect(px + 7, py + 3, 1, 9); c.fillRect(px + 4, py + 6, 7, 1); c.fillRect(px + 5, py + 4, 1, 1); c.fillRect(px + 9, py + 4, 1, 1); }
+      break;
+    }
+  }
+}
+
 // ================= TUILES =================
 const K = {
   FLOOR: 0, WALL: 1, FENCE: 2, DOOR: 3, DESK: 4, TABLE: 5, ARMOIRE: 6, SHELF: 7, LOCKER: 8, TRASH: 9, PLANT: 10, BUSH: 11, TREE: 12,
@@ -1319,6 +1468,7 @@ function drawWallDecor(c, px, py, d, i) {
     case 'alarm': R(4, 4, 8, 9, '#1a1028'); R(5, 5, 6, 7, '#e43b44'); R(6, 6, 4, 3, '#ffffff'); R(7, 7, 2, 1, '#e43b44'); R(6, 10, 4, 1, '#ff9fa8'); R(5, 5, 6, 1, '#ff6b74'); break;
     case 'evac': R(1, 3, 14, 11, '#1a6b3a'); R(2, 4, 12, 9, '#f6f2e0'); R(3, 5, 4, 3, '#9ad0a0'); R(8, 5, 4, 3, '#9ad0a0'); R(3, 9, 9, 1, '#63c74d'); R(11, 9, 1, 3, '#e43b44'); R(10, 11, 3, 1, '#e43b44'); break;
     case 'stairsign': R(3, 4, 10, 8, '#2f9e5a'); R(4, 5, 8, 6, '#3fc070'); R(6, 6, 1, 4, '#ffffff'); R(6, 9, 4, 1, '#ffffff'); R(9, 6, 1, 3, '#ffffff'); break;
+    default: drawWallDecorX(c, px, py, d, i, R);
   }
 }
 function drawFurniture(c, k, px, py, tx, ty, m, L) {
@@ -1427,20 +1577,23 @@ function drawFloorDecor(c, d) {
       c.strokeStyle = 'rgba(61,123,255,0.7)'; c.beginPath(); c.arc(px + d.w * 8, py + d.h * 8, 26, 0, 7); c.stroke(); break;
     case 'stairs': for (let i = 0; i < d.h * 4; i++) { c.fillStyle = i % 2 ? '#a8a090' : '#c8c0b0'; c.fillRect(px, py + i * 4, d.w * 16, 4); } c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(px, py, 3, d.h * 16); break;
     case 'rug': c.fillStyle = d.col || '#7b45a8'; c.fillRect(px + 2, py + 2, d.w * 16 - 4, d.h * 16 - 4); c.fillStyle = shade(d.col || '#7b45a8', 0.3); c.fillRect(px + 4, py + 4, d.w * 16 - 8, 1); c.fillRect(px + 4, py + d.h * 16 - 5, d.w * 16 - 8, 1); break;
+    default: drawFloorDecorX(c, d, px, py);
   }
 }
 const OVERHANG = 9;
 const TALL_KINDS = new Set([K.WALL, K.LOCKER, K.ARMOIRE, K.SHELF, K.STALL, K.COPIER, K.PILLAR, K.X_WINDOW, K.X_DOOR, K.X_ELEV]);
 function isWallish(k) { return k === K.WALL || k === K.X_WINDOW || k === K.X_DOOR || k === K.X_ELEV || k === K.LOCKER; }
 function renderMapCanvas(L) {
-  const m = L.m; const [cv, c] = mkCanvas(m.w * 16, m.h * 16);
+  const m = L.m; dressMap(L); const [cv, c] = mkCanvas(m.w * 16, m.h * 16);
   // 1) sols
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
     const k = m.get(x, y); if (k === K.WALL) continue;
     drawFloorTile(c, x * 16, y * 16, m.fs[y * m.w + x], x, y);
   }
-  // 2) décor au sol
+  // 2) usure, petits détails, puis décor au sol, puis ombres au pied des murs
+  floorDetails(c, m);
   m.fdecor.forEach(d => drawFloorDecor(c, d));
+  aoPass(c, m);
   // 3) murs + objets (de haut en bas)
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
     const k = m.get(x, y), px = x * 16, py = y * 16;
@@ -5084,6 +5237,155 @@ const SqAlbum = {
   }
 };
 
+// ================= PLUS DE VIE DANS LE COLLÈGE =================
+// Match de foot dans la cour, élèves qui se baladent par deux, bavardages sur les bancs,
+// et l'élève aux toilettes qu'il ne faut pas surprendre en courant…
+const TEAM_COL = ['#e43b44', '#3d7bff'];
+function lifeSetup() {
+  const L = G.L, m = G.m; G.foot = null;
+  if (G.net || G.inf) return;
+  const outdoor = !!L.outdoor;
+  // les endroits où les élèves se promènent : la cour, ou les couloirs et grandes salles à l'intérieur
+  if (!L.kidSpots || !L.kidSpots.length) {
+    const sp = [];
+    for (let y = 1; y < m.h - 1; y++) for (let x = 1; x < m.w - 1; x++) {
+      if (m.get(x, y) !== K.FLOOR || /Toilettes|Loge|Infirmerie|Douches/.test(m.roomAt(x, y))) continue;
+      let free = 0; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => { if (m.get(x + dx, y + dy) === K.FLOOR) free++; });
+      if (free >= 3 && Math.abs(x - L.start[0]) + Math.abs(y - L.start[1]) > 6) sp.push([x, y]);
+    }
+    L.kidSpots = shuffle(sp).slice(0, 60);
+  }
+  const spots = L.kidSpots; if (!spots.length) return;
+  const mk = (x, y, beh, o) => { const k = Object.assign({ cfg: randomChar(), x, y, ang: Math.PI / 2, face: 0, anim: 0, moving: false, path: null, pi: 0, beh, st: rand(0, 2), ph: Math.random() * 6, isKid: true }, o || {}); G.kids.push(k); return k; };
+  // 1) match de foot sur le terrain
+  const court = m.fdecor.find(d => d.t === 'court');
+  if (outdoor && court) {
+    const f = { x0: court.x * 16 + 6, y0: court.y * 16 + 6, x1: (court.x + court.w) * 16 - 6, y1: (court.y + court.h) * 16 - 6 };
+    G.foot = { x: (f.x0 + f.x1) / 2, y: (f.y0 + f.y1) / 2, vx: 0, vy: 0, z: 0, vz: 0, f, score: [0, 0], resetT: 0, kickT: 0 };
+    for (let i = 0; i < 6; i++) {
+      const team = i % 2, k = mk(lerp(f.x0, f.x1, team ? 0.65 : 0.35) + rand(-14, 14), lerp(f.y0, f.y1, 0.2 + (i >> 1) * 0.3), 'foot', { team, kcd: 0 });
+      k.cfg = Object.assign({}, k.cfg, { topCol: TEAM_COL[team] }); k.home = [k.x, k.y];
+    }
+  }
+  // 2) des élèves qui se baladent par deux (en bavardant)
+  const nPairs = outdoor ? 2 : 2;
+  for (let p = 0; p < nPairs; p++) {
+    const s = pick(spots), a = mk(s[0] * 16 + 8, s[1] * 16 + 12, 'pairL'), b = mk(a.x + 10, a.y, 'pairF');
+    b.mate = a; a.mate = b; a.slow = true;
+  }
+  // 3) sur les bancs de la cour
+  if (outdoor) {
+    const benches = []; for (let y = 1; y < m.h - 1; y++) for (let x = 1; x < m.w - 1; x++) if (m.get(x, y) === K.BENCH && m.get(x, y + 1) === K.FLOOR) benches.push([x, y]);
+    shuffle(benches).slice(0, 3).forEach(([x, y]) => { const k = mk(x * 16 + 8, y * 16 + 13, 'bench'); k.face = 0; k.noDoor = true; });
+  }
+}
+// ---------- le foot ----------
+function lifeFootBall(dt) {
+  const B = G.foot; if (!B) return; const f = B.f;
+  if (B.resetT > 0) { B.resetT -= dt; if (B.resetT <= 0) { B.x = (f.x0 + f.x1) / 2; B.y = (f.y0 + f.y1) / 2; B.vx = B.vy = 0; } return; }
+  B.x += B.vx * dt; B.y += B.vy * dt; const fr = Math.pow(0.35, dt); B.vx *= fr; B.vy *= fr;
+  B.vz -= 260 * dt; B.z = Math.max(0, B.z + B.vz * dt); if (B.z === 0 && B.vz < 0) B.vz = Math.abs(B.vz) > 40 ? -B.vz * 0.4 : 0;
+  const midY = (f.y0 + f.y1) / 2, gh = 14;
+  // but !
+  if ((B.x < f.x0 + 2 || B.x > f.x1 - 2) && Math.abs(B.y - midY) < gh) {
+    const team = B.x > f.x1 - 2 ? 0 : 1; B.score[team]++; B.resetT = 1.6;
+    const fans = G.kids.filter(k => k.beh === 'foot' && k.team === team); fans.forEach(k => hop(k, 120));
+    const sp = fans[0]; if (sp) { sp.bub = { text: pick(['BUUUT !! ⚽', 'GOOOAL !', 'Et c’est le but !', 'Trop fort !!']), t: 0, dur: 1.8 }; const d = dist(sp.x, sp.y, G.P.x, G.P.y) / 16; if (d < 12) { AU.babble(clamp(1 - d / 12, 0.1, 0.8), panOf(sp.x), true); AU.sfx('whistle', clamp(0.6 - d / 20, 0.05, 0.4)); } }
+    return;
+  }
+  if (B.x < f.x0) { B.x = f.x0; B.vx = Math.abs(B.vx) * 0.6; } if (B.x > f.x1) { B.x = f.x1; B.vx = -Math.abs(B.vx) * 0.6; }
+  if (B.y < f.y0) { B.y = f.y0; B.vy = Math.abs(B.vy) * 0.6; } if (B.y > f.y1) { B.y = f.y1; B.vy = -Math.abs(B.vy) * 0.6; }
+  // le joueur peut taper dans le ballon en passant
+  const P = G.P; if (P && !P.hidden && B.z < 4 && dist(P.x, P.y - 2, B.x, B.y) < 8 && P.moving) { const a = Math.atan2(B.y - P.y, B.x - P.x), sp = P.running ? 150 : 80; B.vx = Math.cos(a) * sp; B.vy = Math.sin(a) * sp; B.vz = P.running ? 70 : 20; footKickFx(B); }
+}
+function footKickFx(B) { const d = dist(B.x, B.y, G.P.x, G.P.y) / 16; if (d < 12) AU.foot('wood', 'adult', clamp(1 - d / 12, 0.05, 0.6) * 0.8, panOf(B.x)); }
+function lifeFoot(k, dt) {
+  const B = G.foot; if (!B) { k.moving = false; return; }
+  const f = B.f, mates = G.kids.filter(o => o.beh === 'foot' && o.team === k.team);
+  const chaser = mates.reduce((a, o) => dist(o.x, o.y, B.x, B.y) < dist(a.x, a.y, B.x, B.y) ? o : a, mates[0]);
+  let tx, ty, spd;
+  if (B.resetT > 0) { tx = k.home[0]; ty = k.home[1]; spd = 1.6 * 16; }
+  else if (k === chaser) { const goalX = k.team ? f.x0 : f.x1; tx = B.x - Math.sign(goalX - B.x) * 5; ty = B.y; spd = 2.9 * 16; }
+  else { tx = lerp(k.home[0], B.x, 0.35); ty = lerp(k.home[1], B.y, 0.25); spd = 2.2 * 16; }
+  const dx = tx - k.x, dy = ty - k.y, d = Math.hypot(dx, dy);
+  if (d > 3) { const st = Math.min(d, spd * dt), ox = k.x, oy = k.y; moveA(k, dx / d * st, dy / d * st, solidP, 4, 4); const mv = Math.hypot(k.x - ox, k.y - oy); k.moving = mv > 0.05; k.runK = spd > 2.5 * 16; k.dist = (k.dist || 0) + mv; k.anim = (k.anim || 0) + dt; k.face = faceFromAng(Math.atan2(dy, dx)); k.ang = Math.atan2(dy, dx); }
+  else { k.moving = false; k.face = faceFromAng(Math.atan2(B.y - k.y, B.x - k.x)); }
+  k.kcd = (k.kcd || 0) - dt;
+  if (k === chaser && B.resetT <= 0 && k.kcd <= 0 && B.z < 5 && dist(k.x, k.y - 2, B.x, B.y) < 9) {
+    const goalX = k.team ? f.x0 : f.x1, goalY = (f.y0 + f.y1) / 2 + rand(-12, 12), a = Math.atan2(goalY - B.y, goalX - B.x) + rand(-0.6, 0.6), sp = rand(70, 140);
+    B.vx = Math.cos(a) * sp; B.vy = Math.sin(a) * sp; B.vz = Math.random() < 0.3 ? rand(50, 90) : 10; k.kcd = rand(0.6, 1.1); hop(k, 70); footKickFx(B);
+  }
+}
+function drawFootBall(c) {
+  const B = G.foot; if (!B || B.resetT > 0.8) return;
+  c.fillStyle = 'rgba(0,0,0,0.25)'; c.beginPath(); c.ellipse(B.x, B.y + 1, 3, 1.4, 0, 0, 7); c.fill();
+  const y = B.y - 2 - B.z; c.fillStyle = '#ffffff'; c.beginPath(); c.arc(B.x, y, 2.4, 0, 7); c.fill();
+  c.fillStyle = '#222'; c.fillRect(Math.round(B.x) - 1, Math.round(y) - 1, 1, 1); c.fillRect(Math.round(B.x) + 1, Math.round(y), 1, 1);
+}
+// ---------- balades à deux ----------
+function lifePairF(k, dt) {
+  const a = k.mate; if (!a) { k.moving = false; return; }
+  const ang = a.moving ? a.ang || 0 : (k.sideA != null ? k.sideA : 0); if (a.moving) k.sideA = ang;
+  const tx = a.x + Math.cos(ang + Math.PI / 2) * 11, ty = a.y + Math.sin(ang + Math.PI / 2) * 6;
+  const dx = tx - k.x, dy = ty - k.y, d = Math.hypot(dx, dy);
+  if (d > 40) { const [kx, ky] = tileOf(k), [ax, ay] = tileOf(a); if (!k.path || k.pi >= k.path.length || (k.repT = (k.repT || 0) - dt) <= 0) { k.repT = 1; const p = astar(kx, ky, ax, ay, passTeach(false)); if (p) { k.path = p; k.pi = 0; } } followPath(k, 2.4 * 16, dt); return; }
+  if (d > 2) { const st = Math.min(d, (a.moving ? 2.2 : 1.4) * 16 * dt), ox = k.x, oy = k.y; moveA(k, dx / d * st, dy / d * st, solidP, 4, 4); const mv = Math.hypot(k.x - ox, k.y - oy); k.moving = mv > 0.05; k.dist = (k.dist || 0) + mv; k.anim = (k.anim || 0) + dt; k.face = a.moving ? a.face : faceFromAng(Math.atan2(a.y - k.y, a.x - k.x)); }
+  else { k.moving = false; k.face = a.moving ? a.face : faceFromAng(Math.atan2(a.y - k.y, a.x - k.x)); }
+  if (!a.moving && !k.moving) a.face = faceFromAng(Math.atan2(k.y - a.y, k.x - a.x));
+}
+// ---------- l'élève aux toilettes ----------
+const PIPI_SCARED = ['AAAH ! T’as failli me faire rater !', 'WOUAH ! Tu m’as fait peur !!', 'Oh nooon… à côté !', 'MAIS ÇA VA PAS ?!'];
+const PIPI_BUSY = ['Hé ! C’est occupé ! 😤', 'On frappe avant d’entrer…', 'Ça se fait pas de regarder !'];
+function gagsUpdate(dt) {
+  const m = G.m; if (!m || !m.npcGags) return;
+  const P = G.P, local = !(G.net && !(G.inf && G.inf.coop));
+  m.npcGags.forEach(g => {
+    if (g.bub) { g.bub.t += dt; if (g.bub.t > g.bub.dur) g.bub = null; }
+    g.cd -= dt; g.st -= dt;
+    const d = P && !P.hidden && !P.out ? dist(P.x, P.y, g.x, g.y) / 16 : 99;
+    if (g.state === 'busy') {
+      g.face = 1; g.moving = false; g.hz = 0;
+      if (local && g.cd <= 0) {
+        const fast = P.running && !(P.slip > 0) && !(P.small > 0);
+        if (fast && d < 2.8) gagScare(g);
+        else if (!fast && d < 1.2 && P.lastG !== 'sneak' && P.moving) { g.bub = { text: pick(PIPI_BUSY), t: 0, dur: 1.8 }; g.cd = 6; g.face = faceFromAng(Math.atan2(P.y - g.y, P.x - g.x)); g.state = 'look'; g.st = 1.4; }
+      }
+    } else if (g.st <= 0) { g.state = 'busy'; g.x = g.home[0]; g.y = g.home[1]; }
+    else if (g.state === 'scared' || g.state === 'look') { if (P) g.face = faceFromAng(Math.atan2(P.y - g.y, P.x - g.x)); }
+    g.vis = easyOn() || (G.eye && Math.hypot(g.x - G.eye[0], g.y - G.eye[1]) < visRAt(Math.atan2(g.y - G.eye[1], g.x - G.eye[0])) && los(G.eye[0], G.eye[1], g.x, g.y - 10));
+  });
+  // flaques : elles sèchent, et font glisser
+  m.puddles = (m.puddles || []).filter(p => G.time - p.t < 50);
+  m.puddles.forEach(p => {
+    p.r = Math.min(p.max, p.r + dt * 14);
+    if (P && !P.hidden && P.running && !(P.skidT > 0) && dist(P.x, P.y, p.x, p.y) < p.r + 2) {
+      P.skidT = 0.45; P.skv = [P.lastDir ? P.lastDir[0] * PL_RUN : 0, P.lastDir ? P.lastDir[1] * PL_RUN : 0]; AU.sfx('splash'); squash(P, 6);
+      if (!G.puddleTold) { G.puddleTold = true; toast('🤢 Beurk, ça glisse… et c’est pas de l’eau.', 2.2); }
+    }
+    const T = G.T;
+    if (T && !T.gone && (T.state === 'chase' || T.running) && !(T.slipT > 0) && dist(T.x, T.y, p.x, p.y) < p.r + 2 && (!G.net || (G.inf && G.inf.coop && G.inf.auth))) {
+      T.slipT = 1.6; AU.sfx('splash'); T.bubble = { text: pick(['WAAAH ! C’est quoi ça ?!', 'Ouh là là… ça glisse !', 'BEURK !']), t: 0, dur: 1.8 }; hop(T, 130);
+    }
+  });
+}
+function gagScare(g) {
+  const m = G.m; g.state = 'scared'; g.st = 2.6; g.cd = 7; hop(g, 140); squash(g, 6);
+  g.bub = { text: pick(PIPI_SCARED), t: 0, dur: 2.2 };
+  const d = dist(g.x, g.y, G.P.x, G.P.y) / 16;
+  AU.sfx('kidscream', clamp(1.1 - d / 10, 0.3, 1)); AU.babble(0.8, panOf(g.x), true);
+  makeNoise(g.x, g.y, 6, 'AAAH !', 'scream');
+  if (g.n < 3) { g.n++; m.puddles.push({ x: g.x + rand(-6, 6), y: g.y + 5 + rand(-1, 2), r: 1, max: rand(5, 7), t: G.time }); }
+}
+function drawGag(c, g) { drawSprite(c, g.cfg, null, g, {}); }
+function drawPuddles(c) {
+  (G.m && G.m.puddles || []).forEach(p => {
+    const a = clamp(1 - (G.time - p.t - 40) / 10, 0, 1); c.globalAlpha = a;
+    c.fillStyle = 'rgba(232,206,60,0.55)'; c.beginPath(); c.ellipse(p.x, p.y, p.r, p.r * 0.5, 0, 0, 7); c.fill();
+    c.fillStyle = 'rgba(255,246,170,0.6)'; c.fillRect(Math.round(p.x - p.r * 0.4), Math.round(p.y - p.r * 0.2), 2, 1);
+    c.globalAlpha = 1;
+  });
+}
+
 // ================= MOTEUR DE JEU =================
 const PL_SNEAK = 2.3 * 16, PL_RUN = 4.4 * 16;
 const G = {
@@ -5245,6 +5547,7 @@ function startLevel(idx, cfg, setup, opts) {
     L.kidSpots = L.itemSpots.filter(([x, y]) => { const f = L.m.fs[y * L.m.w + x]; return f === FS.ASPHALT || f === FS.GRASS || f === FS.SAND; });
   } else if (opts && opts.robots) { spawnItems(); spawnRobots(L.robots || 6); }
   else { spawnItems(); spawnKids(L.kids || 0); }
+  if (!setup) lifeSetup();
   G.tasks = (setup && setup.tasks ? setup.tasks.map(i => L.taskPool[i]).filter(Boolean) : shuffle(L.taskPool.slice()).slice(0, 3)).map(t => Object.assign({ def: TASKDEFS[t.id], done: false, room: L.m.roomAt(t.x, t.y) }, t)); G.tasksDone = 0; G.tasksRemote = 0;
   { const keys = []; for (let y = 0; y < L.m.h; y++) for (let x = 0; x < L.m.w; x++) { const key = y * L.m.w + x; if (!SEARCHABLE_KINDS.has(L.m.get(x, y)) || L.candAt.has(key) || G.tasks.some(t => t.x === x && t.y === y)) continue; if ([[0, 1], [0, -1], [1, 0], [-1, 0]].some(([dx, dy]) => L.reach[(y + dy) * L.m.w + x + dx] >= 0 && L.m.get(x + dx, y + dy) === K.FLOOR)) keys.push(key); } G.disguiseAt = new Set(shuffle(keys).slice(0, 2)); }
   spawnPigeons(); FX.reset(); G.camX = null;
@@ -5416,6 +5719,8 @@ function updateTeacher(dt) {
   if (T.state === 'scared') { teacherScared(T, dt); return; }
   // un squishy lui a explosé à la figure : il ne voit plus rien
   if (T.state === 'blind') { teacherBlind(T, dt); return; }
+  // il a glissé dans une flaque…
+  if (T.slipT > 0) { T.slipT -= dt; T.moving = false; T.running = false; return; }
   if (T.state === 'count') {
     T.st -= dt; T.moving = false;
     const n = 3 - Math.ceil(T.st - 0.3);
@@ -5592,6 +5897,9 @@ function updateKids(dt) {
       case 'evac': infEvacStep(k, dt); break;
       case 'sit': case 'crowd': k.moving = false; if (k.bub) { k.bub.t += dt; if (k.bub.t > k.bub.dur) k.bub = null; } break;
       case 'jump': k.moving = false; k.face = 0; break;
+      case 'foot': lifeFoot(k, dt); break;
+      case 'pairF': lifePairF(k, dt); break;
+      case 'bench': k.moving = false; k.face = 0; if (k.bub) { k.bub.t += dt; if (k.bub.t > k.bub.dur) k.bub = null; } break;
       case 'ball': if (G.ball) { const o = G.kids[G.ball.from === i ? G.ball.to : G.ball.from]; k.face = o.x > k.x ? 2 : 3; } k.moving = false; break;
       case 'robot': {
         if (!k.route) break;
@@ -6032,7 +6340,7 @@ function update(dt) {
     if (AU.songName === 'chase' && G.T.state !== 'chase' && !['tired'].includes(G.T.state)) AU.play('sneak');
     if (AU.songName == null || AU.songName === 'menu') AU.play('sneak');
     }
-    if (G.mode === 'play') { npcChatter(dt); cuteTick(dt); }
+    if (G.mode === 'play') { npcChatter(dt); cuteTick(dt); lifeFootBall(dt); gagsUpdate(dt); }
   } else if (G.mode === 'escape') {
     G.escT += dt; const P = G.P, t = Math.min(1, G.escT / 0.8);
     const ex0 = P.x, ey0 = P.y; P.x = lerp(G.escFrom[0], G.escTo[0], t); P.y = lerp(G.escFrom[1], G.escTo[1], t); P.moving = t < 1; P.running = true; P.dist = (P.dist || 0) + Math.hypot(P.x - ex0, P.y - ey0) + dt * 30; P.skidT = 0;
@@ -6940,7 +7248,10 @@ function renderGame(dt) {
   G.kids.forEach(k => { if (k.vis && k.isWatcher && !k.gone && k.state !== 'evac') { ctx.globalAlpha = 0.75; drawCone(ctx, k); ctx.globalAlpha = 1; } });
   if (!G.L.outdoor) { for (const mo of FX.motes) { const a = Math.sin(mo.t / mo.life * Math.PI) * (0.35 + 0.25 * Math.sin(G.time * 3 + mo.ph)); ctx.fillStyle = `rgba(255,240,200,${a})`; ctx.fillRect(mo.x, mo.y, 0.8, 0.8); } }
   // 4) entités triées par profondeur
+  drawPuddles(ctx);
   const ents = [];
+  (G.m.npcGags || []).forEach(g => { if (g.vis) ents.push([g.y, () => occlude(ctx, g, () => drawGag(ctx, g))]); });
+  if (G.foot && G.eye && (easyOn() || (Math.hypot(G.foot.x - G.eye[0], G.foot.y - G.eye[1]) < visRAt(Math.atan2(G.foot.y - G.eye[1], G.foot.x - G.eye[0])) && los(G.eye[0], G.eye[1], G.foot.x, G.foot.y - 2)))) ents.push([G.foot.y, () => drawFootBall(ctx)]);
   G.items.forEach(it => ents.push([it.y, () => drawItemW(ctx, it)]));
   G.apples.forEach(a => ents.push([a.y, () => { const w = Math.sin(G.time * 4) * 0.12; ctx.save(); ctx.translate(a.x, a.y - 6); ctx.rotate(w); ctx.drawImage(itemCanvas('apple'), -7, -7); ctx.restore(); }]));
   G.kids.forEach(k => {
@@ -6948,7 +7259,7 @@ function renderGame(dt) {
     ents.push([k.y, () => occlude(ctx, k, () => {
       const bob = k.beh === 'jump' ? -Math.abs(Math.sin(G.time * 6 + k.ph)) * 5 : 0;
       if (k.beh === 'jump') { const up = Math.sin(G.time * 6 + k.ph) > 0; ctx.strokeStyle = '#e43b44'; ctx.lineWidth = 0.9; ctx.beginPath(); if (up) ctx.ellipse(k.x, k.y - 2, 8, 3, 0, 0.1, Math.PI - 0.1); else ctx.ellipse(k.x, k.y - 22 + bob, 8, 4, 0, Math.PI + 0.1, -0.1); ctx.stroke(); }
-      if (k.beh === 'sit') { drawSprite(ctx, k.cfg, null, k, { sy: 0.86, bob: 2, noShadow: true }); if (k.sixT > 0) drawSixSeven(ctx, k, 3); return; }
+      if (k.beh === 'sit' || k.beh === 'bench') { drawSprite(ctx, k.cfg, null, k, { sy: 0.86, bob: 2, noShadow: true }); if (k.sixT > 0) drawSixSeven(ctx, k, 3); return; }
       drawSprite(ctx, k.cfg, k.v || null, k, { bob, sy: k.beh === 'jump' && bob > -1 ? 0.9 : 1 });
       if (k.sixT > 0) drawSixSeven(ctx, k, 0);
       if (k.isWatcher && k.markT > 0 && k.mark) txt(ctx, k.mark, k.x, k.y - 40, 9, k.mark === '!' ? '#e43b44' : '#ffd23f');
@@ -7034,6 +7345,7 @@ function drawTeacher(c, T, extra) {
   if (T.state === 'tired') { o.sy = (o.sy || 1) * (0.86 + Math.sin(G.time * 10) * 0.03); o.rot = 0.12 * (T.face === 3 ? -1 : 1); }
   if (T.state === 'check') o.dx = Math.sin(G.time * 30) * 0.8;
   if (T.state === 'count') o.dx = Math.sin(G.time * 20) * 0.3;
+  if (T.slipT > 0) o.rot = (T.slipT > 0.5 ? Math.min(1.35, (1.6 - T.slipT) * 5) : T.slipT * 2.7) * (T.face === 3 ? -1 : 1);
   const bl = isBlind(T); if (bl) { v = Object.assign({}, pr.v, { eyes: 6 }); Object.assign(o, { face: 0, noBlink: true, rot: Math.sin(G.time * 5) * 0.12, hz: Math.abs(Math.sin(G.time * 6)) * 1.2 }); }
   drawSprite(c, pr.cfg, v, T, o);
   if (bl) drawBlindGoo(c, T);
@@ -7147,7 +7459,7 @@ function drawOverlay() {
     txt(c, '▼', qx, qy + bob, Math.round(12 * d), '#3fd06a'); txt(c, 'TOI', qx, qy - 13 * d + bob, Math.round(8 * d), '#ffffff');
   }
   // bulles des élèves (« C'est pas moi ! »)
-  G.kids.forEach(k => {
+  G.kids.concat(G.m.npcGags || []).forEach(k => {
     if (!k.bub || !k.vis) return;
     const b = k.bub, al = Math.min(1, (b.dur - b.t) * 4), sc = b.t < 0.16 ? easeOutBack(b.t / 0.16) : 1, F2 = Math.round(8 * d);
     c.font = F2 + 'px ' + FONT; const w = c.measureText(b.text).width + F2 * 1.4, h = F2 * 2;
