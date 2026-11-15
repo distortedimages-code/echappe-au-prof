@@ -387,6 +387,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
 .tPlay .go{font-style:normal;font-family:'Press Start 2P',monospace;font-size:16px;background:var(--ink);color:var(--yel);border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex:none;animation:goPulse 1.1s ease-in-out infinite}
 @keyframes goPulse{50%{transform:scale(1.14)}}
 .tInf{background:#ff8a3a}.tMulti{background:var(--pink);color:#fff}.tChars{background:var(--cyan)}.tSquish{background:#ffb3d6}.tHist{background:#e8b07a}.tEn{background:#8fc4ff}
+.tRefresh{flex-direction:row;align-items:center;gap:8px;background:var(--panel2);color:var(--paper)}.tRefresh .sv{font-size:26px;padding-left:12px}.tRefresh .tl{padding:7px 9px}.tRefresh .tl b{color:#9fe0ff}
 .tSave{flex-direction:row;align-items:center;gap:6px;background:var(--panel2);color:var(--paper)}.tSave .sv{font-size:30px;padding-left:12px}.tSave .tl b{color:var(--yel)}
 
 /* ---- solo surveillant ---- */
@@ -470,6 +471,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
         <button class="tile tChars" id="bChars"><canvas data-ill="chars" width="88" height="56"></canvas><span class="tl"><b>Personnages</b><small>Crée tes élèves</small></span></button>
         <button class="tile tSquish" id="bSquish"><canvas data-ill="squish" width="88" height="56"></canvas><span class="tl"><b>Squishies</b><small id="tSqN">Ta collection</small></span></button>
         <button class="tile tSave" id="bSave"><span class="sv">💾</span><span class="tl"><b>Sauvegarde</b><small>Un code pour garder tes squishies</small></span></button>
+        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du __BUILD__</small></span></button>
       </div>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>

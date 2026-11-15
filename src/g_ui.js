@@ -98,6 +98,14 @@ const Input = {
 
 // ================= INTERFACE =================
 const $ = id => document.getElementById(id);
+// ---------- recharger le jeu (pratique quand il est épinglé comme une app sur iPad : pas de bouton du navigateur) ----------
+const GAME_BUILD = '__BUILD__';
+function refreshGame() {
+  try { sessionStorage.setItem('nds_refresh', '1'); } catch (e) { }
+  $('tVer').textContent = '⏳ Rechargement…'; try { AU.sfx('blip'); } catch (e) { }
+  // tout est déjà sauvegardé au fil de l'eau (squishies, personnages, progrès) : on peut recharger sans rien perdre
+  setTimeout(() => { try { location.reload(); } catch (e) { location.href = location.href; } }, 180);
+}
 const UI = {
   chars: store.get('nds_chars', []), cur: store.get('nds_cur', 0),
   prog: (() => {
@@ -174,7 +182,7 @@ const UI = {
     const tap = (id, f) => $(id).addEventListener('click', e => { AU.init(); AU.sfx('blip'); f(e); });
     tap('bPlay', () => { if (!this.chars.length) this.openCreator(-1, 'levels'); else this.openLevels(); });
     tap('bChars', () => this.openChars('title'));
-    tap('bSquish', () => SqAlbum.open('title')); tap('bQuiz', () => Quiz.open('hist')); tap('bQuizEn', () => Quiz.open('en')); tap('bGuard', () => Solo.levels()); tap('bSave', () => Save.open('title')); tap('bSqSave', () => Save.open('squish')); tap('bSqBack', () => this.openTitle());
+    tap('bSquish', () => SqAlbum.open('title')); tap('bQuiz', () => Quiz.open('hist')); tap('bQuizEn', () => Quiz.open('en')); tap('bGuard', () => Solo.levels()); tap('bRefresh', () => refreshGame()); tap('bSave', () => Save.open('title')); tap('bSqSave', () => Save.open('squish')); tap('bSqBack', () => this.openTitle());
     tap('bMulti', () => Multi.open());
     tap('bInf', () => { AU.init(); if (!this.chars.length) this.openCreator(-1, 'inf'); else this.launchInf(); });
     tap('bPlan', () => this.openPlan());
@@ -214,6 +222,7 @@ const UI = {
   openTitle() { G.mode = 'menu'; this.show('sTitle'); AU.play('menu'); this.titleInfo(); },
   // les petits textes des tuiles du menu
   titleInfo() {
+    { let fresh = false; try { fresh = sessionStorage.getItem('nds_refresh') === '1'; sessionStorage.removeItem('nds_refresh'); } catch (e) { } if (fresh) $('tVer').textContent = '✅ Rechargé · version du ' + GAME_BUILD; }
     $('tSqN').textContent = SqCol.count() + ' / ' + SQUISHIES.length + ' à collectionner';
     const rec = k => { const b = (store.get(k, {}) || {}).best || {}, v = Object.values(b); return v.length ? Math.max(...v) : null; };
     const h = rec('nds_quiz'), e = rec('nds_quiz_en');
