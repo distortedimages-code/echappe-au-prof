@@ -503,6 +503,7 @@ function drawOverlay() {
   for (const q of G.cues) {
     const a = clamp(1 - q.t / q.life, 0, 1) * (q.t < 0.1 ? q.t / 0.1 : 1);
     let [sx, sy] = toScreen(q.x, q.y); const [cx, cy, off] = clampEdge(sx, sy);
+    if (off && q.type === 'kid') continue;   // les petits mots des élèves : seulement s'ils sont à l'écran
     c.globalAlpha = a;
     if (off) { const an = Math.atan2(sy - cy, sx - cx); drawArrow(c, cx, cy, an, q.type === 'kid' ? '#c8c0d8' : '#ffb347', 7 * d); sx = cx - Math.cos(an) * 16 * d; sy = cy - Math.sin(an) * 16 * d; }
     if (q.type === 'step') {
@@ -593,28 +594,36 @@ function drawOverlay() {
       }
     });
   }
-  // bulle du prof
+  // bulle du prof : au-dessus de lui s'il est à l'écran ; sinon (hors écran ou caché), une bulle sans pointe
+  // posée sur le bord de l'écran, du côté où il se trouve sur la carte
   if (T.bubble) {
     const heard = !(G.tVis || G.mode === 'caught');
     const dd = dist(T.x, T.y, P.x, P.y) / 16;
     if (!heard || dd < 20) {
       c.font = F + 'px ' + FONT;
-      const maxW = Math.min(V.W * 0.62, 230 * d);
-      const arrow = !heard ? '' : (() => { const ax = T.x - P.x, ay = T.y - P.y; return Math.abs(ax) > Math.abs(ay) ? (ax > 0 ? '➡️ ' : '⬅️ ') : (ay > 0 ? '⬇️ ' : '⬆️ '); })();
-      const lines = wrap(c, (heard ? '🔊 ' + arrow + (T.prof && T.prof.name ? T.prof.name + ' : ' : '') : '') + T.bubble.text, maxW);
-      const lh = F * 1.55, w = Math.max(...lines.map(l => c.measureText(l).width)) + F * 1.6, h = lines.length * lh + F * 1.1;
-      let [bx, by] = toScreen(T.x, T.y - 40 - (T.hz || 0)); by -= h / 2 + (T.markT > 0 ? 22 * d : 0);
       const e = screenEdges();
-      if (heard) { bx = V.W / 2; by = e.t + h / 2 + 6 * d; }   // on l'entend sans le voir : sous-titre fixe, pas une bulle qui se balade
-      bx = clamp(bx, e.l + w / 2, e.r - w / 2); by = clamp(by, e.t + h / 2, e.b - h / 2);
+      const [ax, ay] = toScreen(T.x, T.y - 40 - (T.hz || 0));
+      const onScr = !heard && ax > e.l && ax < e.r && ay > e.t + 10 * d && ay < e.b;
+      // hors écran : bulle plus étroite, pour qu'elle puisse vraiment coller au bord du côté du prof
+      const maxW = onScr ? Math.min(V.W * 0.62, 230 * d) : Math.min((e.r - e.l) * 0.44, 170 * d);
+      const name = T.prof && T.prof.name ? T.prof.name : '';
+      const lines = wrap(c, (onScr ? '' : (heard ? '🔊 ' : '') + (name ? name + ' : ' : '')) + T.bubble.text, maxW);
+      const lh = F * 1.55, w = Math.max(...lines.map(l => c.measureText(l).width)) + F * 1.6, h = lines.length * lh + F * 1.1;
+      let bx, by;
+      if (onScr) { bx = clamp(ax, e.l + w / 2, e.r - w / 2); by = clamp(ay - h / 2 - 9 * d - (T.markT > 0 ? 22 * d : 0), e.t + h / 2, e.b - h / 2); }
+      else {
+        const cx = (e.l + e.r) / 2, cy = (e.t + e.b) / 2, hw = (e.r - e.l) / 2 - w / 2 - 4 * d, hh = (e.b - e.t) / 2 - h / 2 - 4 * d;
+        const dx = ax - cx, dy = ay - cy, t = Math.min(1, hw / Math.max(1e-3, Math.abs(dx)), hh / Math.max(1e-3, Math.abs(dy)));
+        bx = cx + dx * t; by = cy + dy * t;
+      }
       const al = Math.min(1, (T.bubble.dur - T.bubble.t) * 3), sc = T.bubble.t < 0.18 ? easeOutBack(T.bubble.t / 0.18) : 1;
-      c.save(); c.translate(bx, by + (heard ? Math.sin(G.time * 3) * 1.5 * d : 0)); c.scale(sc, sc);
-      c.globalAlpha = heard ? al * 0.94 : al;
+      c.save(); c.translate(bx, by); c.scale(sc, sc);
+      c.globalAlpha = onScr ? al : al * 0.94;
       c.fillStyle = 'rgba(20,8,40,0.45)'; rrect(c, -w / 2 + 3 * d, -h / 2 + 4 * d, w, h, 7 * d); c.fill();
       c.fillStyle = heard ? 'rgba(40,28,70,0.95)' : '#ffffff'; c.strokeStyle = heard ? '#ffb347' : '#1a1028'; c.lineWidth = 2.5 * d;
       if (heard) { c.setLineDash([5 * d, 4 * d]); c.lineDashOffset = -G.time * 20 * d; }
       rrect(c, -w / 2, -h / 2, w, h, 7 * d); c.fill(); c.stroke(); c.setLineDash([]);
-      if (!heard) { c.fillStyle = '#ffffff'; c.strokeStyle = '#1a1028'; c.beginPath(); c.moveTo(-6 * d, h / 2 - 1); c.lineTo(6 * d, h / 2 - 1); c.lineTo(0, h / 2 + 9 * d); c.closePath(); c.fill(); c.beginPath(); c.moveTo(-6 * d, h / 2); c.lineTo(0, h / 2 + 9 * d); c.lineTo(6 * d, h / 2); c.stroke(); }
+      if (onScr) { const tx = clamp(ax - bx, -w / 2 + 10 * d, w / 2 - 10 * d); c.fillStyle = '#ffffff'; c.strokeStyle = '#1a1028'; c.beginPath(); c.moveTo(tx - 6 * d, h / 2 - 1); c.lineTo(tx + 6 * d, h / 2 - 1); c.lineTo(tx, h / 2 + 9 * d); c.closePath(); c.fill(); c.beginPath(); c.moveTo(tx - 6 * d, h / 2); c.lineTo(tx, h / 2 + 9 * d); c.lineTo(tx + 6 * d, h / 2); c.stroke(); }
       c.fillStyle = heard ? '#ffe0b0' : '#1a1028'; c.textAlign = 'center'; c.textBaseline = 'middle';
       lines.forEach((l, i) => c.fillText(l, 0, -h / 2 + F * 0.55 + lh * (i + 0.5)));
       c.restore(); c.globalAlpha = 1;
