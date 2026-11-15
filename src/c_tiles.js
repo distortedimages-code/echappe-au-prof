@@ -151,7 +151,7 @@ function drawFurniture(c, k, px, py, tx, ty, m, L) {
     case K.TRASH: R(4, 4, 8, 10, '#3e8948'); R(3, 3, 10, 2, '#2f6b37'); R(6, 6, 1, 6, '#2f6b37'); R(9, 6, 1, 6, '#2f6b37'); R(5, 14, 6, 1, '#1f4a25'); if (h > 0.4) { R(6, 1, 3, 2, '#ffffff'); R(9, 2, 2, 1, '#fec43a'); } break;
     case K.PLANT: R(5, 10, 6, 5, '#c0603a'); R(4, 9, 8, 2, '#d97a4a'); R(3, 3, 4, 5, '#3e8948'); R(9, 2, 4, 6, '#3e8948'); R(6, 0, 4, 9, '#63c74d'); R(4, 6, 2, 1, '#63c74d'); R(11, 4, 1, 2, '#8fd86e'); R(7, 1, 1, 3, '#8fd86e'); break;
     case K.BUSH: R(1, 4, 14, 11, '#3e8948'); R(2, 2, 12, 3, '#4fa04a'); R(0, 7, 16, 6, '#3e8948'); R(4, 4, 3, 2, '#63c74d'); R(9, 6, 3, 2, '#63c74d'); R(3, 10, 2, 2, '#63c74d'); R(1, 14, 14, 1, '#2a5e30'); if (h > 0.6) { R(11, 10, 1, 1, '#ff6fb5'); R(5, 7, 1, 1, '#fff6a0'); } break;
-    case K.TREE: R(6, 9, 4, 7, '#7a4b2a'); R(7, 9, 1, 7, '#8f5c34'); c.fillStyle = '#2f6b37'; c.fillRect(px - 1, py - 4, 18, 13); c.fillRect(px + 1, py - 8, 14, 18); R(1, -7, 14, 15, '#3e8948'); R(0, -3, 16, 9, '#3e8948'); R(3, -6, 4, 3, '#63c74d'); R(9, -4, 3, 2, '#63c74d'); R(2, 1, 3, 2, '#63c74d'); R(11, 2, 2, 2, '#4fa04a'); break;
+    case K.TREE: c.fillStyle = 'rgba(10,6,20,0.28)'; c.beginPath(); c.ellipse(px + 8, py + 15, 8, 2.6, 0, 0, 7); c.fill(); drawTree(c, px, py); break;
     case K.BENCH: R(1, 5, 14, 2, '#b07a45'); R(1, 8, 14, 2, '#b07a45'); R(1, 5, 14, 1, '#cf9a60'); R(2, 10, 1, 4, '#555'); R(13, 10, 1, 4, '#555'); break;
     case K.SLIDE: R(3, 0, 10, 4, '#e43b44'); R(4, 4, 8, 12, '#fec43a'); for (let i = 6; i < 16; i += 3) R(4, i, 8, 1, '#f77622'); R(3, 4, 1, 12, '#d0d6e0'); R(12, 4, 1, 12, '#d0d6e0'); R(5, 1, 6, 1, '#ff6f6f'); break;
     case K.CABANE: R(1, 5, 14, 11, '#c08a54'); for (let i = 7; i < 16; i += 3) R(1, i, 14, 1, '#a8743f'); R(6, 9, 4, 7, '#5a351c'); c.fillStyle = '#e43b44'; for (let i = 0; i < 6; i++) c.fillRect(px + 2 - i + 2, py - 3 + i, 12 + i * 2 - 4, 1); R(0, 2, 16, 3, '#c62828'); R(10, 7, 3, 2, '#8fd3ff'); break;
@@ -209,6 +209,26 @@ function drawFloorDecor(c, d) {
     default: drawFloorDecorX(c, d, px, py);
   }
 }
+// un arbre vu de 3/4 : le feuillage dépasse sur la case du dessus (on passe derrière)
+function drawTree(c, px, py) {
+  const R = (a, b, w, h, col) => { c.fillStyle = col; c.fillRect(px + a, py + b, w, h); };
+  R(6, 5, 4, 11, '#7a4b2a'); R(7, 5, 1, 11, '#9a6a3c'); R(9, 6, 1, 10, '#5a351c'); R(5, 14, 6, 2, '#5a351c');
+  R(-2, -9, 20, 14, '#245a2e'); R(0, -14, 16, 21, '#245a2e'); R(2, -16, 12, 3, '#245a2e');
+  R(-1, -10, 18, 12, '#2f6b37'); R(1, -14, 14, 19, '#2f6b37');
+  R(0, -12, 15, 11, '#3e8948'); R(2, -15, 11, 6, '#3e8948'); R(-1, -7, 8, 7, '#3e8948'); R(9, -6, 8, 6, '#3e8948');
+  R(3, -14, 5, 3, '#4fa04a'); R(10, -11, 4, 3, '#4fa04a'); R(1, -6, 4, 3, '#4fa04a'); R(11, -3, 4, 2, '#4fa04a');
+  R(4, -14, 2, 1, '#63c74d'); R(11, -11, 2, 1, '#63c74d'); R(2, -6, 2, 1, '#63c74d'); R(6, -9, 2, 1, '#63c74d');
+  R(-1, 2, 18, 2, '#1d4a26'); R(1, 4, 14, 2, '#1d4a26');
+}
+// ce qui dépasse vers le haut et cache ce qui passe derrière : redessiné par-dessus, trié avec les personnages
+const FRONT_KINDS = { [K.TREE]: { x: -2, y: -16, w: 20, h: 32 }, [K.CABANE]: { x: 0, y: -3, w: 16, h: 19 } };
+const FRONT_CACHE = {};
+function frontSprite(k) {
+  if (FRONT_CACHE[k]) return FRONT_CACHE[k];
+  const f = FRONT_KINDS[k], [cv, c] = mkCanvas(f.w, f.h);
+  if (k === K.TREE) drawTree(c, -f.x, -f.y); else drawFurniture(c, k, -f.x, -f.y, 0, 0, { get: () => -1 }, null);
+  return (FRONT_CACHE[k] = cv);
+}
 const OVERHANG = 9;
 const TALL_KINDS = new Set([K.WALL, K.LOCKER, K.ARMOIRE, K.SHELF, K.STALL, K.COPIER, K.PILLAR, K.X_WINDOW, K.X_DOOR, K.X_ELEV]);
 function isWallish(k) { return k === K.WALL || k === K.X_WINDOW || k === K.X_DOOR || k === K.X_ELEV || k === K.LOCKER; }
@@ -224,6 +244,7 @@ function renderMapCanvas(L) {
   m.fdecor.forEach(d => drawFloorDecor(c, d));
   aoPass(c, m);
   // 3) murs + objets (de haut en bas)
+  L.fronts = [];
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
     const k = m.get(x, y), px = x * 16, py = y * 16;
     const below = m.get(x, y + 1);
@@ -233,6 +254,7 @@ function renderMapCanvas(L) {
     if (k === K.X_WINDOW || k === K.X_DOOR || k === K.X_ELEV || (k === K.LOCKER && m.get(x, y - 1) === K.WALL && !KP[m.get(x, y + 1)].solid)) drawWallTile(c, px, py, m.ws[y * m.w + x], true, x, y);
     if (k === K.X_HOLE && !(m.get(x, y - 1) === K.FENCE || m.get(x, y + 1) === K.FENCE)) drawWallTile(c, px, py, m.ws[y * m.w + x], true, x, y);
     drawFurniture(c, k, px, py, x, y, m, L);
+    const fk = FRONT_KINDS[k]; if (fk) L.fronts.push({ k, x: px + fk.x, y: py + fk.y, w: fk.w, h: fk.h, base: py + 15 });
   }
   // 4) décor mural
   m.decor.forEach(d => { const w = d.w || 1; for (let i = 0; i < w; i++) { if (isWallish(m.get(d.x + i, d.y + 1)) || m.get(d.x + i, d.y) !== K.WALL) continue; drawWallDecor(c, (d.x + i) * 16, d.y * 16, d, i); } });

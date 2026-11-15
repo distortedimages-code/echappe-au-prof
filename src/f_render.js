@@ -344,8 +344,10 @@ function renderGame(dt) {
   const ents = [];
   (G.m.npcGags || []).forEach(g => { if (g.vis) ents.push([g.y, () => occlude(ctx, g, () => drawGag(ctx, g))]); });
   if (G.foot && regionVisible(G.foot.x, G.foot.y)) ents.push([G.foot.y, () => drawFootBall(ctx)]);
-  G.items.forEach(it => ents.push([it.y, () => drawItemW(ctx, it)]));
-  G.apples.forEach(a => ents.push([a.y, () => { const w = Math.sin(G.time * 4) * 0.12; ctx.save(); ctx.translate(a.x, a.y - 6); ctx.rotate(w); ctx.drawImage(itemCanvas('apple'), -7, -7); ctx.restore(); }]));
+  // un objet par terre juste derrière un arbre resterait caché : on le garde visible
+  const behindFront = (x, y) => { const k = G.m.get(Math.floor(x / 16), Math.floor(y / 16) + 1); return FRONT_KINDS[k] ? y + 24 : y; };
+  G.items.forEach(it => ents.push([behindFront(it.x, it.y), () => drawItemW(ctx, it)]));
+  G.apples.forEach(a => ents.push([behindFront(a.x, a.y), () => { const w = Math.sin(G.time * 4) * 0.12; ctx.save(); ctx.translate(a.x, a.y - 6); ctx.rotate(w); ctx.drawImage(itemCanvas('apple'), -7, -7); ctx.restore(); }]));
   G.kids.forEach(k => {
     if (!k.vis) return;
     ents.push([k.y, () => occlude(ctx, k, () => {
@@ -393,6 +395,9 @@ function renderGame(dt) {
     const a = G.kids[G.ball.from], b = G.kids[G.ball.to];
     if (a && b && (a.vis || b.vis)) { const t = G.ball.t, bx = lerp(a.x, b.x, t), by = lerp(a.y, b.y, t); ents.push([by, () => { const h = Math.sin(Math.PI * t) * 14 + 10; ctx.fillStyle = 'rgba(10,6,20,0.3)'; ctx.beginPath(); ctx.ellipse(bx, by, 2.2, 0.9, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#f77622'; ctx.beginPath(); ctx.arc(bx, by - h, 2.2, 0, 7); ctx.fill(); ctx.fillStyle = '#ffb070'; ctx.fillRect(bx - 1, by - h - 1.5, 1, 1); }]); }
   }
+  // arbres, cabane… : redessinés à leur profondeur, pour cacher qui passe derrière
+  { const x0 = ci - 24, x1 = ci + lw + 24, y0 = cj - 24, y1 = cj + lh + 40;
+    (G.L.fronts || []).forEach(f => { if (f.x > x1 || f.x + f.w < x0 || f.y > y1 || f.y + f.h < y0) return; ents.push([f.base, () => ctx.drawImage(frontSprite(f.k), f.x, f.y)]); }); }
   ents.sort((a, b) => a[0] - b[0]).forEach(e => e[1]());
   if (P.hidden && viewerA() === P) drawEyes(ctx, P.hidden);
   if (G.inf && G.inf.guard) { const Q2 = G.T2; if (Q2 && Q2.fl === G.inf.cur && Q2.x > -9000) { txt(ctx, Q2.prof.name, Q2.x, Q2.y - 44, 6, '#7ff0ff'); if (Q2.bubble) txt(ctx, Q2.bubble.text, Q2.x, Q2.y - 52, 6, '#ffffff'); } G.inf.fugs.forEach(f => { if (f.vis && f.bub) txt(ctx, f.bub.text, f.x, f.y - 30, 6, '#ffe6a0'); }); }
