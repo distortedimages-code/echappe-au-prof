@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Échappe au prof ! · Notre-Dame de Sion</title>
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="Échappe au prof">
+<meta name="theme-color" content="#22163f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
@@ -471,7 +476,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
         <button class="tile tChars" id="bChars"><canvas data-ill="chars" width="88" height="56"></canvas><span class="tl"><b>Personnages</b><small>Crée tes élèves</small></span></button>
         <button class="tile tSquish" id="bSquish"><canvas data-ill="squish" width="88" height="56"></canvas><span class="tl"><b>Squishies</b><small id="tSqN">Ta collection</small></span></button>
         <button class="tile tSave" id="bSave"><span class="sv">💾</span><span class="tl"><b>Sauvegarde</b><small>Un code pour garder tes squishies</small></span></button>
-        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 15 nov. · 17h46</small></span></button>
+        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 15 nov. · 17h47</small></span></button>
       </div>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
@@ -10697,7 +10702,7 @@ const Input = {
 // ================= INTERFACE =================
 const $ = id => document.getElementById(id);
 // ---------- recharger le jeu (pratique quand il est épinglé comme une app sur iPad : pas de bouton du navigateur) ----------
-const GAME_BUILD = '15 nov. · 17h46';
+const GAME_BUILD = '15 nov. · 17h47';
 function refreshGame() {
   try { sessionStorage.setItem('nds_refresh', '1'); } catch (e) { }
   $('tVer').textContent = '⏳ Rechargement…'; try { AU.sfx('blip'); } catch (e) { }
