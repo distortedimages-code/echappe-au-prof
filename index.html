@@ -2826,10 +2826,36 @@ const Net = {
       add('peerjs.min.js', () => res(), () => add('https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js', () => res(), () => rej(new Error('lib'))));
     });
   },
+  // serveurs pour se trouver à travers les box et la 4G/5G : STUN (adresse publique) + relais TURN si le direct est bloqué
+  // RELAY : relais perso (ex. ExpressTURN) — vide tant qu'on n'en a pas ; on peut aussi en coller un via ?turn=…&tu=…&tp=…
+  RELAY: null,
+  iceServers() {
+    const q = new URLSearchParams(location.search), list = [
+      { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+      { urls: 'stun:stun.cloudflare.com:3478' },
+      { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478', 'turn:eu-0.turn.peerjs.com:3478?transport=tcp'], username: 'peerjs', credential: 'peerjsp' }
+    ];
+    let mine = this.RELAY;
+    try { const st = JSON.parse(localStorage.getItem('nds_turn') || 'null'); if (st && st.urls) mine = st; } catch (e) { }
+    if (q.get('turn')) mine = { urls: q.get('turn').split(','), username: q.get('tu') || '', credential: q.get('tp') || '' };
+    if (mine) list.unshift(mine);
+    return list;
+  },
   opts() {
-    const q = new URLSearchParams(location.search), o = { debug: 0 };
+    const q = new URLSearchParams(location.search), o = { debug: 0, config: { iceServers: this.iceServers(), sdpSemantics: 'unified-plan' } };
     if (q.get('peerhost')) { o.host = q.get('peerhost'); o.port = +q.get('peerport') || 9000; o.path = q.get('peerpath') || '/'; o.secure = false; o.config = { iceServers: [] }; }
     return o;
+  },
+  // direct ou par le relais ? (affiché dans le salon, pratique pour comprendre un souci de 5G)
+  async linkKind() {
+    try {
+      const pc = this.conn && this.conn.peerConnection; if (!pc) return '';
+      const st = await pc.getStats(); let pair = null, loc = {};
+      st.forEach(r => { if (r.type === 'transport' && r.selectedCandidatePairId) pair = st.get(r.selectedCandidatePairId); });
+      if (!pair) st.forEach(r => { if (r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded') pair = r; });
+      if (!pair) return ''; st.forEach(r => { if (r.id === pair.localCandidateId || r.id === pair.remoteCandidateId) loc[r.id] = r.candidateType; });
+      return Object.values(loc).includes('relay') ? 'relais' : 'direct';
+    } catch (e) { return ''; }
   },
   idFor(code) { return 'echappe-au-prof-v1-' + code.toLowerCase(); },
   newCode() { const A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 4; i++) s += A[Math.floor(Math.random() * A.length)]; return s; },
@@ -2859,7 +2885,7 @@ const Net = {
     const p = new Peer(undefined, this.opts()); this.peer = p;
     p.on('open', () => {
       const c = p.connect(this.idFor(code), { reliable: true, serialization: 'json' }); this.bind(c);
-      this.joinTimer = setTimeout(() => { if (!this.connected) Multi.error('Impossible de rejoindre… Vérifiez que vous êtes connectés à internet (le même Wi-Fi, c’est encore mieux).'); }, 15000);
+      this.joinTimer = setTimeout(() => { if (!this.connected) Multi.error('Impossible de rejoindre. Vérifiez internet… En 4G/5G, réessayez : la mise en relation passe parfois au 2e essai.'); }, 20000);
     });
     p.on('error', e => { if (!this.connected) Multi.error(this.errText(e)); });
   },
@@ -2869,6 +2895,7 @@ const Net = {
       this.connected = true; clearTimeout(this.joinTimer); this.lastRecv = performance.now();
       const me = UI.cfg(); this.send({ t: 'hello', name: me ? me.name : 'Joueur', cfg: me || randomChar('Élève') });
       Multi.status('Connecté ! Préparation de la partie…');
+      setTimeout(async () => { const k = await this.linkKind(); this.kind = k; if (k && !$('sMulti').classList.contains('hidden')) Multi.status('Connecté' + (k === 'relais' ? ' (via le relais 🛰️)' : ' en direct ⚡') + ' ! Préparation de la partie…'); }, 1200);
     });
     c.on('data', d => { this.lastRecv = performance.now(); try { this.recv(d); } catch (e) { console.error(e); } });
     c.on('close', () => this.lost());
