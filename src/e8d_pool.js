@@ -61,6 +61,7 @@ function poolDive() {
 }
 function poolSurface(gasp) {
   const P = G.P; if (!P.under) return; P.under = false; splashFx(P.x, P.y, 4);
+  for (let i = 0; i < 9; i++) part(P.x + rand(-1, 1), P.y - 22, 'drop', { vx: rand(-14, 14), vy: rand(-90, -55), g: 220, life: 0.7, col: pick(['#ffffff', '#bfefff', '#7fd8f0']) });   // pfff ! le jet d'eau
   if (gasp) { cue(P.x, P.y - 30, 'word', 'GASP !', { col: '#ffffff', pop: true, life: 0.9 }); makeNoise(P.x, P.y, 3.5, 'GASP !'); toast('😮‍💨 Plus d’air ! Il fallait remonter respirer.', 2); AU.sfx('boing', 0.4); }
 }
 function poolLadderFoot(B) {
@@ -148,20 +149,70 @@ function poolTeacher(T, dt, sees, slow) {
 }
 // ---------- dessin : on ne voit que la tête qui dépasse (ou des bulles) ----------
 function drawSwimmer(c, cfg, v, a, o) {
-  const x = a.x, y = a.y, wl = y - 9;
+  const x = a.x, mv = !!a.moving, t = G.time + (a.ph || 0), sk = colOf(SKINS, cfg.skin || 0);
+  const capCol = colOf(CLOTHCOLS, (cfg.topCol || 0) + 3), dir = a.face === 3 ? -1 : 1, side = a.face === 2 || a.face === 3, back = a.face === 1;
+  const bob = mv ? Math.round(Math.sin(t * 9)) : Math.round(Math.sin(t * 3) * 1.4);
+  const y = a.y + bob, wl = Math.round(a.y - 6);   // la ligne d'eau (fixe), le nageur bouge un peu autour
+  const P = (px, py, w, h, col) => { c.fillStyle = col; c.fillRect(rp(px), rp(py), w, h); };
   if (a.under) {
-    c.save(); c.globalAlpha = 0.3; c.fillStyle = '#103a5a'; c.beginPath(); c.ellipse(x, y - 5, 7, 3, 0, 0, 7); c.fill(); c.restore();
-    const t = G.time * 1.8 + (a.ph || 0); c.fillStyle = 'rgba(255,255,255,0.8)';
-    for (let i = 0; i < 3; i++) { const f = (t + i * 0.33) % 1; c.fillRect(rp(x - 2 + i * 2 + Math.sin(t * 3 + i) * 1.5), rp(y - 7 - f * 9), 1, 1); }
-  } else {
-    c.save(); c.beginPath(); c.rect(x - 16, y - 70, 32, 70 - 9); c.clip();
-    drawSprite0(c, cfg, v, Object.assign({}, a, { y: y + 9 }), Object.assign({}, o, { noShadow: true }));
+    // sous l'eau : une silhouette qui bat des pieds, et des bulles
+    const k = Math.sin(t * 14) > 0;
+    c.save(); c.globalAlpha = 0.34; c.fillStyle = '#0c2f4a';
+    c.beginPath(); c.ellipse(x, a.y - 4, side ? 7 : 4, side ? 2.5 : 4, 0, 0, 7); c.fill();
+    if (side) { P(x - dir * 9, a.y - 5 + (k ? -1 : 1), 3, 1, '#0c2f4a'); P(x - dir * 9, a.y - 3 + (k ? 1 : -1), 3, 1, '#0c2f4a'); } else { P(x - 3 + (k ? 1 : 0), a.y + 1, 2, 2, '#0c2f4a'); P(x + 1 - (k ? 1 : 0), a.y + 1, 2, 2, '#0c2f4a'); }
+    c.globalAlpha = 0.5; c.fillStyle = capCol; c.beginPath(); c.ellipse(x + (side ? dir * 4 : 0), a.y - 5, 2.5, 2, 0, 0, 7); c.fill();
     c.restore();
-    const ph = G.time * 4 + (a.ph || 0); c.strokeStyle = 'rgba(255,255,255,0.75)'; c.lineWidth = 1;
-    c.beginPath(); c.ellipse(x, wl, 7 + Math.sin(ph) * 0.8, 2.2, 0, 0, 7); c.stroke();
+    const tt = G.time * 1.8 + (a.ph || 0);
+    for (let i = 0; i < 3; i++) { const f = (tt + i * 0.33) % 1, bx = rp(x + (side ? dir * 4 : 0) - 1 + i + Math.sin(tt * 3 + i) * 1.5), by = rp(a.y - 7 - f * 10); P(bx, by, 1, 1, 'rgba(255,255,255,0.85)'); if (i === 0 && f > 0.5) { P(bx + 1, by - 2, 2, 2, 'rgba(255,255,255,0.5)'); } }
+  } else {
+    // ronds dans l'eau (sur place) ou sillage (en nageant)
+    c.lineWidth = 1;
+    if (!mv) for (let kk = 0; kk < 2; kk++) { const r = (t * 0.8 + kk * 0.5) % 1; c.strokeStyle = `rgba(255,255,255,${(1 - r) * 0.55})`; c.beginPath(); c.ellipse(x, wl + 1, 6 + r * 9, 2 + r * 3, 0, 0, 7); c.stroke(); }
+    else {
+      c.strokeStyle = 'rgba(255,255,255,0.55)'; c.beginPath();
+      if (side) { c.moveTo(x - dir * 5, wl); c.lineTo(x - dir * 17, wl - 4); c.moveTo(x - dir * 5, wl + 2); c.lineTo(x - dir * 17, wl + 6); }
+      else { const sy = back ? 1 : -1; c.moveTo(x - 4, wl - sy); c.lineTo(x - 9, wl - sy * 9); c.moveTo(x + 4, wl - sy); c.lineTo(x + 9, wl - sy * 9); }
+      c.stroke();
+      if (Math.random() < 0.3) P(x - (side ? dir * rand(6, 14) : rand(-6, 6)), wl + rand(-2, 3), 1, 1, '#ffffff');
+    }
+    // le corps sous l'eau, bleuté
+    c.save(); c.beginPath(); c.rect(x - 16, wl + 1, 32, 20); c.clip(); c.globalAlpha = 0.18;
+    drawSprite0(c, cfg, v, Object.assign({}, a, { y: y + 3 }), Object.assign({}, o, { noShadow: true, tint: '#3a86b8', noLean: true }));
+    c.restore();
+    // la tête et les épaules qui dépassent
+    c.save(); c.beginPath(); c.rect(x - 16, wl - 40, 32, 41); c.clip();
+    drawSprite0(c, cfg, v, Object.assign({}, a, { y: y + 3, moving: false }), Object.assign({}, o, { noShadow: true, noLean: true, gait: 'idle', frame: 0 }));
+    c.restore();
+    // bonnet de bain et lunettes
+    const hy = y + 3 - 32;   // le haut du dessin du personnage
+    P(x - 4, hy + 8, 8, 1, capCol); P(x - 6, hy + 9, 12, 4, capCol); P(x - 5, hy + 9, 3, 1, 'rgba(255,255,255,0.55)');
+    if (!back) {
+      if (side) { P(x - dir * 5 - (dir < 0 ? 1 : 0), hy + 14, 6, 1, '#2a2a3a'); P(x + dir * 2 - 1, hy + 13, 3, 3, '#2a2a3a'); P(x + dir * 2, hy + 14, 1, 1, '#9fe0ff'); }
+      else { P(x - 6, hy + 14, 12, 1, '#2a2a3a'); P(x - 4, hy + 13, 3, 3, '#2a2a3a'); P(x + 1, hy + 13, 3, 3, '#2a2a3a'); P(x - 3, hy + 14, 1, 1, '#9fe0ff'); P(x + 2, hy + 14, 1, 1, '#9fe0ff'); }
+    }
+    // les bras qui font le crawl (ou qui battent l'eau sur place)
+    const ph = mv ? (a.dist || 0) * 0.32 : t * 3.2;
+    for (let s2 = 0; s2 < 2; s2++) {
+      const th = ph + s2 * Math.PI, up = Math.sin(th);
+      if (mv && up > 0) {
+        const sx = side ? x + dir * 1 : x + (s2 ? 6 : -6), sy2 = wl - 2;
+        const tx = side ? sx + dir * Math.cos(th) * -7 : sx + (s2 ? 1 : -1) * Math.cos(th) * 2, ty = sy2 - up * 8;
+        for (let i = 0; i <= 4; i++) P(lerp(sx, tx, i / 4) - 1, lerp(sy2, ty, i / 4) - 1, 2, 2, sk);
+        P(tx - 1, ty - 2, 3, 2, sk);
+      } else if (!mv && s2 === 0) { const hx = Math.round(Math.sin(t * 6) * 2); P(x - 9 + hx, wl - 1, 3, 2, sk); P(x + 6 - hx, wl - 1, 3, 2, sk); }
+      // l'eau qui gicle quand le bras replonge
+      const key = 'arm' + s2, was = a[key]; a[key] = up > 0;
+      if (mv && was && up <= 0 && a.vis !== false && Math.random() < 0.9) {
+        const ex = side ? x - dir * 6 : x + (s2 ? 7 : -7);
+        for (let i = 0; i < 3; i++) part(ex, wl - 1, 'drop', { vx: rand(-25, 25), vy: rand(-55, -30), g: 200, life: 0.45, col: pick(['#ffffff', '#bfefff']) });
+      }
+    }
+    // ligne d'eau nette, avec de l'écume
+    P(x - 7, wl, 14, 1, 'rgba(255,255,255,0.9)'); P(x - 8, wl + 1, 2, 1, 'rgba(255,255,255,0.6)'); P(x + 6, wl + 1, 2, 1, 'rgba(255,255,255,0.6)');
+    if ((t * 4 | 0) % 3 === 0) P(x + (Math.sin(t * 5) > 0 ? -9 : 8), wl - 1, 1, 1, '#ffffff');
   }
   if (a === G.P && (a.under || a.air < AIR_MAX - 0.05)) {
-    const n = Math.ceil(a.air), y0 = y - (a.under ? 16 : 30);
+    const n = Math.ceil(a.air), y0 = a.y - (a.under ? 18 : 34);
     for (let i = 0; i < AIR_MAX; i++) { c.fillStyle = i < n ? (a.air < 3 ? '#ff8a96' : '#bfefff') : 'rgba(255,255,255,0.2)'; c.fillRect(rp(x - 10 + i * 2), rp(y0), 1, 2); }
   }
 }
