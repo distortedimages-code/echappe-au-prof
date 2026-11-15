@@ -532,7 +532,7 @@ function updateKids(dt) {
           if (tgt == null) break;
           k.rp = (k.rp || 0) - dt; if ((k.rp <= 0 || !k.path) && G.pathBudget-- > 0) { k.rp = 0.9; const [ox, oy] = tileOf(G.kids[tgt]); const [kx, ky] = tileOf(k); const p = astar(kx, ky, ox, oy, pass); if (p) { k.path = p; k.pi = 0; } }
           followPath(k, 3.0 * 16, dt);
-          if (bd < 12) { G.tagIt = tgt; G.kids[tgt].st = 1.2; hop(G.kids[tgt], 90); G.kids[tgt].path = null; k.path = null; const d = dist(k.x, k.y, P.x, P.y) / 16; if (d < 12 && !k.vis) cue(k.x, k.y - 24, 'kid', 'Chat !'); }
+          if (bd < 12) { G.tagIt = tgt; G.kids[tgt].st = 1.2; hop(G.kids[tgt], 90); G.kids[tgt].path = null; k.path = null; const d = dist(k.x, k.y, P.x, P.y) / 16; if (d < 12 && k.vis) cue(k.x, k.y - 24, 'kid', 'Chat !'); }
         } else {
           if (!k.path || k.pi >= k.path.length) kidTarget(k, 10);
           followPath(k, 2.6 * 16, dt);
@@ -550,7 +550,7 @@ function updateKids(dt) {
   if (G.kidCueT <= 0) {
     G.kidCueT = rand(3, 7);
     const k = pick(G.kids), d = dist(k.x, k.y, P.x, P.y) / 16;
-    if (!k.vis && d < 14) cue(k.x, k.y - 24, 'kid', pick(['hihi !', 'Ballon !', 'À toi !', 'Ha ha !', 'Trop fort !', 'Attends-moi !']));
+    if (k.vis && d < 14) cue(k.x, k.y - 24, 'kid', pick(['hihi !', 'Ballon !', 'À toi !', 'Ha ha !', 'Trop fort !', 'Attends-moi !']));
   }
 }
 // ---------- Portes ----------

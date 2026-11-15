@@ -600,11 +600,12 @@ function drawOverlay() {
     if (!heard || dd < 20) {
       c.font = F + 'px ' + FONT;
       const maxW = Math.min(V.W * 0.62, 230 * d);
-      const lines = wrap(c, (heard ? '🔊 ' : '') + T.bubble.text, maxW);
+      const arrow = !heard ? '' : (() => { const ax = T.x - P.x, ay = T.y - P.y; return Math.abs(ax) > Math.abs(ay) ? (ax > 0 ? '➡️ ' : '⬅️ ') : (ay > 0 ? '⬇️ ' : '⬆️ '); })();
+      const lines = wrap(c, (heard ? '🔊 ' + arrow + (T.prof && T.prof.name ? T.prof.name + ' : ' : '') : '') + T.bubble.text, maxW);
       const lh = F * 1.55, w = Math.max(...lines.map(l => c.measureText(l).width)) + F * 1.6, h = lines.length * lh + F * 1.1;
       let [bx, by] = toScreen(T.x, T.y - 40 - (T.hz || 0)); by -= h / 2 + (T.markT > 0 ? 22 * d : 0);
       const e = screenEdges();
-      if (heard) { const r = clampEdge(bx, by); bx = r[0]; by = r[1]; }
+      if (heard) { bx = V.W / 2; by = e.t + h / 2 + 6 * d; }   // on l'entend sans le voir : sous-titre fixe, pas une bulle qui se balade
       bx = clamp(bx, e.l + w / 2, e.r - w / 2); by = clamp(by, e.t + h / 2, e.b - h / 2);
       const al = Math.min(1, (T.bubble.dur - T.bubble.t) * 3), sc = T.bubble.t < 0.18 ? easeOutBack(T.bubble.t / 0.18) : 1;
       c.save(); c.translate(bx, by + (heard ? Math.sin(G.time * 3) * 1.5 * d : 0)); c.scale(sc, sc);
