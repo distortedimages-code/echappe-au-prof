@@ -500,7 +500,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
         <button class="tile tChars" id="bChars"><canvas data-ill="chars" width="88" height="56"></canvas><span class="tl"><b>Personnages</b><small>Crée tes élèves</small></span></button>
         <button class="tile tSquish" id="bSquish"><canvas data-ill="squish" width="88" height="56"></canvas><span class="tl"><b>Squishies</b><small id="tSqN">Ta collection</small></span></button>
         <button class="tile tSave" id="bSave"><span class="sv">💾</span><span class="tl"><b>Sauvegarde</b><small>Un code pour garder tes squishies</small></span></button>
-        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 15 nov. · 20h51</small></span></button>
+        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 15 nov. · 22h48</small></span></button>
       </div>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
@@ -5649,13 +5649,37 @@ function petFollow(A, dt) {
   const p = A && A.pet; if (!p || A.x < -9000) return;
   p.t += dt; if (p.leaveT != null) { p.leaveT -= dt; p.y -= dt * 20; if (p.leaveT <= 0) A.pet = null; return; }
   if (p.jump > 0) { p.jump -= dt; const T = p.jumpTo; if (T) { p.x += (T.x - p.x) * Math.min(1, dt * 9); p.y += (T.y - p.y) * Math.min(1, dt * 9); } return; }
-  const fx = A.face === 2 ? 1 : A.face === 3 ? -1 : 0, fy = A.face === 0 ? 1 : A.face === 1 ? -1 : 0;
-  const tx = A.hidden ? A.hidden.x * 16 + 8 + 12 : A.x - fx * 14 - (fx ? 0 : 8), ty = A.hidden ? A.hidden.y * 16 + 14 : A.y - fy * 12 + 2;
+  // caché : le compagnon se faufile dans la même cachette (on ne le voit plus, il ne trahit personne)
+  if (A.hidden) {
+    const tx = A.hidden.x * 16 + 8, ty = A.hidden.y * 16 + 12, d = Math.hypot(tx - p.x, ty - p.y), ox = p.x;
+    if (d > 3) { const k = Math.min(1, dt * 7); p.x += (tx - p.x) * k; p.y += (ty - p.y) * k; p.moving = true; } else p.moving = false;
+    if (d < 14) p.inHide = Math.min(1, (p.inHide || 0) + dt * 5);
+    p.vx = (p.x - ox) / Math.max(dt, 1e-3); cutePetMood(A, dt); return;
+  }
+  if (p.inHide > 0) { if (p.inHide >= 1) p.joy = 0.5; p.inHide = Math.max(0, p.inHide - dt * 5); }   // il ressort en sautillant
+  const [tx, ty] = petSpot(A, p);
   const d = Math.hypot(tx - p.x, ty - p.y);
   const ox = p.x;
-  if (d > 4) { const k = Math.min(1, dt * (d > 60 ? 10 : 5)); p.x += (tx - p.x) * k; p.y += (ty - p.y) * k; p.moving = true; } else p.moving = false;
+  // coincé dans un mur ou un meuble (après une porte, un escalier…) : il rattrape vite son élève
+  const stuck = !petFree(p.x, p.y, p);
+  if (d > 4) { const k = Math.min(1, dt * (d > 60 || stuck ? 10 : 5)); p.x += (tx - p.x) * k; p.y += (ty - p.y) * k; p.moving = true; } else p.moving = false;
   if (d > 160) { p.x = tx; p.y = ty; }
   p.vx = (p.x - ox) / Math.max(dt, 1e-3); cutePetMood(A, dt);
+}
+// une case où le compagnon peut se tenir (pas dans un mur ni dans un meuble ; dans l'eau seulement s'il vole)
+function petFree(x, y, p) {
+  const tx = Math.floor(x / 16), ty = Math.floor((y - 2) / 16), k = G.m && G.m.get(tx, ty);
+  if (k == null || !KP[k]) return false;
+  if (k === K.WATER) { const def = PETS[p ? p.i : 0]; return !!(def && (def.px === 'dragon' || def.px === 'ghost')); }
+  if (k === K.DOOR) { const d = doorAt(tx, ty); return !(d && d.locked); }
+  return KP[k].solid !== 1;
+}
+// où se placer : derrière son élève si possible, sinon à côté, sinon tout contre lui
+function petSpot(A, p) {
+  const fx = A.face === 2 ? 1 : A.face === 3 ? -1 : 0, fy = A.face === 0 ? 1 : A.face === 1 ? -1 : 0;
+  const c = [[A.x - fx * 14 - (fx ? 0 : 8), A.y - fy * 12 + 2], [A.x - 12, A.y + 2], [A.x + 12, A.y + 2], [A.x - 6, A.y + 10], [A.x + 6, A.y + 10]];
+  for (const q of c) if (petFree(q[0], q[1], p)) return q;
+  return [A.x - 4, A.y + 3];
 }
 // le compagnon saute sur le prof qui t'attrape : il s'enfuit !
 function petScare(T, A, remote) {
@@ -10452,14 +10476,18 @@ function renderGame(dt) {
   const drawPet = A => {
     const p = A && A.pet; if (!p || A.x < -9000 || A.out || p.x == null) return;
     const bob = p.moving || p.jump > 0 ? Math.abs(Math.sin(p.t * 12)) * 3 : Math.sin(p.t * 3) * 0.6;
-    ents.push([p.y, () => {
-      ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 5, 2, 0, 0, 7); ctx.fill();
-      const def = PETS[p.i], al = p.leaveT != null ? Math.max(0, p.leaveT / 1.2) : 1;
-      if (def && def.px) { try { drawCutePet(ctx, p, def, al); } catch (e) { } return; }
-      ctx.globalAlpha = al;
+    // dans la cachette avec son élève : invisible
+    const vis = (p.leaveT != null ? Math.max(0, p.leaveT / 1.2) : 1) * (1 - (p.inHide || 0));
+    if (vis <= 0.02 || !inV(p.x, p.y)) return;
+    // comme les élèves : il passe derrière les murs et les grands meubles
+    ents.push([p.y, () => occlude(ctx, p, () => {
+      ctx.globalAlpha = vis; ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 5, 2, 0, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+      const def = PETS[p.i];
+      if (def && def.px) { try { drawCutePet(ctx, p, def, vis); } catch (e) { } ctx.globalAlpha = 1; return; }
+      ctx.globalAlpha = vis;
       ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#000'; ctx.fillText(p.e, p.x, p.y + 1 - bob);
       ctx.globalAlpha = 1;
-    }]);
+    })]);
   };
   drawPet(P); if (Q && ((G.inf && G.inf.coop && Q.fl === G.inf.cur) || (G.net && G.net.cc))) drawPet(Q);
   if (G.ball) {
@@ -11238,7 +11266,7 @@ const Input = {
 // ================= INTERFACE =================
 const $ = id => document.getElementById(id);
 // ---------- recharger le jeu (pratique quand il est épinglé comme une app sur iPad : pas de bouton du navigateur) ----------
-const GAME_BUILD = '15 nov. · 20h51';
+const GAME_BUILD = '15 nov. · 22h48';
 function refreshGame() {
   try { sessionStorage.setItem('nds_refresh', '1'); } catch (e) { }
   $('tVer').textContent = '⏳ Rechargement…'; try { AU.sfx('blip'); } catch (e) { }

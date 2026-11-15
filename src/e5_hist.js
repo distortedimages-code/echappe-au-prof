@@ -148,13 +148,37 @@ function petFollow(A, dt) {
   const p = A && A.pet; if (!p || A.x < -9000) return;
   p.t += dt; if (p.leaveT != null) { p.leaveT -= dt; p.y -= dt * 20; if (p.leaveT <= 0) A.pet = null; return; }
   if (p.jump > 0) { p.jump -= dt; const T = p.jumpTo; if (T) { p.x += (T.x - p.x) * Math.min(1, dt * 9); p.y += (T.y - p.y) * Math.min(1, dt * 9); } return; }
-  const fx = A.face === 2 ? 1 : A.face === 3 ? -1 : 0, fy = A.face === 0 ? 1 : A.face === 1 ? -1 : 0;
-  const tx = A.hidden ? A.hidden.x * 16 + 8 + 12 : A.x - fx * 14 - (fx ? 0 : 8), ty = A.hidden ? A.hidden.y * 16 + 14 : A.y - fy * 12 + 2;
+  // caché : le compagnon se faufile dans la même cachette (on ne le voit plus, il ne trahit personne)
+  if (A.hidden) {
+    const tx = A.hidden.x * 16 + 8, ty = A.hidden.y * 16 + 12, d = Math.hypot(tx - p.x, ty - p.y), ox = p.x;
+    if (d > 3) { const k = Math.min(1, dt * 7); p.x += (tx - p.x) * k; p.y += (ty - p.y) * k; p.moving = true; } else p.moving = false;
+    if (d < 14) p.inHide = Math.min(1, (p.inHide || 0) + dt * 5);
+    p.vx = (p.x - ox) / Math.max(dt, 1e-3); cutePetMood(A, dt); return;
+  }
+  if (p.inHide > 0) { if (p.inHide >= 1) p.joy = 0.5; p.inHide = Math.max(0, p.inHide - dt * 5); }   // il ressort en sautillant
+  const [tx, ty] = petSpot(A, p);
   const d = Math.hypot(tx - p.x, ty - p.y);
   const ox = p.x;
-  if (d > 4) { const k = Math.min(1, dt * (d > 60 ? 10 : 5)); p.x += (tx - p.x) * k; p.y += (ty - p.y) * k; p.moving = true; } else p.moving = false;
+  // coincé dans un mur ou un meuble (après une porte, un escalier…) : il rattrape vite son élève
+  const stuck = !petFree(p.x, p.y, p);
+  if (d > 4) { const k = Math.min(1, dt * (d > 60 || stuck ? 10 : 5)); p.x += (tx - p.x) * k; p.y += (ty - p.y) * k; p.moving = true; } else p.moving = false;
   if (d > 160) { p.x = tx; p.y = ty; }
   p.vx = (p.x - ox) / Math.max(dt, 1e-3); cutePetMood(A, dt);
+}
+// une case où le compagnon peut se tenir (pas dans un mur ni dans un meuble ; dans l'eau seulement s'il vole)
+function petFree(x, y, p) {
+  const tx = Math.floor(x / 16), ty = Math.floor((y - 2) / 16), k = G.m && G.m.get(tx, ty);
+  if (k == null || !KP[k]) return false;
+  if (k === K.WATER) { const def = PETS[p ? p.i : 0]; return !!(def && (def.px === 'dragon' || def.px === 'ghost')); }
+  if (k === K.DOOR) { const d = doorAt(tx, ty); return !(d && d.locked); }
+  return KP[k].solid !== 1;
+}
+// où se placer : derrière son élève si possible, sinon à côté, sinon tout contre lui
+function petSpot(A, p) {
+  const fx = A.face === 2 ? 1 : A.face === 3 ? -1 : 0, fy = A.face === 0 ? 1 : A.face === 1 ? -1 : 0;
+  const c = [[A.x - fx * 14 - (fx ? 0 : 8), A.y - fy * 12 + 2], [A.x - 12, A.y + 2], [A.x + 12, A.y + 2], [A.x - 6, A.y + 10], [A.x + 6, A.y + 10]];
+  for (const q of c) if (petFree(q[0], q[1], p)) return q;
+  return [A.x - 4, A.y + 3];
 }
 // le compagnon saute sur le prof qui t'attrape : il s'enfuit !
 function petScare(T, A, remote) {

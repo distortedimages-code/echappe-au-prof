@@ -457,14 +457,18 @@ function renderGame(dt) {
   const drawPet = A => {
     const p = A && A.pet; if (!p || A.x < -9000 || A.out || p.x == null) return;
     const bob = p.moving || p.jump > 0 ? Math.abs(Math.sin(p.t * 12)) * 3 : Math.sin(p.t * 3) * 0.6;
-    ents.push([p.y, () => {
-      ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 5, 2, 0, 0, 7); ctx.fill();
-      const def = PETS[p.i], al = p.leaveT != null ? Math.max(0, p.leaveT / 1.2) : 1;
-      if (def && def.px) { try { drawCutePet(ctx, p, def, al); } catch (e) { } return; }
-      ctx.globalAlpha = al;
+    // dans la cachette avec son élève : invisible
+    const vis = (p.leaveT != null ? Math.max(0, p.leaveT / 1.2) : 1) * (1 - (p.inHide || 0));
+    if (vis <= 0.02 || !inV(p.x, p.y)) return;
+    // comme les élèves : il passe derrière les murs et les grands meubles
+    ents.push([p.y, () => occlude(ctx, p, () => {
+      ctx.globalAlpha = vis; ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 5, 2, 0, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+      const def = PETS[p.i];
+      if (def && def.px) { try { drawCutePet(ctx, p, def, vis); } catch (e) { } ctx.globalAlpha = 1; return; }
+      ctx.globalAlpha = vis;
       ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#000'; ctx.fillText(p.e, p.x, p.y + 1 - bob);
       ctx.globalAlpha = 1;
-    }]);
+    })]);
   };
   drawPet(P); if (Q && ((G.inf && G.inf.coop && Q.fl === G.inf.cur) || (G.net && G.net.cc))) drawPet(Q);
   if (G.ball) {
