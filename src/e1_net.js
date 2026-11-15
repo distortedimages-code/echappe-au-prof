@@ -424,7 +424,8 @@ function netUpdate(dt) {
     AU.play(G.alarmT > 0 ? 'chase' : 'sneak');
   } else {
     updateTeacherLocal(dt); if (G.mode !== 'play') return;
-    if (P.net) {
+    if (G.net.solo) { Solo.tick(dt); if (G.mode !== 'play') return; }
+    else if (P.net) {
       Net.smooth(P, dt); const s = P.net;
       P.small = s.sm ? 10 : 0; P.slip = s.sl ? 1 : 0; P.skidT = s.sk ? 0.1 : 0;
       const hs = s.h >= 0 ? G.L.hides[s.h] : null;
@@ -445,5 +446,5 @@ function netUpdate(dt) {
   if (G.inf) { infUpdate(dt); if (G.mode !== 'play') return; }
   Net.timeLeft -= dt;
   if (Net.isHost && Net.timeLeft <= 0) { Net.send({ t: 'end' }); timeUp(); }
-  Net.tick(dt);
+  if (!G.net.solo) Net.tick(dt);
 }

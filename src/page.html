@@ -388,6 +388,18 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
 @keyframes goPulse{50%{transform:scale(1.14)}}
 .tInf{background:#ff8a3a}.tMulti{background:var(--pink);color:#fff}.tChars{background:var(--cyan)}.tSquish{background:#ffb3d6}.tHist{background:#e8b07a}.tEn{background:#8fc4ff}
 .tSave{flex-direction:row;align-items:center;gap:6px;background:var(--panel2);color:var(--paper)}.tSave .sv{font-size:30px;padding-left:12px}.tSave .tl b{color:var(--yel)}
+
+/* ---- solo surveillant ---- */
+.tGuard{background:#9fe0ff}
+.tSave{flex-direction:column;justify-content:center;align-items:flex-start}.tSave .sv{font-size:46px;padding:12px 0 0 12px}
+#hWanted{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 6px!important;border-color:#ff4f8b!important;background:rgba(255,246,230,.95)!important;color:var(--ink);min-width:74px}
+#hWanted.hidden{display:none}
+#hWanted b{font-size:6.5px;color:#d0283a;letter-spacing:.5px}
+#hWanted canvas{width:44px;height:68px;image-rendering:pixelated;background:#e8f1ff;border:2px solid var(--ink);border-radius:5px}
+#hWanted #wantN{font-family:'VT323',monospace;font-size:17px;line-height:1}#hWanted #wantS{font-family:'VT323',monospace;font-size:14px;line-height:1}
+#hWanted.calm{border-color:var(--cyan)!important}#hWanted.calm b{color:#1f6e8a}#hWanted.calm canvas{height:0;border:none}
+#hWanted.pop{animation:wantPop .5s cubic-bezier(.2,1.8,.4,1)}@keyframes wantPop{0%{transform:scale(.4)}100%{transform:scale(1)}}
+#hud.solo #hEffects{top:180px}
 </style>
 </head>
 <body>
@@ -399,7 +411,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     <div class="hudTop">
       <button id="bPause" class="hbtn" aria-label="Pause">❚❚</button>
       <div class="hudInfo"><div id="hRoom">📍</div><div class="hudRow"><div id="hStatus" class="chip">Calme</div><div id="hLocks" class="mini">🔑×3</div><div id="hHeart" class="mini">🤍</div><div id="hPet" class="mini hidden"></div></div><div id="hTasks" class="hidden"></div></div>
-      <div class="hudRight"><div id="hTime">0:00</div><button id="bPlan" class="hidden" aria-label="Plan du collège">🗺️</button><button id="bPing" class="hidden" aria-label="Appeler mon équipier">📍</button><button id="bDiv" class="hidden" aria-label="Faire diversion">🥁</button></div>
+      <div class="hudRight"><div id="hTime">0:00</div><div id="hWanted" class="hidden"><b id="wantT">RECHERCHÉ·E</b><canvas id="wantCv" width="22" height="34"></canvas><span id="wantN"></span><span id="wantS"></span></div><button id="bPlan" class="hidden" aria-label="Plan du collège">🗺️</button><button id="bPing" class="hidden" aria-label="Appeler mon équipier">📍</button><button id="bDiv" class="hidden" aria-label="Faire diversion">🥁</button></div>
     </div>
     <div id="hEffects"></div>
     <div id="hHidden" class="hidden"></div>
@@ -450,13 +462,14 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <div class="sub">Collège Notre-Dame de Sion</div>
       <div class="tiles">
         <button class="tile wide tPlay" id="bPlay"><canvas id="titleCv" width="176" height="56"></canvas><span class="tl"><span><b>▶ JOUER</b><small>Fuis le prof, trouve la sortie secrète</small></span><i class="go">▶</i></span></button>
+        <button class="tile tGuard" id="bGuard"><canvas data-ill="guard" width="88" height="56"></canvas><span class="tl"><b>Surveillant</b><small>Attrape les élèves qui sèchent</small></span></button>
         <button class="tile tInf" id="bInf"><canvas data-ill="inf" width="88" height="56"></canvas><span class="tl"><b>Infiltration</b><small>Étage par étage, sans te faire voir</small></span></button>
         <button class="tile tMulti" id="bMulti"><canvas data-ill="multi" width="88" height="56"></canvas><span class="tl"><b>À deux</b><small>En ligne, avec un·e ami·e</small></span></button>
         <button class="tile tHist" id="bQuiz"><canvas data-ill="hist" width="88" height="56"></canvas><span class="tl"><b>Histoire</b><small id="tHistS">La Préhistoire</small></span></button>
         <button class="tile tEn" id="bQuizEn"><canvas data-ill="en" width="88" height="56"></canvas><span class="tl"><b>Anglais</b><small id="tEnS">Have, numbers…</small></span></button>
         <button class="tile tChars" id="bChars"><canvas data-ill="chars" width="88" height="56"></canvas><span class="tl"><b>Personnages</b><small>Crée tes élèves</small></span></button>
         <button class="tile tSquish" id="bSquish"><canvas data-ill="squish" width="88" height="56"></canvas><span class="tl"><b>Squishies</b><small id="tSqN">Ta collection</small></span></button>
-        <button class="tile wide tSave" id="bSave"><span class="sv">💾</span><span class="tl"><b>Ma sauvegarde</b><small>Un code pour ne jamais perdre tes squishies</small></span></button>
+        <button class="tile tSave" id="bSave"><span class="sv">💾</span><span class="tl"><b>Sauvegarde</b><small>Un code pour garder tes squishies</small></span></button>
       </div>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
@@ -513,7 +526,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
   <div id="sLevels" class="screen hidden">
     <div class="wrap">
       <div class="panel who"><canvas id="whoCv" width="20" height="34"></canvas><div style="flex:1"><div class="tiny">Tu joues avec</div><div class="px" id="whoName" style="font-size:13px;color:var(--yel)"></div></div><button class="btn ghost" id="bWho" style="font-size:10px;padding:10px">Changer</button></div>
-      <h2 class="px">🏫 Choisis ton niveau</h2>
+      <h2 class="px" id="lvlH">🏫 Choisis ton niveau</h2>
       <button class="procTog" id="bProc"></button>
       <div id="lvlList" style="display:flex;flex-direction:column;gap:12px"></div>
       <button class="btn ghost" id="bLvlBack">◀ Accueil</button>

@@ -22,6 +22,24 @@ const MenuArt = {
       try { this[cv.dataset.ill](c, this.t, cv.width, cv.height); } catch (e) { }
     });
   },
+  // 🚨 le surveillant, l'affiche « recherché·e », et l'élève qui se cache derrière les casiers
+  guard(c, t, W, H) {
+    c.fillStyle = '#c2b9a8'; c.fillRect(0, 0, W, H);
+    this.wall(c, WS.PAINT, 0, W); this.floor(c, FS.CHECK, 16, W);
+    const k = this.kids()[2];
+    // l'affiche
+    c.fillStyle = '#fff6e6'; c.fillRect(30, 1, 18, 15); c.fillStyle = '#d0283a'; c.fillRect(30, 1, 18, 3);
+    c.drawImage(charCanvas(k, 0, 0, null, 'basic'), 3, 2, 14, 11, 32, 4, 14, 11);
+    // l'élève qui dépasse des casiers
+    const peek = Math.sin(t * 2.2) > 0.1, kx = peek ? 71 : 76;
+    this.spr(c, k, null, kx, 50, 3, 0, 'basic');
+    drawFurniture(c, K.LOCKER, 58, 24, 0, 0, { get: () => K.FLOOR }, { lockerCol: '#4f7fc0' }); drawFurniture(c, K.LOCKER, 58, 40, 0, 1, { get: () => K.FLOOR }, { lockerCol: '#4f7fc0' });
+    drawFurniture(c, K.LOCKER, 74, 24, 1, 0, { get: () => K.FLOOR }, { lockerCol: '#4f7fc0' }); drawFurniture(c, K.LOCKER, 74, 40, 1, 1, { get: () => K.FLOOR }, { lockerCol: '#4f7fc0' });
+    // le surveillant qui cherche
+    const g = PROFS[0], gx = 14 + ((t * 9) % 24), back = ((t * 9) % 48) > 24, x = back ? 38 - ((t * 9) % 24) : gx;
+    this.spr(c, g.cfg, g.v, x, 52, back ? 3 : 2, Math.floor(t * 6) % 4, 'walk');
+    if (peek) { c.fillStyle = '#ffd23f'; c.fillRect(x - 1, 14, 2, 6); c.fillRect(x - 1, 21, 2, 2); }
+  },
   // 🕵️ la nuit, on passe dans le dos du surveillant pour rejoindre l'escalier
   inf(c, t, W, H) {
     c.fillStyle = '#1a1430'; c.fillRect(0, 0, W, H);

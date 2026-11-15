@@ -927,6 +927,7 @@ function escape(ex, tx, ty, fromNet) {
 }
 function caught(reason, fromNet) {
   if (G.mode !== 'play') return;
+  if (G.net && G.net.solo) { Solo.caught(reason); return; }
   if (G.inf && G.inf.coop && !fromNet) { coopCaught(G.P, reason); return; }
   const P = G.P, T = G.T;
   // un squishy dans le sac : seconde chance, il explose à la figure du prof
@@ -982,7 +983,7 @@ function update(dt) {
   } else if (G.mode === 'timeup') {
     G.caughtT += dt;
     if (G.caughtT > 1.4 && !FX.iris) FX.iris = { mode: 'out', t: 0, dur: 0.6 };
-    if (G.caughtT > 2.1) { G.mode = 'result'; Multi.result('time'); }
+    if (G.caughtT > 2.1) { if (G.net && G.net.solo) Solo.end('time'); else { G.mode = 'result'; Multi.result('time'); } }
   }
   // indices & particules
   for (let i = G.cues.length - 1; i >= 0; i--) { const c = G.cues[i]; c.t += dt; if (c.t > c.life) G.cues.splice(i, 1); }

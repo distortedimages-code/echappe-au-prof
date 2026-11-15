@@ -174,7 +174,7 @@ const UI = {
     const tap = (id, f) => $(id).addEventListener('click', e => { AU.init(); AU.sfx('blip'); f(e); });
     tap('bPlay', () => { if (!this.chars.length) this.openCreator(-1, 'levels'); else this.openLevels(); });
     tap('bChars', () => this.openChars('title'));
-    tap('bSquish', () => SqAlbum.open('title')); tap('bQuiz', () => Quiz.open('hist')); tap('bQuizEn', () => Quiz.open('en')); tap('bSave', () => Save.open('title')); tap('bSqSave', () => Save.open('squish')); tap('bSqBack', () => this.openTitle());
+    tap('bSquish', () => SqAlbum.open('title')); tap('bQuiz', () => Quiz.open('hist')); tap('bQuizEn', () => Quiz.open('en')); tap('bGuard', () => Solo.levels()); tap('bSave', () => Save.open('title')); tap('bSqSave', () => Save.open('squish')); tap('bSqBack', () => this.openTitle());
     tap('bMulti', () => Multi.open());
     tap('bInf', () => { AU.init(); if (!this.chars.length) this.openCreator(-1, 'inf'); else this.launchInf(); });
     tap('bPlan', () => this.openPlan());
@@ -192,11 +192,11 @@ const UI = {
     tap('bLvlBack', () => this.openTitle());
     tap('bInNext', () => this.inGo(this.inP + 1)); tap('bInPrev', () => this.inGo(this.inP - 1)); tap('bInSkip', () => this.inGo(this.inN - 1));
     this.initIntroSwipe();
-    tap('bGo', () => { if (G.net) { Net.setReady(); return; } G.mode = 'play'; this.show('play'); AU.play('sneak'); FX.iris = { mode: 'in', t: 0, dur: 0.75 }; this.hudSig = null; this.invSig = null; if (G.L.def.prof === 4) G.intercomT = 12; });
+    tap('bGo', () => { if (G.net && G.net.solo) { Solo.go(); return; } if (G.net) { Net.setReady(); return; } G.mode = 'play'; this.show('play'); AU.play('sneak'); FX.iris = { mode: 'in', t: 0, dur: 0.75 }; this.hudSig = null; this.invSig = null; if (G.L.def.prof === 4) G.intercomT = 12; });
     tap('bPause', () => this.pause());
-    tap('pResume', () => { if (!G.net) G.mode = this.pausedFrom || 'play'; this.show('play'); });
-    tap('pRestart', () => { if (G.inf) this.launchInf(true); else this.launch(G.lvl, true); });
-    tap('pLevels', () => { if (G.inf) { G.inf = null; G.mode = 'menu'; AU.play('menu'); this.openTitle(); return; } if (G.net) { Net.close(); G.net = null; G.mode = 'menu'; this.openTitle(); return; } AU.play('menu'); this.openLevels(); G.mode = 'menu'; });
+    tap('pResume', () => { if (!netLive()) G.mode = this.pausedFrom || 'play'; this.show('play'); });
+    tap('pRestart', () => { if (G.net && G.net.solo) { Solo.start(Solo.lv); return; } if (G.inf) this.launchInf(true); else this.launch(G.lvl, true); });
+    tap('pLevels', () => { if (G.net && G.net.solo) { Solo.quit(); AU.play('menu'); Solo.levels(); return; } if (G.inf) { G.inf = null; G.mode = 'menu'; AU.play('menu'); this.openTitle(); return; } if (G.net) { Net.close(); G.net = null; G.mode = 'menu'; this.openTitle(); return; } AU.play('menu'); this.openLevels(); G.mode = 'menu'; });
     document.querySelectorAll('.tog').forEach(b => {
       b.addEventListener('click', () => { AU.init(); const k = b.dataset.k; AU.set[k] = !AU.set[k]; AU.applySet(); this.syncTogs(); if (k === 'crt') bakePost(); if (k === 'music' && AU.set.music && G.mode === 'menu') AU.play('menu'); });
     });
@@ -206,7 +206,7 @@ const UI = {
     ['act1', 'act2'].forEach((id, i) => $(id).addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); doAction(G.actions[i]); this.hudSig = null; }));
     $('hTasks').addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); this.tasksOpen = !this.tasksOpen; this.taskPeekT = 0; this.taskSig = null; this.infSig = null; AU.sfx('tick'); });
     $('inv').addEventListener('pointerdown', e => { const b = e.target.closest('.slot'); if (!b) return; e.stopPropagation(); e.preventDefault(); useItem(+b.dataset.i); this.invSig = null; });
-    document.addEventListener('visibilitychange', () => { if (document.hidden && G.mode === 'play' && !G.net) this.pause(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && G.mode === 'play' && !netLive()) this.pause(); });
     this.waveTitle(); this.openTitle();
   },
   waveTitle() { document.querySelectorAll('.logo span').forEach((sp, j) => { const t = sp.textContent; sp.innerHTML = [...t].map((ch, i) => `<i style="animation-delay:${(i * 0.08 + j * 0.3).toFixed(2)}s">${ch === ' ' ? '&nbsp;' : ch}</i>`).join(''); }); },
@@ -284,7 +284,8 @@ const UI = {
   // ---------- niveaux ----------
   openLevels() {
     G.mode = 'menu'; this.show('sLevels'); AU.play('menu');
-    const c = this.cfg(); portrait($('whoCv'), c, null, 1); $('whoName').textContent = c.name;
+    $('lvlH').textContent = '🏫 Choisis ton niveau'; document.querySelector('#sLevels .who').classList.remove('hidden');
+    const c = this.cfg(); if (c) { portrait($('whoCv'), c, null, 1); $('whoName').textContent = c.name; }
     this.paintProc($('bProc'));
     const list = $('lvlList'); list.innerHTML = '';
     LEVELS.forEach((L, i) => {
@@ -417,8 +418,8 @@ const UI = {
   },
   pause() {
     if (G.mode !== 'play') return;
-    $('pRestart').classList.toggle('hidden', !!G.net); $('pLevels').textContent = G.net ? '🏠 Quitter la partie' : '🏫 Niveaux'; $('pResume').textContent = G.net ? '▶ Continuer (la partie tourne !)' : '▶ Reprendre';
-    if (!G.net) { this.pausedFrom = G.mode; G.mode = 'paused'; }
+    const live = netLive(); $('pRestart').classList.toggle('hidden', live); $('pLevels').textContent = live ? '🏠 Quitter la partie' : '🏫 Niveaux'; $('pResume').textContent = live ? '▶ Continuer (la partie tourne !)' : '▶ Reprendre';
+    if (!live) { this.pausedFrom = G.mode; G.mode = 'paused'; }
     this.show('sPause'); this.syncTogs();
     $('pDiag').textContent = '🛠️ qualité ' + Perf.q + ' · sprites ' + CHAR_CACHE.size + ' · ratés ' + ((window.__sprErr || 0) + (window.__canvasFail || 0)) + (window.__lastErr ? ' · ' + window.__lastErr : '');
   },
@@ -527,6 +528,7 @@ const UI = {
     }
     this.hudT -= dt; if (this.hudT > 0) return; this.hudT = 0.12;
     const VA = viewerA(), teach = G.net && G.net.role === 'teacher';
+    if (Solo.on()) Solo.hud(); else $('hWanted').classList.add('hidden');
     const [tx, ty] = tileOf(VA); let rn = G.m.roomAt(tx, ty) || '…';
     if (G.inf && /^Escalier [AB]$/.test(rn)) { const k = stairKind(rn.slice(-1)), to = k === 'up' ? G.inf.cur + 1 : G.inf.cur - 1; rn += k === 'down' ? ' ⬇ descend ' + (to === 0 ? 'au RDC' : 'au ' + INF_FLOOR_META[to].short) : k === 'up' ? ' ⬆ monte au ' + INF_FLOOR_META[to].short : k === 'locked' ? ' 🔒 grille fermée' : ' 🚧 fermé'; }
     const rt = '📍 ' + (G.inf ? INF_FLOOR_META[G.inf.cur].short + ' · ' : '') + rn; if ($('hRoom').textContent !== rt) $('hRoom').textContent = rt;
@@ -536,6 +538,7 @@ const UI = {
     if (G.net && !(G.inf && G.inf.coop)) {
       if (teach) {
         if (T.state === 'count') { s = '🙈 Tu comptes…'; cls = 'warn'; } else if (T.state === 'sleep') { s = '💤 Tu dors…'; cls = 'cool'; } else if (T.state === 'stun') { s = '😵 La tête qui tourne…'; cls = 'cool'; }
+        else if (Solo.on() && G.solo.phase !== 'hunt') { s = '📻 Patrouille : rien à signaler'; cls = 'cool'; }
         else if (G.pVis) { s = '👀 En vue ! Attrape !'; cls = 'alarm'; } else if (G.slowT > 0) { s = '🐢 Ralenti…'; cls = 'cool'; } else s = '🎯 Trouve ' + (P.cfg.name || 'l’élève');
       } else {
         if (T.state === 'count') { s = '⏳ Ça compte… file !'; cls = 'warn'; } else if (G.alarmT > 0) { s = '🚨 POURSUITE !'; cls = 'alarm'; }
