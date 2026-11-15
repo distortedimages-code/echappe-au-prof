@@ -166,7 +166,7 @@ function infSave(F) {
 function infLoad(f, first) {
   const I = G.inf, F = I.floors[f];
   I.cur = f; G.L = F.L; G.m = F.L.m; if (!I.multi || I.coop) G.T = F.T; G.kids = F.kids; G.robotSpots = F.robotSpots; G.items = F.items; G.apples = F.apples; G.doors = F.doors; G.doorIdx = F.doorIdx;
-  G.searched = F.searched; G.pigeons = F.pigeons || []; G.disguiseAt = F.disguiseAt; G.mapCanvas = F.mapCanvas; G.trees = F.trees;
+  G.searched = F.searched; G.pigeons = F.pigeons || []; G.disguiseAt = F.disguiseAt; G.mapCanvas = F.mapCanvas; G.mapKeep = true; G.trees = F.trees;
   G.cues = []; G.parts = []; G.camX = null; G.ball = null;
   if (!first) { G.L.hides.forEach(s => s.shake = 0); }
 }

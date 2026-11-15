@@ -16,10 +16,12 @@ const V = { cv: null, ctx: null, lo: null, lx: null, fog: null, fx: null, S: 3, 
 function setupView() {
   V.cv = document.getElementById('game'); V.ctx = V.cv.getContext('2d');
   [V.lo, V.lx] = mkCanvas(10, 10); [V.fog, V.fx] = mkCanvas(10, 10);
-  resizeView(); addEventListener('resize', resizeView);
+  resizeView(); addEventListener('resize', () => { clearTimeout(V.rzT); V.rzT = setTimeout(resizeView, 120); });
 }
 function resizeView() {
   const dpr = Math.min(Q_LEVELS[Perf.q], window.devicePixelRatio || 1), w = innerWidth, h = innerHeight;
+  if (V.sizeKey === w + 'x' + h + '@' + dpr) return;   // rien n'a changé : on ne réalloue pas les canvas (sinon accrocs + mémoire)
+  V.sizeKey = w + 'x' + h + '@' + dpr;
   V.dpr = dpr; V.W = Math.round(w * dpr); V.H = Math.round(h * dpr); V.cv.width = V.W; V.cv.height = V.H;
   V.S = Math.max(2, Math.round(Math.min(w, h) / (12 * 16) * dpr));
   V.lw = Math.ceil(V.W / V.S) + 2; V.lh = Math.ceil(V.H / V.S) + 2;
@@ -34,14 +36,14 @@ function glowSprite() {
   g.addColorStop(0, 'rgba(255,214,150,1)'); g.addColorStop(1, 'rgba(255,214,150,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return (GLOW = c);
 }
 function bakePost() {
-  const [c, x] = mkCanvas(V.W, V.H);
+  if (!V.postC) [V.postC, V.postX] = mkCanvas(V.W, V.H);
+  const c = V.postC; c.width = V.W; c.height = V.H; const x = V.postX; x.clearRect(0, 0, V.W, V.H);
   const g = x.createRadialGradient(V.W / 2, V.H / 2, Math.min(V.W, V.H) * 0.42, V.W / 2, V.H / 2, Math.hypot(V.W, V.H) * 0.62);
   g.addColorStop(0, 'rgba(10,4,24,0)'); g.addColorStop(1, 'rgba(10,4,24,0.55)'); x.fillStyle = g; x.fillRect(0, 0, V.W, V.H);
   if (AU.set.crt) { const step = Math.max(3, Math.round(V.dpr * 2)); x.fillStyle = 'rgba(0,0,0,0.11)'; for (let y = 0; y < V.H; y += step) x.fillRect(0, y, V.W, Math.max(1, step / 3)); }
   V.post = c;
   // trame BD (points)
-  const [h, hx] = mkCanvas(12, 12); hx.fillStyle = 'rgba(20,8,40,0.5)'; hx.beginPath(); hx.arc(6, 6, 2.2, 0, 7); hx.fill();
-  V.halftone = V.ctx.createPattern(h, 'repeat');
+  if (!V.halftone) { const [h, hx] = mkCanvas(12, 12); hx.fillStyle = 'rgba(20,8,40,0.5)'; hx.beginPath(); hx.arc(6, 6, 2.2, 0, 7); hx.fill(); V.halftone = V.ctx.createPattern(h, 'repeat'); }
 }
 const rp = v => Math.round(v * V.a) / V.a;
 const TINTS = new WeakMap();
@@ -53,6 +55,10 @@ function tinted(cv, col) {
 }
 // Dessine un personnage (coordonnées monde, contexte déjà transformé)
 function drawSprite(c, cfg, v, a, o = {}) {
+  try { drawSprite0(c, cfg, v, a, o); }
+  catch (e) { window.__sprErr = (window.__sprErr || 0) + 1; window.__lastErr = String(e && e.message || e).slice(0, 90); try { c.restore(); } catch (e2) { } c.fillStyle = '#1a1028'; c.fillRect(a.x - 5, a.y - 26, 10, 26); c.fillStyle = (cfg && cfg.topCol) || '#ff6f91'; c.fillRect(a.x - 4, a.y - 16, 8, 9); }
+}
+function drawSprite0(c, cfg, v, a, o = {}) {
   const scale = o.scale || 1, alpha = o.alpha == null ? 1 : o.alpha;
   const g = o.gait || gaitOf(a), fr = o.frame != null ? o.frame : frameOf(a, g), pose = poseOf(g, fr);
   const face = o.face != null ? o.face : a.face, dir = face === 3 ? 2 : face, side = dir === 2;

@@ -164,7 +164,8 @@ function startLevel(idx, cfg, setup, opts) {
   { const keys = []; for (let y = 0; y < L.m.h; y++) for (let x = 0; x < L.m.w; x++) { const key = y * L.m.w + x; if (!SEARCHABLE_KINDS.has(L.m.get(x, y)) || L.candAt.has(key) || G.tasks.some(t => t.x === x && t.y === y)) continue; if ([[0, 1], [0, -1], [1, 0], [-1, 0]].some(([dx, dy]) => L.reach[(y + dy) * L.m.w + x + dx] >= 0 && L.m.get(x + dx, y + dy) === K.FLOOR)) keys.push(key); } G.disguiseAt = new Set(shuffle(keys).slice(0, 2)); }
   spawnPigeons(); FX.reset(); G.camX = null;
   G.trees = []; for (let y = 0; y < L.m.h; y++) for (let x = 0; x < L.m.w; x++) if (L.m.get(x, y) === K.TREE) G.trees.push([x, y]);
-  G.mapCanvas = renderMapCanvas(L);
+  if (G.mapCanvas && !(G.mapKeep)) { try { G.mapCanvas.width = 0; G.mapCanvas.height = 0; } catch (e) { } }
+  G.mapKeep = false; G.mapCanvas = renderMapCanvas(L);
   G.mode = 'intro';
 }
 function spawnItems() {

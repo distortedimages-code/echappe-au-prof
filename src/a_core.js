@@ -18,7 +18,14 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
 };
-function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; return [c, x]; }
+// sur iPhone, la mémoire réservée aux canvas est limitée : si elle déborde, getContext renvoie null
+// → on libère le cache des sprites et on réessaie, au lieu de planter (ce qui faisait disparaître le perso)
+function mkCanvas(w, h) {
+  let c = document.createElement('canvas'); c.width = w; c.height = h; let x = c.getContext('2d');
+  if (!x && typeof freeSpriteCache === 'function') { freeSpriteCache(); c = document.createElement('canvas'); c.width = w; c.height = h; x = c.getContext('2d'); }
+  if (!x) { window.__canvasFail = (window.__canvasFail || 0) + 1; c = document.createElement('canvas'); c.width = 1; c.height = 1; x = c.getContext('2d') || { fillRect() { }, drawImage() { }, getImageData() { return { data: new Uint8ClampedArray(4) }; }, putImageData() { }, createRadialGradient() { return { addColorStop() { } }; }, beginPath() { }, arc() { }, fill() { }, createPattern() { return null; } }; }
+  x.imageSmoothingEnabled = false; return [c, x];
+}
 function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
 // ================= AUDIO (chiptune maison) =================

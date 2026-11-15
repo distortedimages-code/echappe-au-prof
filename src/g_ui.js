@@ -411,6 +411,7 @@ const UI = {
     $('pRestart').classList.toggle('hidden', !!G.net); $('pLevels').textContent = G.net ? '🏠 Quitter la partie' : '🏫 Niveaux'; $('pResume').textContent = G.net ? '▶ Continuer (la partie tourne !)' : '▶ Reprendre';
     if (!G.net) { this.pausedFrom = G.mode; G.mode = 'paused'; }
     this.show('sPause'); this.syncTogs();
+    $('pDiag').textContent = '🛠️ qualité ' + Perf.q + ' · sprites ' + CHAR_CACHE.size + ' · ratés ' + ((window.__sprErr || 0) + (window.__canvasFail || 0)) + (window.__lastErr ? ' · ' + window.__lastErr : '');
   },
   // ---------- résultat ----------
   result(win) {

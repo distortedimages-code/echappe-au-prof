@@ -1,7 +1,6 @@
 // ================= PLUS DE VIE DANS LE COLLÈGE =================
 // Match de foot dans la cour, élèves qui se baladent par deux, bavardages sur les bancs,
 // et l'élève aux toilettes qu'il ne faut pas surprendre en courant…
-const TEAM_COL = ['#e43b44', '#3d7bff'];
 function lifeSetup() {
   const L = G.L, m = G.m; G.foot = null;
   if (G.net || G.inf) return;
@@ -25,7 +24,7 @@ function lifeSetup() {
     G.foot = { x: (f.x0 + f.x1) / 2, y: (f.y0 + f.y1) / 2, vx: 0, vy: 0, z: 0, vz: 0, f, score: [0, 0], resetT: 0, kickT: 0 };
     for (let i = 0; i < 6; i++) {
       const team = i % 2, k = mk(lerp(f.x0, f.x1, team ? 0.65 : 0.35) + rand(-14, 14), lerp(f.y0, f.y1, 0.2 + (i >> 1) * 0.3), 'foot', { team, kcd: 0 });
-      k.cfg = Object.assign({}, k.cfg, { topCol: TEAM_COL[team] }); k.home = [k.x, k.y];
+      k.cfg = Object.assign({}, k.cfg, { top: 7, topCol: team ? 6 : 0 }); k.home = [k.x, k.y];   // maillot de foot rouge ou bleu (index de la palette, pas une couleur !)
     }
   }
   // 2) des élèves qui se baladent par deux (en bavardant)

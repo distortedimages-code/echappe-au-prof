@@ -34,6 +34,11 @@ function randomChar(name, rf) {
   return c;
 }
 const CHAR_CACHE = new Map();
+// libère les sprites les plus anciens (et leur mémoire tout de suite : width = 0, important sur iPhone)
+function freeSpriteCache(keep = 0) {
+  const n = CHAR_CACHE.size - keep; let i = 0;
+  for (const [k, cv] of CHAR_CACHE) { if (i++ >= n) break; CHAR_CACHE.delete(k); try { cv.width = 0; cv.height = 0; } catch (e) { } }
+}
 function charKey(c, v) {
   let k = CHAR_FIELDS.map(f => c[f.k]).join(',');
   if (v) k += '|' + (v.adult ? 1 : 0) + (v.wide ? 1 : 0) + (v.eyes != null ? v.eyes : '') + (v.extras || []).join('');
@@ -104,7 +109,7 @@ function charCanvas(cfg, dir, frame, v, gait = 'basic') {
   const [cv, x] = mkCanvas(20, 34);
   drawCharInto(x, cfg, dir, frame, v || {}, gait);
   shadePass(cv, x); outlinePass(cv, x);
-  if (CHAR_CACHE.size > 2500) CHAR_CACHE.clear();
+  if (CHAR_CACHE.size > 1400) freeSpriteCache(700);
   CHAR_CACHE.set(key, cv); return cv;
 }
 function drawCharInto(x, c, dir, frame, v, gait) {
