@@ -212,6 +212,7 @@ const Net = {
       case 'caught': caught(d.r, true); break;
       case 'grabfail': if (G.inf && d.fl !== G.inf.cur) break; grabFail(d.i, true, d.li); if (this.role === 'student') { T.state = 'stun'; T.checkT = 0; const k = G.kids[d.i]; if (k && dist(k.x, k.y, P.x, P.y) < 14 * 16) cue(T.x, T.y - 30, 'word', 'RATÉ !', { col: '#9fe0ff', pop: true }); } break;
       case 'task': G.tasksRemote = d.n; if (this.role === 'teacher') { toast('📋 ' + (P.cfg.name || 'L’élève') + ' a fini une tâche (' + d.n + '/' + (G.tasks.length || 3) + ')' + (d.n >= (G.tasks.length || 3) ? ' : sorties ouvertes ! 😱' : ' !'), 2.4); AU.sfx('ding', 0.5); } break;
+      case 'undisguise': if (this.role === 'teacher') { if (G.pVis) { puff(P.x, P.y - 10, 14, '#ffffff'); cue(P.x, P.y - 36, 'word', 'DÉMASQUÉ !', { col: '#ff9fd8', pop: true }); } P.cfg = d.cfg; P.disguised = false; } break;
       case 'disguise': if (this.role === 'teacher') { if (G.pVis) { puff(P.x, P.y - 10, 18, '#ffffff'); cue(P.x, P.y - 36, 'word', 'POUF !', { col: '#ffd23f', pop: true }); } P.cfg = d.cfg; P.disguised = true; } break;
       case 'escape': {
         if (G.inf && G.inf.cur !== 0) { G.mode = 'escape'; G.escT = 1.9; G.escFrom = [-9999, -9999]; G.escTo = [-9999, -9999]; break; }

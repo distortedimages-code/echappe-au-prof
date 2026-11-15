@@ -619,6 +619,15 @@ function moveA(P, dx, dy, solid, hw, hh) {
   if (blockedY && Math.abs(dy) > Math.abs(dx) * 1.5) assist(dy, 'y');
   return blockedX || blockedY;
 }
+// le déguisement tient 15 secondes, puis la perruque tombe
+const DISGUISE_T = 15;
+function undisguise() {
+  const P = G.P; if (!P.disguised) return;
+  if (P.cfgOrig) P.cfg = P.cfgOrig; P.disguised = false; P.disguiseT = 0; P.cfgOrig = null; P.spin = 0.5;
+  if (P.hidden) { AU.sfx('pouf'); toast('🥸 Ton déguisement est tombé dans ta cachette.', 1.8); }
+  else { puff(P.x, P.y - 10, 16, '#ffffff'); AU.sfx('pouf'); cue(P.x, P.y - 40, 'word', 'OUPS !', { col: '#ff9fd8', pop: true }); toast('🥸 Fin du déguisement : c’est re-toi !', 1.8); }
+  if (G.net) Net.send({ t: 'undisguise', cfg: P.cfg });
+}
 function updatePlayer(dt) {
   const P = G.P, inp = Input.get(), T = G.T;
   if (P.out) { P.moving = false; return; }
@@ -631,6 +640,7 @@ function updatePlayer(dt) {
     if (P.hidden && dT < 3 && T.state !== 'sleep') { P.hidden.shake = Math.max(P.hidden.shake || 0, 0.06); P.glupT = (P.glupT || 0) - dt; if (P.glupT <= 0) { P.glupT = rand(2.5, 4); cue(P.hidden.x * 16 + 8, P.hidden.y * 16 - 4, 'word', pick(['glups…', 'gloups', '*tremble*']), { col: '#bfe4ff', small: true, life: 1 }); } } }
   if (P.small > 0) { const was = P.small; P.small -= dt; if (P.small <= 0) unshrink(); else if (was > 3 && P.small <= 3) toast('⏳ Le gâteau s’épuise…', 1.6); }
   if (P.slip > 0) { P.slip -= dt; if (P.slip <= 0) toast('Pantoufle : plus de magie.', 1.4); }
+  if (P.disguised && P.disguiseT > 0) { const was = P.disguiseT; P.disguiseT -= dt; if (P.disguiseT <= 0) undisguise(); else if (was > 3 && P.disguiseT <= 3) toast('⏳ La moustache se décolle…', 1.6); }
   if (P.hidden) {
     P.moving = false; P.running = false;
     if (inp.mag > 0.6) { P.unhideT += dt; if (P.unhideT > 0.18) unhide(); } else P.unhideT = 0;
@@ -893,10 +903,11 @@ function useItem(i) {
     case 'disguise': {
       if (P.hidden) { toast('Sors d’abord de ta cachette.', 1.4); used = false; break; }
       const src = G.kids.length ? pick(G.kids).cfg : randomChar('');
-      const nc = Object.assign({}, src, { name: P.cfg.name }); P.cfg = nc; P.disguised = true; P.spin = 0.7;
+      if (!P.disguised) P.cfgOrig = P.cfg;
+      const nc = Object.assign({}, src, { name: P.cfg.name }); P.cfg = nc; P.disguised = true; P.disguiseT = DISGUISE_T; P.spin = 0.7;
       puff(P.x, P.y - 10, 20, '#ffffff'); sparkle(P.x, P.y - 12, 16); AU.sfx('pouf'); AU.sfx('magic'); cue(P.x, P.y - 40, 'word', 'TADAAA !', { col: '#ffd23f', pop: true });
       if (G.net) Net.send({ t: 'disguise', cfg: nc }); else if (!G.T.seeNow) { G.T.knows = null; G.T.detect = 0; }
-      toast('🥸 Déguisé·e ! ' + (G.kids.length ? 'Personne ne te reconnaît. Normalement.' : 'Le prof n’y verra que du feu.'), 2.4);
+      toast('🥸 Déguisé·e pour 15 s ! ' + (G.kids.length ? 'Personne ne te reconnaît. Normalement.' : 'Le prof n’y verra que du feu.'), 2.4);
       break;
     }
     case 'mirror': G.reveal = 8; FX.flash = 0.7; FX.flashCol = '220,240,255'; AU.sfx('magic'); toast('🪞 Miroir : prof et sorties révélés !', 2); break;

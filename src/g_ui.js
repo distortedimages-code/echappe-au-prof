@@ -211,7 +211,16 @@ const UI = {
   },
   waveTitle() { document.querySelectorAll('.logo span').forEach((sp, j) => { const t = sp.textContent; sp.innerHTML = [...t].map((ch, i) => `<i style="animation-delay:${(i * 0.08 + j * 0.3).toFixed(2)}s">${ch === ' ' ? '&nbsp;' : ch}</i>`).join(''); }); },
   syncTogs() { document.querySelectorAll('.tog').forEach(b => b.classList.toggle('off', !AU.set[b.dataset.k])); this.paintEasy($('bEasy')); this.paintEasy($('pEasy')); },
-  openTitle() { G.mode = 'menu'; this.show('sTitle'); AU.play('menu'); $('bSquish').textContent = '🧸 Mes squishies (' + SqCol.count() + '/' + SQUISHIES.length + ')'; },
+  openTitle() { G.mode = 'menu'; this.show('sTitle'); AU.play('menu'); this.titleInfo(); },
+  // les petits textes des tuiles du menu
+  titleInfo() {
+    $('tSqN').textContent = SqCol.count() + ' / ' + SQUISHIES.length + ' à collectionner';
+    const rec = k => { const b = (store.get(k, {}) || {}).best || {}, v = Object.values(b); return v.length ? Math.max(...v) : null; };
+    const h = rec('nds_quiz'), e = rec('nds_quiz_en');
+    $('tHistS').textContent = h != null ? 'Record : ' + h + '/20' : 'La Préhistoire';
+    $('tEnS').textContent = e != null ? 'Record : ' + e + '/20' : 'Have, numbers…';
+    MenuArt.refresh();
+  },
   // ---------- liste des persos ----------
   openChars(back) {
     this.charsBack = back || 'title'; this.show('sChars');
@@ -575,6 +584,7 @@ const UI = {
     if (teach) { if (G.slowT > 0) eff.push('🐢 Ralenti ' + Math.ceil(G.slowT) + 's'); $('hEffects').innerHTML = eff.map(e => `<div>${e}</div>`).join(''); $('hHidden').classList.add('hidden'); return; }
     if (P.small > 0) eff.push('🍰 Petit ' + Math.ceil(P.small) + 's');
     if (P.slip > 0) eff.push('👠 Silence ' + Math.ceil(P.slip) + 's');
+    if (P.disguised && P.disguiseT > 0) eff.push('🥸 Déguisé ' + Math.ceil(P.disguiseT) + 's');
     if (G.reveal > 0) eff.push('🪞 Miroir ' + Math.ceil(G.reveal) + 's');
     if (G.slowT > 0) eff.push('⏱️ Ralenti ' + Math.ceil(G.slowT) + 's');
     $('hEffects').innerHTML = eff.map(e => `<div>${e}</div>`).join('');
@@ -589,6 +599,7 @@ const Title = {
   t: 0, kid: null,
   draw(dt) {
     if ($('sTitle').classList.contains('hidden')) return;
+    MenuArt.tick(dt);
     this.t += dt; const cv = $('titleCv'), c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
     if (!this.kid) this.kid = UI.cfg() || randomChar('');
     c.fillStyle = '#7d5a8a'; c.fillRect(0, 0, 176, 20);

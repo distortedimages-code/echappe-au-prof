@@ -389,7 +389,7 @@ const ITEMS = {
   watch: { n: 'Montre du Lapin blanc', d: 'Prof en mode escargot (8 s).', short: 'Ralenti' },
   key: { n: 'Petite clé', d: 'Ouvre une porte fermée à clé.', short: 'Clé' },
   squishy: { n: 'Squishy kawaii', d: 'Si on t’attrape : SPLOTCH ! Le prof voit flou 10 s.', short: 'Squishy' },
-  disguise: { n: 'Déguisement', d: 'Perruque + moustache : nouveau look. (Pas devant le prof.)', short: 'Déguise' },
+  disguise: { n: 'Déguisement', d: 'Perruque + moustache : nouveau look pendant 15 s. (Pas devant le prof.)', short: 'Déguise' },
 };
 const ITEM_KEYS = Object.keys(ITEMS).filter(k => k !== 'disguise' && k !== 'key');
 const ITEM_CACHE = {};

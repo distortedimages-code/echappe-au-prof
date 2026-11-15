@@ -371,6 +371,23 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
 .svRow{display:flex;gap:8px;flex-wrap:wrap}.svRow .btn{flex:1}
 .svHr{border:none;border-top:3px dashed #d8c8b0;margin:12px 0}
 .svMsg{font-size:19px;margin-top:6px}.svMsg.ok{color:#2e8a3a}.svMsg.ko{color:#d0283a}
+
+/* ---- menu principal en tuiles ---- */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:460px;margin:4px auto 6px}
+.tile{position:relative;display:flex;flex-direction:column;padding:0;margin:0;border:3px solid var(--ink);border-radius:14px;overflow:hidden;background:var(--panel2);box-shadow:0 5px 0 var(--ink);color:var(--ink);text-align:left;font-family:'VT323',monospace;touch-action:manipulation;cursor:pointer;transition:transform .08s,box-shadow .08s;-webkit-tap-highlight-color:transparent}
+.tile:active{transform:translateY(4px);box-shadow:0 1px 0 var(--ink)}
+.tile canvas{display:block;width:100%;height:auto;aspect-ratio:88/56;image-rendering:pixelated;background:#1a1430;border-bottom:3px solid var(--ink)}
+.tile .tl{display:flex;flex-direction:column;gap:4px;padding:8px 9px 9px;flex:1}
+.tile .tl b{font-family:'Press Start 2P',monospace;font-size:11px;line-height:1.3}
+.tile .tl small{font-size:18px;line-height:1;opacity:.85}
+.tile.wide{grid-column:span 2}
+#bPlay #titleCv{max-width:none;border:none;border-bottom:3px solid var(--ink);border-radius:0;box-shadow:none;aspect-ratio:176/56}
+.tPlay{background:var(--yel)}.tPlay .tl{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}.tPlay .tl>span{display:flex;flex-direction:column;gap:5px}
+.tPlay .tl b{font-size:17px}.tPlay .tl small{font-size:19px}
+.tPlay .go{font-style:normal;font-family:'Press Start 2P',monospace;font-size:16px;background:var(--ink);color:var(--yel);border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex:none;animation:goPulse 1.1s ease-in-out infinite}
+@keyframes goPulse{50%{transform:scale(1.14)}}
+.tInf{background:#ff8a3a}.tMulti{background:var(--pink);color:#fff}.tChars{background:var(--cyan)}.tSquish{background:#ffb3d6}.tHist{background:#e8b07a}.tEn{background:#8fc4ff}
+.tSave{flex-direction:row;align-items:center;gap:6px;background:var(--panel2);color:var(--paper)}.tSave .sv{font-size:30px;padding-left:12px}.tSave .tl b{color:var(--yel)}
 </style>
 </head>
 <body>
@@ -431,15 +448,16 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     <div class="wrap center">
       <div class="logo"><span class="l1">ÉCHAPPE</span><span class="l2">AU PROF !</span></div>
       <div class="sub">Collège Notre-Dame de Sion</div>
-      <canvas id="titleCv" width="176" height="56"></canvas>
-      <button class="btn big" id="bPlay">▶ Jouer</button>
-      <button class="btn orange" id="bInf">🕵️ Mode infiltration</button>
-      <button class="btn pink" id="bMulti">👥 À deux en ligne</button>
-      <button class="btn cyan" id="bChars">👕 Mes personnages</button>
-      <button class="btn sqBtn" id="bSquish">🧸 Mes squishies</button>
-      <button class="btn qzBtn" id="bQuiz">🦴 L’interro de M. Silex</button>
-      <button class="btn qzBtnEn" id="bQuizEn">🇬🇧 Le quiz de Miss Teacup</button>
-      <button class="btn ghost svBtn" id="bSave">💾 Ma sauvegarde</button>
+      <div class="tiles">
+        <button class="tile wide tPlay" id="bPlay"><canvas id="titleCv" width="176" height="56"></canvas><span class="tl"><span><b>▶ JOUER</b><small>Fuis le prof, trouve la sortie secrète</small></span><i class="go">▶</i></span></button>
+        <button class="tile tInf" id="bInf"><canvas data-ill="inf" width="88" height="56"></canvas><span class="tl"><b>Infiltration</b><small>Étage par étage, sans te faire voir</small></span></button>
+        <button class="tile tMulti" id="bMulti"><canvas data-ill="multi" width="88" height="56"></canvas><span class="tl"><b>À deux</b><small>En ligne, avec un·e ami·e</small></span></button>
+        <button class="tile tHist" id="bQuiz"><canvas data-ill="hist" width="88" height="56"></canvas><span class="tl"><b>Histoire</b><small id="tHistS">La Préhistoire</small></span></button>
+        <button class="tile tEn" id="bQuizEn"><canvas data-ill="en" width="88" height="56"></canvas><span class="tl"><b>Anglais</b><small id="tEnS">Have, numbers…</small></span></button>
+        <button class="tile tChars" id="bChars"><canvas data-ill="chars" width="88" height="56"></canvas><span class="tl"><b>Personnages</b><small>Crée tes élèves</small></span></button>
+        <button class="tile tSquish" id="bSquish"><canvas data-ill="squish" width="88" height="56"></canvas><span class="tl"><b>Squishies</b><small id="tSqN">Ta collection</small></span></button>
+        <button class="tile wide tSave" id="bSave"><span class="sv">💾</span><span class="tl"><b>Ma sauvegarde</b><small>Un code pour ne jamais perdre tes squishies</small></span></button>
+      </div>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
       <div class="panel howto">
@@ -1346,7 +1364,7 @@ const ITEMS = {
   watch: { n: 'Montre du Lapin blanc', d: 'Prof en mode escargot (8 s).', short: 'Ralenti' },
   key: { n: 'Petite clé', d: 'Ouvre une porte fermée à clé.', short: 'Clé' },
   squishy: { n: 'Squishy kawaii', d: 'Si on t’attrape : SPLOTCH ! Le prof voit flou 10 s.', short: 'Squishy' },
-  disguise: { n: 'Déguisement', d: 'Perruque + moustache : nouveau look. (Pas devant le prof.)', short: 'Déguise' },
+  disguise: { n: 'Déguisement', d: 'Perruque + moustache : nouveau look pendant 15 s. (Pas devant le prof.)', short: 'Déguise' },
 };
 const ITEM_KEYS = Object.keys(ITEMS).filter(k => k !== 'disguise' && k !== 'key');
 const ITEM_CACHE = {};
@@ -3357,6 +3375,7 @@ const Net = {
       case 'caught': caught(d.r, true); break;
       case 'grabfail': if (G.inf && d.fl !== G.inf.cur) break; grabFail(d.i, true, d.li); if (this.role === 'student') { T.state = 'stun'; T.checkT = 0; const k = G.kids[d.i]; if (k && dist(k.x, k.y, P.x, P.y) < 14 * 16) cue(T.x, T.y - 30, 'word', 'RATÉ !', { col: '#9fe0ff', pop: true }); } break;
       case 'task': G.tasksRemote = d.n; if (this.role === 'teacher') { toast('📋 ' + (P.cfg.name || 'L’élève') + ' a fini une tâche (' + d.n + '/' + (G.tasks.length || 3) + ')' + (d.n >= (G.tasks.length || 3) ? ' : sorties ouvertes ! 😱' : ' !'), 2.4); AU.sfx('ding', 0.5); } break;
+      case 'undisguise': if (this.role === 'teacher') { if (G.pVis) { puff(P.x, P.y - 10, 14, '#ffffff'); cue(P.x, P.y - 36, 'word', 'DÉMASQUÉ !', { col: '#ff9fd8', pop: true }); } P.cfg = d.cfg; P.disguised = false; } break;
       case 'disguise': if (this.role === 'teacher') { if (G.pVis) { puff(P.x, P.y - 10, 18, '#ffffff'); cue(P.x, P.y - 36, 'word', 'POUF !', { col: '#ffd23f', pop: true }); } P.cfg = d.cfg; P.disguised = true; } break;
       case 'escape': {
         if (G.inf && G.inf.cur !== 0) { G.mode = 'escape'; G.escT = 1.9; G.escFrom = [-9999, -9999]; G.escTo = [-9999, -9999]; break; }
@@ -6731,6 +6750,15 @@ function moveA(P, dx, dy, solid, hw, hh) {
   if (blockedY && Math.abs(dy) > Math.abs(dx) * 1.5) assist(dy, 'y');
   return blockedX || blockedY;
 }
+// le déguisement tient 15 secondes, puis la perruque tombe
+const DISGUISE_T = 15;
+function undisguise() {
+  const P = G.P; if (!P.disguised) return;
+  if (P.cfgOrig) P.cfg = P.cfgOrig; P.disguised = false; P.disguiseT = 0; P.cfgOrig = null; P.spin = 0.5;
+  if (P.hidden) { AU.sfx('pouf'); toast('🥸 Ton déguisement est tombé dans ta cachette.', 1.8); }
+  else { puff(P.x, P.y - 10, 16, '#ffffff'); AU.sfx('pouf'); cue(P.x, P.y - 40, 'word', 'OUPS !', { col: '#ff9fd8', pop: true }); toast('🥸 Fin du déguisement : c’est re-toi !', 1.8); }
+  if (G.net) Net.send({ t: 'undisguise', cfg: P.cfg });
+}
 function updatePlayer(dt) {
   const P = G.P, inp = Input.get(), T = G.T;
   if (P.out) { P.moving = false; return; }
@@ -6743,6 +6771,7 @@ function updatePlayer(dt) {
     if (P.hidden && dT < 3 && T.state !== 'sleep') { P.hidden.shake = Math.max(P.hidden.shake || 0, 0.06); P.glupT = (P.glupT || 0) - dt; if (P.glupT <= 0) { P.glupT = rand(2.5, 4); cue(P.hidden.x * 16 + 8, P.hidden.y * 16 - 4, 'word', pick(['glups…', 'gloups', '*tremble*']), { col: '#bfe4ff', small: true, life: 1 }); } } }
   if (P.small > 0) { const was = P.small; P.small -= dt; if (P.small <= 0) unshrink(); else if (was > 3 && P.small <= 3) toast('⏳ Le gâteau s’épuise…', 1.6); }
   if (P.slip > 0) { P.slip -= dt; if (P.slip <= 0) toast('Pantoufle : plus de magie.', 1.4); }
+  if (P.disguised && P.disguiseT > 0) { const was = P.disguiseT; P.disguiseT -= dt; if (P.disguiseT <= 0) undisguise(); else if (was > 3 && P.disguiseT <= 3) toast('⏳ La moustache se décolle…', 1.6); }
   if (P.hidden) {
     P.moving = false; P.running = false;
     if (inp.mag > 0.6) { P.unhideT += dt; if (P.unhideT > 0.18) unhide(); } else P.unhideT = 0;
@@ -7005,10 +7034,11 @@ function useItem(i) {
     case 'disguise': {
       if (P.hidden) { toast('Sors d’abord de ta cachette.', 1.4); used = false; break; }
       const src = G.kids.length ? pick(G.kids).cfg : randomChar('');
-      const nc = Object.assign({}, src, { name: P.cfg.name }); P.cfg = nc; P.disguised = true; P.spin = 0.7;
+      if (!P.disguised) P.cfgOrig = P.cfg;
+      const nc = Object.assign({}, src, { name: P.cfg.name }); P.cfg = nc; P.disguised = true; P.disguiseT = DISGUISE_T; P.spin = 0.7;
       puff(P.x, P.y - 10, 20, '#ffffff'); sparkle(P.x, P.y - 12, 16); AU.sfx('pouf'); AU.sfx('magic'); cue(P.x, P.y - 40, 'word', 'TADAAA !', { col: '#ffd23f', pop: true });
       if (G.net) Net.send({ t: 'disguise', cfg: nc }); else if (!G.T.seeNow) { G.T.knows = null; G.T.detect = 0; }
-      toast('🥸 Déguisé·e ! ' + (G.kids.length ? 'Personne ne te reconnaît. Normalement.' : 'Le prof n’y verra que du feu.'), 2.4);
+      toast('🥸 Déguisé·e pour 15 s ! ' + (G.kids.length ? 'Personne ne te reconnaît. Normalement.' : 'Le prof n’y verra que du feu.'), 2.4);
       break;
     }
     case 'mirror': G.reveal = 8; FX.flash = 0.7; FX.flashCol = '220,240,255'; AU.sfx('magic'); toast('🪞 Miroir : prof et sorties révélés !', 2); break;
@@ -8354,6 +8384,119 @@ function portrait(canvas, cfg, v, scale, dir = 0, frame = 0, gait = 'basic') {
   if (dir === 3) { c.save(); c.translate(canvas.width, 0); c.scale(-1, 1); c.drawImage(cv, x, y, w, h); c.restore(); } else c.drawImage(cv, x, y, w, h);
 }
 
+// ================= MENU PRINCIPAL EN TUILES : une petite scène animée par mode de jeu =================
+// Chaque <canvas data-ill="…"> du menu est redessiné ~10 fois par seconde avec les vrais sprites du jeu.
+const MenuArt = {
+  t: 0, acc: 1, pool: null,
+  // un personnage, pieds en (x, y). dir : 0 face, 1 dos, 2 droite, 3 gauche
+  spr(c, cfg, v, x, y, dir, fr, gait) {
+    const cv = charCanvas(cfg, dir === 3 ? 2 : dir, fr || 0, v || null, gait || 'basic');
+    c.fillStyle = 'rgba(0,0,0,.28)'; c.fillRect(Math.round(x) - 5, y - 1, 10, 2);
+    c.save(); c.translate(Math.round(x), Math.round(y)); if (dir === 3) c.scale(-1, 1); c.drawImage(cv, -10, -32); c.restore();
+  },
+  floor(c, fs, y0, W) { for (let y = y0, r = 0; y < 60; y += 16, r++) for (let x = 0; x < W; x += 16) drawFloorTile(c, x, y, fs, x / 16, r + 3); },
+  wall(c, ws, y0, W) { for (let x = 0; x < W; x += 16) drawWallTile(c, x, y0, ws, true, x / 16, 0); },
+  kids() {
+    if (!this.pool) { const cs = (UI.chars || []).slice(0, 3); while (cs.length < 3) cs.push(randomChar('')); this.pool = cs; }
+    return this.pool;
+  },
+  refresh() { this.pool = null; this.acc = 1; },
+  tick(dt) {
+    this.t += dt; this.acc += dt; if (this.acc < 0.09) return; this.acc = 0;
+    document.querySelectorAll('#sTitle canvas[data-ill]').forEach(cv => {
+      const c = cv.getContext('2d'); if (!c) return; c.imageSmoothingEnabled = false; c.clearRect(0, 0, cv.width, cv.height);
+      try { this[cv.dataset.ill](c, this.t, cv.width, cv.height); } catch (e) { }
+    });
+  },
+  // 🕵️ la nuit, on passe dans le dos du surveillant pour rejoindre l'escalier
+  inf(c, t, W, H) {
+    c.fillStyle = '#1a1430'; c.fillRect(0, 0, W, H);
+    this.wall(c, WS.BLUE, 0, W); this.floor(c, FS.LINO, 16, W);
+    c.fillStyle = '#2a2d44'; c.fillRect(34, 2, 20, 12); c.fillStyle = '#0d1a3a'; c.fillRect(35, 3, 18, 10); c.fillStyle = '#fff3b0'; c.fillRect(47, 4, 3, 3); c.fillStyle = '#ffffff'; c.fillRect(38, 6, 1, 1); c.fillRect(42, 10, 1, 1);
+    // l'escalier, en bas à droite
+    const sx = 68, sy = 28; c.fillStyle = 'rgba(63,200,110,.3)'; c.fillRect(sx, sy, 20, 28); c.strokeStyle = 'rgba(63,200,110,.95)'; c.lineWidth = 1; c.strokeRect(sx + .5, sy + .5, 19, 27);
+    c.strokeStyle = '#ffffff'; for (let i = 0; i < 2; i++) { const yy = sy + 8 + ((t * 10 + i * 12) % 22); c.beginPath(); c.moveTo(sx + 5, yy - 3); c.lineTo(sx + 10, yy + 1); c.lineTo(sx + 15, yy - 3); c.stroke(); }
+    // nuit
+    c.fillStyle = 'rgba(10,6,30,.45)'; c.fillRect(0, 0, W, H);
+    // le surveillant regarde ailleurs, avec sa lampe
+    const g = PROFS[1], gx = 20, gy = 50;
+    c.fillStyle = 'rgba(255,230,120,.28)'; c.beginPath(); c.moveTo(gx - 4, gy - 16); c.lineTo(-10, gy - 34); c.lineTo(-10, gy + 6); c.closePath(); c.fill();
+    this.spr(c, g.cfg, g.v, gx, gy, 3, Math.floor(t * 5) % 4, 'walk');
+    // deux élèves sur la pointe des pieds
+    const [a, b] = this.kids(), ph = Math.floor(t * 7) % 6, bob = (t * 2) % 1;
+    this.spr(c, a, null, 44 + bob * 2, 46, 2, ph, 'sneak');
+    this.spr(c, b, null, 58 + bob * 2, 52, 2, (ph + 3) % 6, 'sneak');
+    if ((t * 2 | 0) % 2) { c.fillStyle = '#bfe4ff'; c.fillRect(50, 12, 1, 3); c.fillRect(52, 11, 1, 4); }
+  },
+  // 👥 élève contre prof
+  multi(c, t, W, H) {
+    c.fillStyle = '#3d6fd0'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#e43b44'; c.beginPath(); c.moveTo(50, 0); c.lineTo(W, 0); c.lineTo(W, H); c.lineTo(38, H); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.12)'; for (let i = 0; i < 6; i++) c.fillRect(((t * 30 + i * 17) % (W + 20)) - 10, 6 + i * 8, 8, 1);
+    c.fillStyle = 'rgba(20,11,38,.35)'; c.fillRect(0, 44, W, 12);
+    const k = this.kids()[0], p = PROFS[2], f = Math.floor(t * 9) % 6;
+    this.spr(c, k, null, 22, 50, 2, f, 'run');
+    this.spr(c, p.cfg, p.v, 68, 50, 3, (f + 2) % 6, 'run');
+    const s = 1 + Math.sin(t * 6) * 0.08; c.save(); c.translate(44, 24); c.scale(s, s);
+    c.font = '11px "Press Start 2P", monospace'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = '#140b26'; c.fillText('VS', 1, 1); c.fillStyle = '#ffd23f'; c.fillText('VS', 0, 0); c.restore();
+    // les deux téléphones
+    [[6, 4], [74, 4]].forEach(([x, y], i) => { c.fillStyle = '#140b26'; c.fillRect(x, y, 8, 12); c.fillStyle = i ? '#ff9fb0' : '#9fd7ff'; c.fillRect(x + 1, y + 1, 6, 9); const on = (t * 3 + i) % 2 < 1; c.fillStyle = on ? '#ffffff' : 'rgba(255,255,255,.4)'; c.fillRect(x + 3, y + 3, 2, 1); c.fillRect(x + 2, y + 5, 4, 1); });
+  },
+  // 👕 la garde-robe
+  chars(c, t, W, H) {
+    c.fillStyle = '#c2b9a8'; c.fillRect(0, 0, W, H);
+    this.wall(c, WS.PAINT, 0, W); this.floor(c, FS.WOOD, 16, W);
+    drawWallDecor(c, 4, 0, { t: 'poster', x: 1, y: 2 }, 0); drawWallDecor(c, 68, 0, { t: 'poster', x: 2, y: 1 }, 0);
+    const ks = this.kids();
+    ks.forEach((k, i) => { const x = 18 + i * 26, sel = i === 1, by = sel ? Math.round(Math.abs(Math.sin(t * 3)) * -2) : 0; this.spr(c, k, null, x, 50 + by, 0, 0, 'basic'); });
+    const tw = (t * 4 | 0) % 4; c.fillStyle = '#fff6a0'; if (tw < 2) { c.fillRect(54, 14, 1, 3); c.fillRect(53, 15, 3, 1); } else { c.fillRect(34, 12, 1, 3); c.fillRect(33, 13, 3, 1); }
+  },
+  // 🧸 la collection
+  squish(c, t, W, H) {
+    c.fillStyle = '#ffd6ea'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#ffc0dd'; for (let y = 2; y < H; y += 8) for (let x = (y / 8 % 2) * 4; x < W; x += 8) c.fillRect(x, y, 2, 2);
+    c.fillStyle = '#c08a54'; c.fillRect(0, 44, W, 4); c.fillStyle = '#9a6a3c'; c.fillRect(0, 48, W, 2); c.fillStyle = '#e0b07a'; c.fillRect(0, 44, W, 1);
+    const have = SqCol.get(), got = SQUISHIES.filter(q => have[q.id]).map(q => q.id);
+    const ids = got.length ? got : [0, 5, 12, 20, 33];
+    const pickN = n => ids[Math.floor((t / 2.2) + n * 3) % ids.length];
+    [[2, 30], [17, 30], [58, 30], [73, 30]].forEach(([x, y], i) => c.drawImage(squishyCanvas(pickN(i + 1), !got.length && i % 2 === 1), x, y));
+    const sq = 1 + Math.max(0, Math.sin(t * 5)) * 0.18, big = squishyCanvas(pickN(0));
+    c.save(); c.translate(44, 44); c.scale(2 * (1 + (sq - 1) * 0.6), 2 / sq); c.drawImage(big, -7, -14); c.restore();
+    if ((t * 2 | 0) % 2) { c.fillStyle = '#ff4f8b'; c.fillRect(30, 6, 2, 2); c.fillRect(33, 6, 2, 2); c.fillRect(30, 8, 5, 2); c.fillRect(31, 10, 3, 1); c.fillRect(32, 11, 1, 1); }
+  },
+  // 🦴 le tableau de M. Silex
+  hist(c, t, W, H) {
+    c.fillStyle = '#c9b48a'; c.fillRect(0, 0, W, H); this.floor(c, FS.WOOD, 42, W);
+    c.fillStyle = '#7a4b2a'; c.fillRect(3, 3, 58, 34); c.fillStyle = '#2f5a3a'; c.fillRect(5, 5, 54, 30);
+    c.fillStyle = 'rgba(255,255,255,.9)';
+    // un mammouth à la craie
+    [[12, 15, 15, 8], [10, 17, 2, 5], [25, 12, 7, 8], [30, 19, 2, 8], [31, 26, 3, 1], [26, 21, 5, 1], [13, 23, 2, 5], [18, 23, 2, 5], [23, 23, 2, 5], [14, 13, 9, 2]].forEach(r => c.fillRect(...r));
+    c.fillStyle = '#2f5a3a'; c.fillRect(27, 14, 1, 1);
+    // la frise
+    c.fillStyle = 'rgba(255,255,255,.85)'; c.fillRect(37, 27, 19, 1); [37, 43, 50, 55].forEach(x => c.fillRect(x, 25, 1, 5));
+    c.fillStyle = '#ffd23f'; c.fillRect(37, 10, 9, 2); c.fillRect(36, 9, 2, 4); c.fillRect(45, 9, 2, 4);
+    c.fillStyle = 'rgba(255,255,255,.7)'; c.fillRect(49, 9, 6, 1); c.fillRect(49, 12, 4, 1); c.fillRect(49, 15, 6, 1);
+    const p = PROFS[6], wav = Math.sin(t * 2.5) > 0.6;
+    this.spr(c, p.cfg, p.v, 74, 52, wav ? 3 : 0, wav ? Math.floor(t * 8) % 4 : 0, wav ? 'walk' : 'basic');
+    if ((t * 1.5 | 0) % 3 === 0) { c.fillStyle = '#ffffff'; c.fillRect(64, 10, 9, 7); c.fillRect(66, 17, 2, 2); c.fillStyle = '#140b26'; c.fillRect(67, 11, 2, 1); c.fillRect(68, 12, 1, 2); c.fillRect(68, 15, 1, 1); }
+  },
+  // 🇬🇧 le cours de Miss Teacup
+  en(c, t, W, H) {
+    c.fillStyle = '#d8e4f0'; c.fillRect(0, 0, W, H); this.floor(c, FS.CARPET, 42, W);
+    c.fillStyle = '#7a4b2a'; c.fillRect(3, 3, 50, 30); c.fillStyle = '#2f5a3a'; c.fillRect(5, 5, 46, 26);
+    c.font = '7px "Press Start 2P", monospace'; c.textBaseline = 'top'; c.fillStyle = 'rgba(255,255,255,.9)'; c.fillText('ABC', 8, 9); c.fillStyle = '#ffd23f'; c.fillText('Hi!', 8, 19);
+    // le drapeau
+    const fx = 37, fy = 8; c.fillStyle = '#1f3a8a'; c.fillRect(fx, fy, 12, 8); c.fillStyle = '#ffffff'; c.fillRect(fx + 5, fy, 3, 8); c.fillRect(fx, fy + 3, 12, 2); c.fillStyle = '#d0283a'; c.fillRect(fx + 6, fy, 1, 8); c.fillRect(fx, fy + 4, 12, 1);
+    // le bureau et la tasse de thé
+    c.fillStyle = '#8b5a2b'; c.fillRect(48, 40, 26, 4); c.fillStyle = '#5a351c'; c.fillRect(50, 44, 2, 8); c.fillRect(70, 44, 2, 8);
+    c.fillStyle = '#ffffff'; c.fillRect(56, 34, 7, 6); c.fillRect(63, 35, 2, 3); c.fillStyle = '#d0d6e0'; c.fillRect(54, 39, 11, 1); c.fillStyle = '#a0522d'; c.fillRect(57, 35, 5, 1); c.fillStyle = '#ff6f91'; c.fillRect(58, 37, 3, 1);
+    c.fillStyle = 'rgba(255,255,255,.75)'; for (let i = 0; i < 2; i++) { const s = (t * 8 + i * 5) % 10; c.fillRect(58 + i * 2 + Math.round(Math.sin(t * 4 + i) * 1), 32 - s, 1, 2); }
+    const p = PROFS[5];
+    this.spr(c, p.cfg, p.v, 80, 52, 0, 0, 'basic');
+  }
+};
+
 // ================= ENTRÉES (joystick + clavier) =================
 const Input = {
   jx: 0, jy: 0, mag: 0, pid: null, ox: 0, oy: 0, keys: {}, used: false, pending: null, el: null, joyEl: null,
@@ -8567,7 +8710,16 @@ const UI = {
   },
   waveTitle() { document.querySelectorAll('.logo span').forEach((sp, j) => { const t = sp.textContent; sp.innerHTML = [...t].map((ch, i) => `<i style="animation-delay:${(i * 0.08 + j * 0.3).toFixed(2)}s">${ch === ' ' ? '&nbsp;' : ch}</i>`).join(''); }); },
   syncTogs() { document.querySelectorAll('.tog').forEach(b => b.classList.toggle('off', !AU.set[b.dataset.k])); this.paintEasy($('bEasy')); this.paintEasy($('pEasy')); },
-  openTitle() { G.mode = 'menu'; this.show('sTitle'); AU.play('menu'); $('bSquish').textContent = '🧸 Mes squishies (' + SqCol.count() + '/' + SQUISHIES.length + ')'; },
+  openTitle() { G.mode = 'menu'; this.show('sTitle'); AU.play('menu'); this.titleInfo(); },
+  // les petits textes des tuiles du menu
+  titleInfo() {
+    $('tSqN').textContent = SqCol.count() + ' / ' + SQUISHIES.length + ' à collectionner';
+    const rec = k => { const b = (store.get(k, {}) || {}).best || {}, v = Object.values(b); return v.length ? Math.max(...v) : null; };
+    const h = rec('nds_quiz'), e = rec('nds_quiz_en');
+    $('tHistS').textContent = h != null ? 'Record : ' + h + '/20' : 'La Préhistoire';
+    $('tEnS').textContent = e != null ? 'Record : ' + e + '/20' : 'Have, numbers…';
+    MenuArt.refresh();
+  },
   // ---------- liste des persos ----------
   openChars(back) {
     this.charsBack = back || 'title'; this.show('sChars');
@@ -8931,6 +9083,7 @@ const UI = {
     if (teach) { if (G.slowT > 0) eff.push('🐢 Ralenti ' + Math.ceil(G.slowT) + 's'); $('hEffects').innerHTML = eff.map(e => `<div>${e}</div>`).join(''); $('hHidden').classList.add('hidden'); return; }
     if (P.small > 0) eff.push('🍰 Petit ' + Math.ceil(P.small) + 's');
     if (P.slip > 0) eff.push('👠 Silence ' + Math.ceil(P.slip) + 's');
+    if (P.disguised && P.disguiseT > 0) eff.push('🥸 Déguisé ' + Math.ceil(P.disguiseT) + 's');
     if (G.reveal > 0) eff.push('🪞 Miroir ' + Math.ceil(G.reveal) + 's');
     if (G.slowT > 0) eff.push('⏱️ Ralenti ' + Math.ceil(G.slowT) + 's');
     $('hEffects').innerHTML = eff.map(e => `<div>${e}</div>`).join('');
@@ -8945,6 +9098,7 @@ const Title = {
   t: 0, kid: null,
   draw(dt) {
     if ($('sTitle').classList.contains('hidden')) return;
+    MenuArt.tick(dt);
     this.t += dt; const cv = $('titleCv'), c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
     if (!this.kid) this.kid = UI.cfg() || randomChar('');
     c.fillStyle = '#7d5a8a'; c.fillRect(0, 0, 176, 20);
