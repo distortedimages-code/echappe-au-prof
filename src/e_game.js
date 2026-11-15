@@ -144,7 +144,7 @@ function startLevel(idx, cfg, setup, opts) {
   let L = seed != null ? buildProcLevel(idx, seed) : null;
   if (!L) L = finalizeLevel(def.build());
   L.def = def; G.seed = L.seed != null ? L.seed : null; G.net = null; G.inf = null; G.alarmFlash = false; G.appleId = 0; G.alarmT = 0; G.pVis = true;
-  G.L = L; G.m = L.m; G.lvl = idx; G.lessons = 0; G.time = 0; G.spotted = 0; G.reveal = 0; G.slowT = 0; G.shake = 0; G.found = 0;
+  G.L = L; G.m = L.m; G.lvl = idx; G.lessons = 0; G.time = 0; G.spotted = 0; G.reveal = 0; G.slowT = 0; G.shake = 0; G.found = 0; G.cls = null; G.power = null; G.dark = false;
   G.cues = []; G.parts = []; G.apples = []; G.searched = new Set(); G.intercomT = 24; G.kidCueT = 3; G.smallDoorTip = false; G.banner = null; G.heartT = 0;
   G.doorIdx = new Int16Array(L.m.w * L.m.h).fill(-1);
   G.doors = L.m.doors.map((d, i) => { G.doorIdx[d.y * L.m.w + d.x] = i; return { x: d.x, y: d.y, open: 0, target: 0, closeT: 0, locked: false, byPlayer: false, hideP: false, horiz: L.m.get(d.x - 1, d.y) !== K.FLOOR && L.m.get(d.x + 1, d.y) !== K.FLOOR }; });
@@ -158,10 +158,13 @@ function startLevel(idx, cfg, setup, opts) {
     G.ball = setup.ball ? { from: setup.ball[0], to: setup.ball[1], t: 0 } : null; G.tagIt = 4;
     L.kidSpots = L.itemSpots.filter(([x, y]) => { const f = L.m.fs[y * L.m.w + x]; return f === FS.ASPHALT || f === FS.GRASS || f === FS.SAND; });
   } else if (opts && opts.robots) { spawnItems(); spawnRobots(L.robots || 6); }
-  else { spawnItems(); spawnKids(L.kids || 0); }
+  else { G.items = []; spawnKids(L.kids || 0); }
   if (!setup) lifeSetup();
   G.tasks = (setup && setup.tasks ? setup.tasks.map(i => L.taskPool[i]).filter(Boolean) : shuffle(L.taskPool.slice()).slice(0, 3)).map(t => Object.assign({ def: TASKDEFS[t.id], done: false, room: L.m.roomAt(t.x, t.y) }, t)); G.tasksDone = 0; G.tasksRemote = 0;
   { const keys = []; for (let y = 0; y < L.m.h; y++) for (let x = 0; x < L.m.w; x++) { const key = y * L.m.w + x; if (!SEARCHABLE_KINDS.has(L.m.get(x, y)) || L.candAt.has(key) || G.tasks.some(t => t.x === x && t.y === y)) continue; if ([[0, 1], [0, -1], [1, 0], [-1, 0]].some(([dx, dy]) => L.reach[(y + dy) * L.m.w + x + dx] >= 0 && L.m.get(x + dx, y + dy) === K.FLOOR)) keys.push(key); } G.disguiseAt = new Set(shuffle(keys).slice(0, 2)); }
+  // solo : les objets magiques sont cachés dans les meubles, un seul par pièce
+  G.stash = null; if (!setup && !(opts && opts.robots)) { spawnStash(); G.disguiseAt = new Set(); }
+  if (!setup && !(opts && opts.robots)) { classSetup(); powerSetup(); }
   spawnPigeons(); FX.reset(); G.camX = null;
   G.trees = []; for (let y = 0; y < L.m.h; y++) for (let x = 0; x < L.m.w; x++) if (L.m.get(x, y) === K.TREE) G.trees.push([x, y]);
   if (G.mapCanvas && !(G.mapKeep)) { try { G.mapCanvas.width = 0; G.mapCanvas.height = 0; } catch (e) { } }
@@ -174,6 +177,42 @@ function spawnItems() {
   const chosen = [];
   for (const s of spots) { if (chosen.length >= kinds.length) break; if (chosen.every(c => Math.abs(c[0] - s[0]) + Math.abs(c[1] - s[1]) >= 8)) chosen.push(s); }
   G.items = chosen.map((s, i) => ({ id: i, x: s[0] * 16 + 8, y: s[1] * 16 + 12, kind: kinds[i], ph: Math.random() * 6 }));
+}
+// ---------- les objets magiques cachés dans les meubles (solo : un seul par pièce) ----------
+const STASH_KINDS = new Set([K.DESK, K.ARMOIRE, K.LOCKER, K.SHELF, K.TRASH, K.BALLBIN, K.COUNTER, K.MATS, K.BUSH]);
+const STASH_LABEL = { [K.DESK]: 'Fouiller le bureau', [K.ARMOIRE]: 'Fouiller l’armoire', [K.LOCKER]: 'Fouiller le casier', [K.SHELF]: 'Fouiller l’étagère', [K.TRASH]: 'Fouiller la poubelle', [K.BALLBIN]: 'Fouiller le bac', [K.COUNTER]: 'Fouiller le comptoir', [K.MATS]: 'Soulever les tapis', [K.BUSH]: 'Fouiller le buisson' };
+const STASH_PREF = new Set([K.DESK, K.ARMOIRE, K.LOCKER, K.SHELF, K.COUNTER]);
+function stashRoomOf(m, x, y) {
+  const r = m.roomAt(x, y); if (r) return r;
+  for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) if (m.get(x + dx, y + dy) === K.FLOOR) { const n = m.roomAt(x + dx, y + dy); if (n) return n; }
+  return '';
+}
+function spawnStash() {
+  const L = G.L, m = G.m, w = m.w; G.stash = new Map();
+  const startRoom = m.roomAt(L.start[0], L.start[1]), byRoom = new Map();
+  for (let y = 1; y < m.h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const k = m.get(x, y), key = y * w + x; if (!STASH_KINDS.has(k)) continue;
+    if (L.candAt.has(key) || G.tasks.some(t => t.x === x && t.y === y)) continue;
+    if (![[0, 1], [0, -1], [1, 0], [-1, 0]].some(([dx, dy]) => L.reach[(y + dy) * w + x + dx] >= 0 && m.get(x + dx, y + dy) === K.FLOOR)) continue;
+    // dehors (la cour), pas de pièces : on découpe en zones de 8×8 cases
+    const rn = stashRoomOf(m, x, y), room = L.outdoor && (!rn || /^Cour|Préau|Terrain|Aire/.test(rn)) ? 'zone ' + Math.floor(x / 9) + '-' + Math.floor(y / 9) : rn;
+    if (!room || room === startRoom || /Toilettes|Douches/.test(room) || Math.abs(x - L.start[0]) + Math.abs(y - L.start[1]) < 4) continue;
+    if (!byRoom.has(room)) byRoom.set(room, []); byRoom.get(room).push({ key, x, y, k });
+  }
+  // le gâteau d'abord (il ouvre le trou de souris), puis le squishy, le déguisement et deux surprises
+  const kinds = ['cake', 'squishy', 'disguise'].concat(shuffle(ITEM_KEYS.filter(k => k !== 'cake' && k !== 'squishy')).slice(0, 2));
+  // des pièces bien réparties : on prend à chaque fois la pièce la plus loin de celles déjà choisies
+  const rooms = [...byRoom.keys()], center = n => { const a = byRoom.get(n); return [a.reduce((s, o) => s + o.x, 0) / a.length, a.reduce((s, o) => s + o.y, 0) / a.length]; };
+  const chosen = [];
+  while (chosen.length < kinds.length && rooms.length) {
+    let bi = 0, bs = -1;
+    rooms.forEach((n, i) => { const [cx, cy] = center(n); const d = chosen.length ? Math.min(...chosen.map(c => { const [ox, oy] = center(c); return Math.abs(cx - ox) + Math.abs(cy - oy); })) : Math.random() * 10; const s = d + Math.random() * 6; if (s > bs) { bs = s; bi = i; } });
+    chosen.push(rooms.splice(bi, 1)[0]);
+  }
+  chosen.forEach((n, i) => {
+    const c = byRoom.get(n), pref = c.filter(o => STASH_PREF.has(o.k)), o = pick(pref.length ? pref : c);
+    G.stash.set(o.key, { kind: kinds[i], x: o.x, y: o.y, room: n });
+  });
 }
 function spawnRobots(n) {
   const L = G.L, spots = [];
@@ -237,7 +276,7 @@ const SIX_LINES = ['Six seven ! 🤲', 'SIX… SEVEN !', 'Six seven…'];
 const PROF_CHAT = ['Ouvrez vos cahiers page 42.', 'Silence au fond !', 'Qui mâche un chewing-gum ?', 'Interro surprise !', 'On ne dit pas « six seven » en classe !', 'Rangez vos portables !', 'Je ne veux plus entendre « feur » !', 'Qui veut passer au tableau ?', 'Les devoirs pour lundi !'];
 function npcChatter(dt) {
   const own = !G.net;
-  G.kids.forEach(k => { if (k.sixT > 0) k.sixT -= dt; if (own && k.bub && k.beh !== 'sit' && k.beh !== 'crowd' && k.beh !== 'watch') { k.bub.t += dt; if (k.bub.t > k.bub.dur) k.bub = null; } });
+  G.kids.forEach(k => { if (k.sixT > 0) k.sixT -= dt; if (own && k.bub && k.beh !== 'sit' && k.beh !== 'crowd' && k.beh !== 'watch' && k.beh !== 'cteach') { k.bub.t += dt; if (k.bub.t > k.bub.dur) k.bub = null; } });
   G.chatT = (G.chatT == null ? 5 : G.chatT) - dt;
   if (G.chatT > 0) return;
   G.chatT = rand(6, 11);   // moins de bulles : une de temps en temps, pas un brouhaha
@@ -261,7 +300,7 @@ function perceive(dt) {
   if (T.gone || ['sleep', 'eat', 'caught', 'count', 'evac', 'gone', 'blind'].includes(T.state)) { T.seeNow = false; T.detect = 0; return false; }
   if (!P.hidden && G.mode === 'play') {
     const ex = T.x, ey = T.y - 12, px = P.x, py = P.y - (P.small > 0 ? 3 : 7);
-    const d = Math.hypot(px - ex, py - ey), range = pr.range * 16 * (P.small > 0 ? 0.55 : 1);
+    const d = Math.hypot(px - ex, py - ey), range = pr.range * 16 * (P.small > 0 ? 0.55 : 1) * (isDark() ? 0.4 : 1);
     if (d < range) {
       let inCone = d < 22;
       if (!inCone) inCone = Math.abs(angDiff(Math.atan2(py - ey, px - ex), T.ang)) < pr.fov;
@@ -345,6 +384,7 @@ function updateTeacher(dt) {
   if (!['eat', 'sleep', 'caught', 'fetch', 'keys', 'unlock'].includes(T.state)) checkApples();
   const L = pr.lines;
   switch (T.state) {
+    case 'power': teacherPower(T, dt, slow); break;
     case 'warn':
       T.st -= dt; T.moving = false; T.ang += angDiff(Math.atan2(P.y - T.y, P.x - T.x), T.ang) * Math.min(1, dt * 8); T.face = faceFromAng(T.ang);
       if (T.st <= 0) { T.state = 'patrol'; T.path = null; }
@@ -507,6 +547,7 @@ function updateKids(dt) {
     if (k.gone) return;
     switch (k.beh) {
       case 'watch': infWatcher(k, dt); break;
+      case 'cteach': classTeacher(k, dt); break;
       case 'evac': infEvacStep(k, dt); break;
       case 'sit': case 'crowd': k.moving = false; if (k.bub) { k.bub.t += dt; if (k.bub.t > k.bub.dur) k.bub = null; } break;
       case 'jump': k.moving = false; k.face = 0; break;
@@ -681,7 +722,7 @@ function updatePlayer(dt) {
   if (inp.mag > 0.08) {
     const run = inp.mag > 0.62;
     let sp = run ? PL_RUN : PL_SNEAK * (0.45 + 0.55 * Math.min(1, inp.mag / 0.62));
-    if (P.small > 0) sp *= 0.85; if (P.slip > 0 && run) sp *= 1.3;
+    if (P.small > 0) sp *= 0.85; if (P.slip > 0 && run) sp *= 1.3; if (isDark()) sp *= 0.85;
     const nx = inp.x / inp.mag, ny = inp.y / inp.mag;
     const ox = P.x, oy = P.y;
     const blocked = moveP(nx * sp * dt, ny * sp * dt);
@@ -693,7 +734,7 @@ function updatePlayer(dt) {
     else P.runT = 0;
     if (P.slip > 0 && P.running) { FX.ghostT -= dt; if (FX.ghostT <= 0) { FX.ghostT = 0.05; FX.ghosts.push({ x: P.x, y: P.y, face: P.face, dist: P.dist, small: P.small > 0, t: 0 }); } }
     P.vang = Math.atan2(ny, nx); P.lookOff = 0; P.lookTo = 0; P.face = faceFromAng(P.vang); P.anim += dt * (run ? 1.5 : 0.9) * (P.moving ? 1 : 0);
-    if (blocked && !P.moving) { P.bumpT -= dt; if (P.bumpT <= 0) { P.bumpT = 0.6; AU.sfx('bump'); squash(P, -4); if (run) { for (let i = 0; i < 4; i++) part(P.x + nx * 6, P.y - 18, 'star', { vx: rand(-30, 30), vy: rand(-40, -10), g: 60, life: 0.6, col: '#ffd23f' }); cue(P.x, P.y - 34, 'word', 'BONK', { col: '#ffd23f', pop: true, small: true, life: 0.7 }); } } }
+    if (blocked && !P.moving) { P.bumpT -= dt; if (P.bumpT <= 0) { P.bumpT = 0.6; AU.sfx('bump'); squash(P, -4); if (isDark()) cue(P.x, P.y - 34, 'word', pick(['BONK', 'AÏE', 'OUILLE']), { col: '#ffd23f', pop: true, small: true, life: 0.7 }); if (run) { for (let i = 0; i < 4; i++) part(P.x + nx * 6, P.y - 18, 'star', { vx: rand(-30, 30), vy: rand(-40, -10), g: 60, life: 0.6, col: '#ffd23f' }); cue(P.x, P.y - 34, 'word', 'BONK', { col: '#ffd23f', pop: true, small: true, life: 0.7 }); } } }
     if (P.running) {
       P.stepT -= dt;
       if (P.stepT <= 0) {
@@ -774,7 +815,7 @@ function computeActions() {
     const sx = L.candAt.get(key);
     if (sx && sx.revealed && sx.secret[0] === tx && sx.secret[1] === ty) cand.push(locked ? { id: 'locked', icon: '🔒', label: 'Passage secret', sub: lockSub, prio: 0, d } : { id: 'secretGo', ex: sx, tx, ty, icon: '🚪', label: 'Prendre le passage !', sub: '', prio: 0, d });
     else if (sx && !G.searched.has(key)) cand.push({ id: 'search', tx, ty, ex: sx, icon: '🔍', label: sx.label, sub: '', prio: 2, d });
-    else if ((SEARCHABLE_KINDS.has(k) || (G.inf && k === K.DESK)) && !G.searched.has(key)) cand.push({ id: 'search', tx, ty, icon: '🔍', label: k === K.DESK ? 'Fouiller le bureau' : 'Fouiller', sub: '', prio: k === K.DESK ? 1.5 : 3, d });
+    else if ((SEARCHABLE_KINDS.has(k) || (G.inf && k === K.DESK) || (G.stash && STASH_KINDS.has(k))) && !G.searched.has(key)) cand.push({ id: 'search', tx, ty, icon: '🔍', label: STASH_LABEL[k] || 'Fouiller', sub: G.stash && G.stash.has(key) ? '✨' : '', prio: G.stash && G.stash.has(key) ? 0.8 : k === K.DESK ? 1.5 : 3, d });
     const hs = L.hideAt.get(key);
     if (hs && (!hs.small || P.small > 0)) {
       let okd = true; if (hs.k === K.DOOR) { const dr = doorAt(tx, ty); okd = !dr.locked && !actorInDoor(dr); }
@@ -798,6 +839,7 @@ function computeActions() {
     const d0 = P.lastDoor, dd = Math.hypot(d0.x * 16 + 8 - P.x, d0.y * 16 + 8 - (P.y - 6));
     if (dd > 12 && dd < 44) cand.push({ id: 'lock', door: d0, icon: '🔒', label: 'Fermer à clé', sub: 'derrière moi !', prio: 0.15, d: 0 });
   }
+  if (G.power && !G.dark && G.power.uses > 0 && !G.net && !G.inf && powerNear(P)) cand.push({ id: 'power', icon: '⚡', label: 'Couper le courant', sub: G.power.uses + '/' + POWER_USES, prio: 0.9, d: 0 });
   if (G.inf) infActions(cand, P);
   if (G.inf && G.inf.coop) coopActions(cand, P);
   cand.sort((a, b) => a.prio - b.prio || a.d - b.d);
@@ -820,6 +862,7 @@ function doAction(a) {
   switch (a.id) {
     case 'gateLocked': AU.sfx('fail'); toast('🔒 Portail fermé. Trousseau… ou alarme incendie 🔥', 2.6); break;
     case 'unhide': unhide(); break;
+    case 'power': AU.sfx('search', 0.5); P.busy = { label: 'J’ouvre le disjoncteur…', dur: 1.2, t: 0, done: () => powerCut() }; break;
     case 'hide': hide(a.spot); break;
     case 'task': TaskUI.open(a.task); break;
     case 'locked': AU.sfx('fail'); toast('🔒 Encore ' + tasksLeft() + ' tâche' + (tasksLeft() > 1 ? 's' : '') + ' 📋. Pas de raccourci !', 2.4); break;
@@ -845,10 +888,18 @@ function doAction(a) {
             ex.revealed = true; AU.sfx('found'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 24);
             if (tasksLeft() > 0) toast('🎉 ' + ex.reveal + ' Mais tâches d’abord !', 2.8);
             else { ex.done = true; toast('🎉 ' + ex.reveal, 2.2); setTimeout(() => { if (G.mode === 'play') escape(ex, a.tx, a.ty); }, 700); }
+          } else if (G.stash && G.stash.has(key)) {
+            const s = G.stash.get(key);
+            if (P.inv.length >= 3) { G.searched.delete(key); toast('✨ Il y a quelque chose… mais ton sac est plein (3 objets).', 2.4); }
+            else {
+              G.stash.delete(key); P.inv.push(s.kind); AU.sfx('pickup'); AU.sfx('magic', 0.5); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 18); hop(P, 110);
+              const sid = s.kind === 'squishy' ? squishyGot(P) : null; FX.flyers.push({ kind: s.kind, sid, slot: P.inv.length - 1, wx: a.tx * 16 + 8, wy: a.ty * 16, t: 0 });
+              if (sid == null) toast('✨ Trouvé : ' + ITEMS[s.kind].n + ' ! ' + ITEMS[s.kind].d, 3.4);
+            }
           } else if (G.disguiseAt && G.disguiseAt.has(key)) {
             if (P.inv.length >= 3) { G.searched.delete(key); toast('🥸 Un déguisement… et pas de place. Dommage.', 2.2); }
             else { G.disguiseAt.delete(key); P.inv.push('disguise'); AU.sfx('pickup'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 16); hop(P, 100); FX.flyers.push({ kind: 'disguise', slot: P.inv.length - 1, wx: a.tx * 16 + 8, wy: a.ty * 16, t: 0 }); toast('🥸 Un déguisement ! ' + ITEMS.disguise.d, 3.4); }
-          } else if (Math.random() < 0.18 && G.found < 2 && P.inv.length < 3) {
+          } else if (!G.stash && Math.random() < 0.18 && G.found < 2 && P.inv.length < 3) {
             G.found++; const kd = pick(ITEM_KEYS); P.inv.push(kd); AU.sfx('pickup'); sparkle(a.tx * 16 + 8, a.ty * 16 + 6, 12);
             if (kd === 'squishy') squishyGot(P); else toast('😮 Trouvé : ' + ITEMS[kd].n + ' ! ' + ITEMS[kd].d, 3);
           } else { AU.sfx('fail'); toast(pick(SEARCH_MSG) + (ex ? ' Pas de passage ici…' : ''), 1.8); }
@@ -956,7 +1007,7 @@ function update(dt) {
     if (G.net) { netUpdate(dt); if (G.mode !== 'play') return; }
     else {
     updatePlayer(dt); if (G.mode !== 'play') return;
-    updateTeacher(dt); updateKids(dt); updateDoors(dt); petFollow(G.P, dt);
+    updateTeacher(dt); updateKids(dt); if (G.cls) classUpdate(dt); if (G.power) powerUpdate(dt); updateDoors(dt); petFollow(G.P, dt);
     if (G.inf) { infUpdate(dt); if (G.mode !== 'play') return; }
     // cœur qui bat
     const d = dist(G.T.x, G.T.y, G.P.x, G.P.y) / 16;

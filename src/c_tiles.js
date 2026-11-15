@@ -81,6 +81,7 @@ function drawWallTile(c, px, py, ws, face, tx, ty) {
 function drawWallDecor(c, px, py, d, i) {
   const R = (a, b, w, h, col) => { c.fillStyle = col; c.fillRect(px + a, py + b, w, h); };
   switch (d.t) {
+    case 'fuse': R(4, 2, 9, 11, '#5a6070'); R(5, 3, 7, 9, '#c4ccd8'); R(5, 3, 7, 1, '#e8ecf2'); R(8, 4, 2, 2, '#ffd23f'); R(7, 6, 2, 2, '#ffd23f'); R(6, 8, 2, 2, '#ffd23f'); R(10, 10, 1, 1, '#e43b44'); R(4, 13, 9, 1, 'rgba(0,0,0,0.3)'); break;
     case 'window': R(3, 5, 10, 7, '#ffffff'); R(4, 6, 8, 5, '#8fd3ff'); R(8, 6, 1, 5, '#ffffff'); R(4, 8, 8, 1, '#ffffff'); R(5, 6, 2, 1, '#d6f1ff'); break;
     case 'bigdoor': R(1, 3, 14, 13, '#5a351c'); R(2, 4, 12, 12, '#7a4b2a'); R(8, 4, 1, 12, '#4a2a14'); R(6, 9, 1, 2, '#ffd23f'); R(9, 9, 1, 2, '#ffd23f'); R(2, 4, 12, 1, '#9a6338'); break;
     case 'board': R(0, 4, 16, 8, '#2f5a3a'); R(0, 4, 16, 1, '#7a4b2a'); R(0, 11, 16, 1, '#7a4b2a'); if (i === 0) R(0, 4, 1, 8, '#7a4b2a'); if (i === d.w - 1) R(15, 4, 1, 8, '#7a4b2a');
@@ -181,8 +182,14 @@ function drawFurniture(c, k, px, py, tx, ty, m, L) {
     }
     case K.X_DOOR: R(1, 1, 14, 15, '#2f8a4a'); R(2, 2, 12, 14, '#3fae5e'); R(3, 7, 10, 1, '#d0d6e0'); R(3, 7, 1, 3, '#d0d6e0'); R(4, 3, 8, 3, '#ffffff'); R(6, 3, 2, 1, '#2f8a4a'); R(7, 4, 2, 2, '#2f8a4a'); break;
     case K.X_ELEV: R(0, 1, 16, 15, '#8a909c'); R(1, 3, 14, 13, '#c4ccd8'); R(8, 3, 1, 13, '#7a8290'); R(5, 1, 6, 2, '#2a2d44'); R(7, 1, 2, 1, '#ff6060'); R(2, 4, 2, 11, '#d6dde8'); R(11, 4, 2, 11, '#d6dde8'); break;
-    case K.X_WINDOW: R(2, 4, 12, 9, '#ffffff'); R(3, 5, 10, 7, '#8fd3ff'); R(8, 5, 1, 7, '#ffffff'); R(3, 8, 10, 1, '#ffffff'); R(4, 5, 3, 1, '#d6f1ff'); R(1, 12, 14, 2, '#d8d0c4'); break;
+    case K.X_WINDOW: R(1, 3, 14, 11, '#ffe9a8'); R(2, 4, 12, 9, '#ffffff'); R(3, 5, 5, 7, '#8fd3ff'); R(4, 5, 2, 1, '#d6f1ff'); R(3, 8, 5, 1, '#ffffff'); R(8, 5, 5, 7, '#bfe8ff'); R(8, 9, 5, 3, '#5aa64e'); R(9, 8, 3, 1, '#6fbf5e'); R(8, 5, 1, 7, '#2a2d44'); R(12, 4, 3, 9, '#f4f4f4'); R(13, 5, 1, 7, '#c8d0dc'); R(1, 12, 14, 2, '#d8d0c4'); R(1, 13, 14, 1, '#b8ae9e'); break;
   }
+}
+// une fenêtre (fermée) vue d'en haut, dans le mur du bas ou des côtés
+function drawWinTop(c, px, py, o) {
+  const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(px + x, py + y, w, h); };
+  if (o === 'b') { R(1, 0, 14, 5, '#e8e8f0'); R(2, 1, 12, 3, '#8fd3ff'); R(3, 1, 4, 1, '#d6f1ff'); R(8, 1, 1, 3, '#e8e8f0'); R(1, 5, 14, 1, 'rgba(0,0,0,0.25)'); }
+  else { const x0 = o === 'l' ? 11 : 0; R(x0, 1, 5, 14, '#e8e8f0'); R(x0 + 1, 2, 3, 12, '#8fd3ff'); R(x0 + 1, 3, 1, 4, '#d6f1ff'); R(x0 + 1, 8, 3, 1, '#e8e8f0'); }
 }
 function drawFloorDecor(c, d) {
   const px = d.x * 16, py = d.y * 16;
@@ -257,7 +264,10 @@ function renderMapCanvas(L) {
     const fk = FRONT_KINDS[k]; if (fk) L.fronts.push({ k, x: px + fk.x, y: py + fk.y, w: fk.w, h: fk.h, base: py + 15 });
   }
   // 4) décor mural
-  m.decor.forEach(d => { const w = d.w || 1; for (let i = 0; i < w; i++) { if (isWallish(m.get(d.x + i, d.y + 1)) || m.get(d.x + i, d.y) !== K.WALL) continue; drawWallDecor(c, (d.x + i) * 16, d.y * 16, d, i); } });
+  m.decor.forEach(d => {
+    if (d.t === 'winb') { if (m.get(d.x, d.y) === K.WALL) drawWinTop(c, d.x * 16, d.y * 16, d.o); return; }
+    const w = d.w || 1; for (let i = 0; i < w; i++) { if (isWallish(m.get(d.x + i, d.y + 1)) || m.get(d.x + i, d.y) !== K.WALL) continue; drawWallDecor(c, (d.x + i) * 16, d.y * 16, d, i); }
+  });
   // 5) perspective : le haut des murs et des grands meubles dépasse un peu vers le haut (ce qui est derrière est en partie caché)
   L.over = new Uint8Array(m.w * m.h);
   for (let y = 1; y < m.h; y++) for (let x = 0; x < m.w; x++) {

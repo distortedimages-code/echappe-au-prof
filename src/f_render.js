@@ -110,6 +110,22 @@ function drawDynamic(c, ox, oy) {
   });
   G.doors.forEach(d => { if (inView(d.x, d.y)) drawDoor(c, d, d.x * 16 + ox, d.y * 16 + oy); });
   L.exits.forEach(e => {
+    if (e.type === 'hold' && inView(e.x, e.y) && !e.done && e.progress <= 0 && e.from) {
+      // la fenêtre entrouverte : un rayon de soleil au sol et un rideau qui vole ; l'issue de secours : un panneau vert qui brille
+      const k = m.get(e.x, e.y), px = e.x * 16 + ox, py = e.y * 16 + oy, dn = e.from[1] > e.y ? 1 : e.from[1] < e.y ? -1 : 0;
+      if (k === K.X_WINDOW) {
+        const a = 0.16 + 0.05 * Math.sin(G.time * 1.7), fy = dn >= 0 ? py + 16 : py, s = dn >= 0 ? 1 : -1;
+        c.fillStyle = `rgba(255,236,150,${a})`; c.beginPath(); c.moveTo(px + 3, fy); c.lineTo(px + 13, fy); c.lineTo(px + 22, fy + s * 26); c.lineTo(px - 4, fy + s * 26); c.closePath(); c.fill();
+        const fl = Math.sin(G.time * 5 + e.x) * 2.2, fl2 = Math.sin(G.time * 7.3 + e.y) * 1.2;
+        c.fillStyle = '#ff6f91'; c.fillRect(px + 12 + Math.round(fl), py + 4, 2, 4); c.fillRect(px + 12 + Math.round(fl * 1.5 + fl2), py + 8, 2, 5);
+        c.fillStyle = '#ffd0dc'; c.fillRect(px + 12 + Math.round(fl), py + 4, 1, 3);
+        if (Math.random() < 0.012 && dist(e.x * 16 + 8, e.y * 16 + 8, G.P.x, G.P.y) < 10 * 16) part(e.x * 16 + 8, e.y * 16 + (dn >= 0 ? 14 : 2), 'spark', { vx: rand(-12, 12), vy: dn * rand(10, 22), life: rand(1, 1.6), col: pick(['#6fbf5e', '#5aa64e', '#f2a33a']), size: 1 });
+      } else if (k === K.X_DOOR) {
+        const a = 0.12 + 0.08 * Math.max(0, Math.sin(G.time * 3)), fy = dn >= 0 ? py + 16 : py;
+        c.fillStyle = `rgba(80,255,140,${a})`; c.beginPath(); c.ellipse(px + 8, fy + (dn >= 0 ? 4 : -4), 12, 6, 0, 0, 7); c.fill();
+        c.fillStyle = (G.time * 2 | 0) % 2 ? '#3cff6e' : '#2fae5e'; c.fillRect(px + 4, py + 2, 8, 1);
+      }
+    }
     if (e.type === 'hold') {
       const p = e.done ? 1 : e.progress; if (p <= 0 || !inView(e.x, e.y)) return;
       const px = e.x * 16 + ox, py = e.y * 16 + oy, k = m.get(e.x, e.y);
@@ -125,13 +141,21 @@ function drawDynamic(c, ox, oy) {
       c.fillStyle = (G.time * 6 | 0) % 2 ? '#fff6a0' : '#ff9fd8'; c.fillRect(px + 7, py + 7, 2, 2);
     }
   });
+  if (G.stash && G.P) G.stash.forEach((s, key) => {
+    // un petit éclat de temps en temps quand on passe à côté du meuble qui cache un objet
+    if (!inView(s.x, s.y) || G.searched.has(key)) return;
+    const d = Math.hypot(s.x * 16 + 8 - G.P.x, s.y * 16 + 8 - G.P.y); if (d > 16 * 4.5 || !regionVisible(s.x * 16 + 8, s.y * 16 + 12)) return;
+    const ph = (G.time * 0.9 + (key % 7) * 0.37) % 1.6; if (ph > 0.5) return;
+    const a = Math.sin(ph / 0.5 * Math.PI), px = s.x * 16 + ox + 4 + (key % 3) * 3, py = s.y * 16 + oy + 2 + (key % 2) * 3;
+    c.globalAlpha = a; c.fillStyle = '#fff6a0'; c.fillRect(px, py - 2, 1, 5); c.fillRect(px - 2, py, 5, 1); c.fillStyle = '#ffffff'; c.fillRect(px, py, 1, 1); c.globalAlpha = 1;
+  });
   G.searched.forEach(key => {
     const x = key % m.w, y = (key / m.w) | 0; if (!inView(x, y)) return;
     const px = x * 16 + ox, py = y * 16 + oy; c.fillStyle = 'rgba(255,255,255,0.75)'; c.fillRect(px + 12, py + 1, 3, 1); c.fillRect(px + 13, py, 1, 3);
   });
 }
 function conePath(c, A) {
-  const T = A || G.T, pr = T.prof, ex = T.x, ey = sightY(T.x, T.y - 12), R = pr.range * 16 * 0.92;
+  const T = A || G.T, pr = T.prof, ex = T.x, ey = sightY(T.x, T.y - 12), R = pr.range * 16 * 0.92 * (!A && isDark() ? 0.4 : 1);
   c.beginPath(); c.moveTo(ex, ey);
   const n = 30;
   for (let i = 0; i <= n; i++) { const a = T.ang - pr.fov + 2 * pr.fov * i / n, d = castRay(ex, ey, a, R); c.lineTo(ex + Math.cos(a) * d, ey + Math.sin(a) * d); }
@@ -206,8 +230,8 @@ function drawFog() {
     fx.closePath(); fx.fill(); fx.globalCompositeOperation = 'source-over';
     return;
   }
-  if (easyOn()) return;   // mode facile : pas de brouillard
-  drawRoomShade(fx, ox, oy); return;   // l'élève : seules les pièces où il n'est pas restent dans le noir
+  if (easyOn()) { if (isDark()) darkFog(fx, ox, oy); return; }   // mode facile : pas de brouillard
+  drawRoomShade(fx, ox, oy); if (isDark()) darkFog(fx, ox, oy); return;   // l'élève : seules les pièces où il n'est pas restent dans le noir
   fx.fillStyle = G.L.outdoor ? 'rgba(18,12,46,0.5)' : 'rgba(14,8,34,0.68)'; fx.fillRect(0, 0, V.lw, V.lh);
   fx.globalCompositeOperation = 'destination-out';
   const [ex, ey] = G.eye, R = G.visR, sx = ex + ox, sy = ey + oy;
@@ -326,6 +350,7 @@ function renderGame(dt) {
   lx.fillStyle = '#120c1e'; lx.fillRect(0, 0, lw, lh);
   lx.drawImage(G.mapCanvas, -ci, -cj); drawDynamic(lx, -ci, -cj);
   drawFog();
+  { const f = isDark() && G.mode === 'play' ? 'grayscale(1) brightness(0.78)' : ''; if (V.cv.style.filter !== f) V.cv.style.filter = f; }
   // 2) transformation monde -> écran (zoom + tremblement)
   const z = FX.zoom, cxs = V.W / 2, cys = V.H * 0.45;
   let shx = 0, shy = 0; if (G.shake > 0) { const a = Math.min(1, G.shake * 3) * S * 1.6; shx = rand(-a, a); shy = rand(-a, a); }
@@ -337,7 +362,7 @@ function renderGame(dt) {
   // 3) cône de vision, poussières
   const showT = G.tVis || G.mode === 'caught';
   if (showT && !T.gone && !['sleep', 'caught', 'count', 'evac'].includes(T.state) && !isBlind(T)) drawCone(ctx);
-  G.kids.forEach(k => { if (k.vis && k.isWatcher && !k.gone && k.state !== 'evac') { ctx.globalAlpha = 0.75; drawCone(ctx, k); ctx.globalAlpha = 1; } });
+  G.kids.forEach(k => { if (k.vis && k.isWatcher && !k.gone && k.state !== 'evac' && !isDark()) { ctx.globalAlpha = 0.75; drawCone(ctx, k); ctx.globalAlpha = 1; } });
   if (!G.L.outdoor) { for (const mo of FX.motes) { const a = Math.sin(mo.t / mo.life * Math.PI) * (0.35 + 0.25 * Math.sin(G.time * 3 + mo.ph)); ctx.fillStyle = `rgba(255,240,200,${a})`; ctx.fillRect(mo.x, mo.y, 0.8, 0.8); } }
   // 4) entités triées par profondeur
   drawPuddles(ctx);
@@ -356,7 +381,7 @@ function renderGame(dt) {
       if (k.beh === 'sit' || k.beh === 'bench') { drawSprite(ctx, k.cfg, null, k, { sy: 0.86, bob: 2, noShadow: true }); if (k.sixT > 0) drawSixSeven(ctx, k, 3); return; }
       drawSprite(ctx, k.cfg, k.v || null, k, { bob, sy: k.beh === 'jump' && bob > -1 ? 0.9 : 1 });
       if (k.sixT > 0) drawSixSeven(ctx, k, 0);
-      if (k.isWatcher && k.markT > 0 && k.mark) txt(ctx, k.mark, k.x, k.y - 40, 9, k.mark === '!' ? '#e43b44' : '#ffd23f');
+      if ((k.isWatcher || k.snitch) && k.markT > 0 && k.mark) txt(ctx, k.mark, k.x, k.y - 40, 9, k.mark === '!' ? '#e43b44' : '#ffd23f');
     })]);
   });
   (G.pigeons || []).forEach(p => { if (p.st === 'gone') return; if (dist(G.eye[0], G.eye[1], p.x, p.y) > G.visR + 10 && p.z < 20) return; ents.push([p.y + (p.z > 4 ? 200 : 0), () => drawPigeon(ctx, p)]); });

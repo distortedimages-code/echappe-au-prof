@@ -149,6 +149,13 @@ const FURN = {
     g.m.fdec(r.x + 1, r.y + 1, 'stairs', { w: 3, h: 3 }); r.stairPt = [r.x + 2, r.y + 2];
     g.put(r, r.x, r.y + r.h - 1, K.PLANT); if (r.h >= 7) g.put(r, r.x + r.w - 1, r.y + r.h - 2, K.TRASH);
   },
+  patio(g, r) {
+    const X2 = r.x + r.w - 1, Y2 = r.y + r.h - 1;
+    g.R.sh([[r.x + 1, r.y + 1], [X2 - 1, Y2 - 1], [X2 - 1, r.y + 1], [r.x + 1, Y2 - 1]]).slice(0, r.w * r.h >= 50 ? 3 : 2).forEach(([x, y]) => g.put(r, x, y, K.TREE));
+    for (let i = 0; i < 8; i++) { const x = g.R.i(r.x, X2), y = g.R.i(r.y, Y2); if (x === r.x || x === X2 || y === Y2) g.put(r, x, y, K.BUSH); }
+    const cx = r.x + (r.w >> 1), cy = r.y + (r.h >> 1); g.put(r, cx - 1, cy, K.BENCH); if (r.w >= 8) g.put(r, cx + 1, cy, K.BENCH);
+    for (let x = r.x; x <= X2; x += 2) g.dec(x, r.y - 1, 'window');
+  },
   smalloffice(g, r) { const X2 = r.x + r.w - 1, Y2 = r.y + r.h - 1; g.row(r, r.x + 1, r.y + 1, 2, K.DESK); g.put(r, X2, r.y, K.ARMOIRE); g.put(r, X2, Y2, K.PLANT); g.put(r, r.x, Y2, K.TRASH); }
 };
 
@@ -227,20 +234,100 @@ const UNIVERSES = {
   }
 };
 
+// ---------- les sorties « à tenir » ----------
+const HOLD_KINDS = {
+  win: { kind: K.X_WINDOW, label: 'Ouvrir la fenêtre', icon: '🪟', time: 2.5, noise: 9, snd: 'creak', word: 'CRIIIC' },
+  door: { kind: K.X_DOOR, label: 'Pousser l’issue de secours', icon: '🚨', time: 2, noise: 16, snd: 'alarm', word: 'DRIIIING', bottom: 1 },
+  elev: { kind: K.X_ELEV, label: 'Appeler l’ascenseur', icon: '🛗', time: 4, noise: 7, snd: 'ding', word: 'DING !', bottom: 1 }
+};
+UNIVERSES[2].holdMix = [['win', 0.55], ['door', 0.45]];
+UNIVERSES[3].holdMix = [['win', 0.55], ['door', 0.45]];
+UNIVERSES[4].holdMix = [['door', 0.7], ['win', 0.3]];
+UNIVERSES[5].holdMix = [['elev', 0.6], ['door', 0.25], ['win', 0.15]];
+const PATIO = { n: 'Patio', fs: FS.GRASS, f: 'patio', patio: 1 };
+// découpe l'espace libre (hors couloirs et grandes salles, avec un mur d'1 case autour) en rectangles
+function decompose(W, H, blocks) {
+  const blk = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (x === 0 || y === 0 || x === W - 1 || y === H - 1) blk[y * W + x] = 1;
+  const mark = (x0, y0, x1, y1) => { for (let y = Math.max(0, y0); y <= Math.min(H - 1, y1); y++) for (let x = Math.max(0, x0); x <= Math.min(W - 1, x1); x++) blk[y * W + x] = 1; };
+  blocks.forEach(b => mark(b.x - 1, b.y - 1, b.x + b.w, b.y + b.h));
+  const out = [];
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    if (blk[y * W + x]) continue;
+    let w = 0; while (!blk[y * W + x + w]) w++;
+    let h = 1; for (; y + h < H - 1; h++) { let ok = true; for (let i = 0; i < w; i++) if (blk[(y + h) * W + x + i]) { ok = false; break; } if (!ok) break; }
+    mark(x, y, x + w, y + h);
+    if (w >= 3 && h >= 3) out.push({ x, y, w, h });
+  }
+  return out;
+}
+// les couloirs de chaque plan (rectangles de 3 cases de large)
+function indoorTemplate(R, S, W, H, tpl) {
+  const fl = Math.floor, H1 = H - 1;
+  if (tpl === 'comb') {
+    const up = R.i(S.up[0], S.up[1]), cy = up + 2; if (H1 - (cy + 4) < 6) return null;
+    let x1 = R.i(fl(W * 0.22), fl(W * 0.32)), x2 = R.i(fl(W * 0.58), fl(W * 0.7));
+    x2 = Math.min(W - 9, Math.max(x2, x1 + 10)); if (x2 - x1 < 10) return null;
+    const cors = [{ x: 1, y: cy, w: W - 2, h: 3 }, { x: x1, y: cy + 3, w: 3, h: H1 - (cy + 3) }, { x: x2, y: cy + 3, w: 3, h: H1 - (cy + 3) }], pre = [];
+    if (S.big) { const bw = R.i(S.big.w[0], S.big.w[1]), left = R.ch(0.5); pre.push({ x: left ? 1 : W - 1 - bw, y: 1, w: bw, h: up, def: S.big }); }
+    return { cors, pre, cy, vx: x1, up };
+  }
+  if (tpl === 'ring') {
+    const up = R.i(6, 8), cy = up + 2, bandB = R.i(5, 6), cy2 = H - bandB - 5;
+    if (cy2 - cy - 5 < 5) return null;
+    const ladder = R.ch(0.3), cors = [{ x: 1, y: cy, w: W - 2, h: 3 }], pre = [];
+    if (ladder) {
+      const xc = R.i(fl(W * 0.4), fl(W * 0.55));
+      cors.push({ x: xc, y: cy + 3, w: 3, h: cy2 - cy - 3 }, { x: 1, y: cy2, w: W - 2, h: 3 });
+      return { cors, pre, cy, vx: xc, up };
+    }
+    const xa = R.i(6, 9), xb = W - 4 - R.i(5, 8), full = R.ch(0.5);
+    cors.push({ x: xa, y: cy + 3, w: 3, h: cy2 - cy - 3 }, { x: xb, y: cy + 3, w: 3, h: cy2 - cy - 3 }, full ? { x: 1, y: cy2, w: W - 2, h: 3 } : { x: xa, y: cy2, w: xb + 3 - xa, h: 3 });
+    const pw = xb - xa - 5, ph = cy2 - cy - 5;
+    if (pw >= 6 && ph >= 5 && R.ch(0.7)) pre.push({ x: xa + 4, y: cy + 4, w: pw, h: ph, def: PATIO });
+    return { cors, pre, cy, vx: xa, up };
+  }
+  if (tpl === 'H') {
+    const xa = R.i(fl(W * 0.24), fl(W * 0.32)), xb = R.i(fl(W * 0.6), fl(W * 0.68)), yb = R.i(fl(H * 0.4), fl(H * 0.55));
+    if (xa < 8 || W - 5 - xb < 6 || xb - xa - 4 < 6) return null;
+    return { cors: [{ x: xa + 3, y: yb, w: xb - xa - 3, h: 3 }, { x: xa, y: 1, w: 3, h: H - 2 }, { x: xb, y: 1, w: 3, h: H - 2 }], pre: [], cy: yb, vx: xa, up: yb - 2 };
+  }
+  if (tpl === 'Z') {
+    const up = R.i(6, 8), cy = up + 2, xm = R.i(fl(W * 0.35), fl(W * 0.55));
+    if (cy + 9 > H - 10) return null;
+    const cyB = R.i(cy + 9, H - 10), left = R.ch(0.5);
+    // le Z (ou son miroir) : couloir du haut d'un côté, descente, couloir du bas de l'autre côté
+    const cors = left
+      ? [{ x: 1, y: cy, w: xm + 2, h: 3 }, { x: xm, y: cy + 3, w: 3, h: cyB - cy - 3 }, { x: xm, y: cyB, w: W - 1 - xm, h: 3 }]
+      : [{ x: xm, y: cy, w: W - 1 - xm, h: 3 }, { x: xm, y: cy + 3, w: 3, h: cyB - cy - 3 }, { x: 1, y: cyB, w: xm + 2, h: 3 }];
+    return { cors, pre: [], cy, vx: xm, up };
+  }
+  return null;
+}
 // ---------- générateur des étages (couloirs + pièces) ----------
 function genIndoor(R, S) {
   const W = R.i(S.w[0], S.w[1]), H = R.i(S.h[0], S.h[1]), m = B(W, H, S.fs, S.ws), g = PG(R, m);
-  const up = R.i(S.up[0], S.up[1]), cy = up + 2, lowY = cy + 4, lowH = H - 1 - lowY;
-  const cors = [{ x: 1, y: cy, w: W - 2, h: 3 }], regions = [];
-  let vx = -1;
-  if (R.ch(S.vcor) && lowH >= 6) {
+  let up = R.i(S.up[0], S.up[1]), cy = up + 2;
+  const cors = [], regions = [], leaves = [];
+  let vx = -1, tpl = 'I';
+  // des plans variés (mais cohérents) : un couloir en I, en peigne, en boucle autour d'un patio, en H, en Z…
+  if (!S.stairs && S.holdMix) {
+    tpl = R.p(S.big ? ['I', 'comb', 'comb'] : ['I', 'comb', 'ring', 'ring', 'H', 'Z', 'Z']);
+    const t = indoorTemplate(R, S, W, H, tpl);
+    if (t) { cors.push(...t.cors); leaves.push(...t.pre); cy = t.cy; vx = t.vx; up = t.up; decompose(W, H, cors.concat(t.pre)).forEach(r => regions.push(r)); }
+    else tpl = 'I';
+  }
+  const lowY = cy + 4, lowH = H - 1 - lowY;
+  if (tpl === 'I') cors.push({ x: 1, y: cy, w: W - 2, h: 3 });
+  if (tpl !== 'I') { }
+  else if (R.ch(S.vcor) && lowH >= 6) {
     vx = R.i(Math.floor(W * 0.3), Math.floor(W * 0.62));
     cors.push({ x: vx, y: cy + 3, w: 3, h: H - 1 - (cy + 3) });
     regions.push({ x: 1, y: lowY, w: vx - 2, h: lowH }, { x: vx + 4, y: lowY, w: W - vx - 5, h: lowH });
   } else regions.push({ x: 1, y: lowY, w: W - 2, h: lowH });
   // bande du haut (avec la grande salle éventuelle)
-  const leaves = [];
-  if (S.stairs) {
+  if (tpl !== 'I') { }
+  else if (S.stairs) {
     const sw = 5;
     leaves.push({ x: 1, y: 1, w: sw, h: up, def: { n: 'Escalier A', fs: FS.CHECK, f: 'stairroom', stair: 'A' } });
     leaves.push({ x: W - 1 - sw, y: 1, w: sw, h: up, def: { n: 'Escalier B', fs: FS.CHECK, f: 'stairroom', stair: 'B' } });
@@ -327,8 +414,30 @@ function genIndoor(R, S) {
     return prefBottom && bot.length ? bot : tbOnly.length ? tbOnly : ok;
   };
   const holdR = leaves.find(r => r.def.hold), smallR = leaves.find(r => r.def.small);
-  if (!S.noExits) { const c = perimCands(holdR, S.hold.bottom); if (!c.length) throw 'hold'; const p = R.p(c); m.put(p.x, p.y, S.hold.kind); g.hold(p.ix, p.iy); exits.push(Object.assign({ type: 'hold', x: p.x, y: p.y }, S.hold)); }
+  // les bouts de couloir qui touchent le mur extérieur (en haut ou en bas) : parfait pour une issue de secours
+  const corEnds = []; cors.forEach(c => { if (c.w !== 3) return; if (c.y + c.h === H1) corEnds.push({ x: c.x + 1, y: H1, ix: c.x + 1, iy: H1 - 1, s: 'b' }); if (c.y === 1) corEnds.push({ x: c.x + 1, y: 0, ix: c.x + 1, iy: 1, s: 't' }); });
+  const placeHold = (kind, r, preferCor) => {
+    const H0 = HOLD_KINDS[kind]; let p = null, where = r ? r.def.n : '';
+    const far = q => !exits.some(e => e.x != null && Math.abs(e.x - q.x) + Math.abs(e.y - q.y) < 4);
+    if (kind === 'door' && (preferCor || !r)) { const c = corEnds.filter(e => g.free(e.ix, e.iy) && m.get(e.x, e.y) === K.WALL && far(e)); if (c.length) { p = R.p(c); where = '@cor'; } }
+    if (!p && r) { const c = perimCands(r, H0.bottom).filter(q => (q.s === 't' || q.s === 'b') && m.get(q.x, q.y) === K.WALL && far(q)); if (c.length) p = R.p(c); }
+    if (!p) return false;
+    m.put(p.x, p.y, H0.kind); g.hold(p.ix, p.iy); exits.push(Object.assign({ type: 'hold', x: p.x, y: p.y, where }, H0)); return true;
+  };
+  let hold2 = null;
+  if (!S.noExits && S.holdMix) {
+    let u = R.f(), k1 = S.holdMix[0][0]; for (const [k, pr] of S.holdMix) { if (u < pr) { k1 = k; break; } u -= pr; }
+    if (!placeHold(k1, holdR, R.ch(0.5)) && !placeHold('door', holdR, true)) throw 'hold';
+    // parfois une deuxième sortie « à tenir » d'un autre genre
+    if (R.ch(0.4)) hold2 = k1 === 'win' ? 'door' : k1 === 'door' ? 'win' : R.p(['door', 'win']);
+  } else if (!S.noExits) { const c = perimCands(holdR, S.hold.bottom); if (!c.length) throw 'hold'; const p = R.p(c); m.put(p.x, p.y, S.hold.kind); g.hold(p.ix, p.iy); exits.push(Object.assign({ type: 'hold', x: p.x, y: p.y }, S.hold)); }
   if (!S.noExits) { const c = perimCands(smallR, false).filter(p => m.get(p.x, p.y) === K.WALL); if (!c.length) throw 'small'; const p = R.p(c); m.put(p.x, p.y, K.X_HOLE); g.hold(p.ix, p.iy); exits.push(Object.assign({ type: 'small', x: p.x, y: p.y }, S.small)); }
+  if (hold2) {
+    const bad = r => r === holdR || r === smallR || S.start.includes(r.def.n) || r.def.n === S.teacher || r.def.patio;
+    const c = R.sh(leaves.filter(r => !bad(r) && tb(r)));
+    let ok = hold2 === 'door' && placeHold('door', null, true);
+    for (const r of c) { if (ok) break; ok = placeHold(hold2, r, false); }
+  }
   const keysR = find(S.keys); if (!keysR) throw 'keys';
   let keyPt = null;
   { const xs = []; for (let x = keysR.x; x < keysR.x + keysR.w; x++) if (g.wall(x, keysR.y - 1) && g.free(x, keysR.y)) xs.push(x); if (!xs.length) throw 'keyspot'; const x = R.ch(0.5) ? xs[xs.length - 1] : xs[0]; keyPt = [x, keysR.y]; g.hold(x, keysR.y); m.dec(x, keysR.y - 1, 'keys'); }
@@ -341,12 +450,30 @@ function genIndoor(R, S) {
     if (!okp) { run = 0; return; }
     if (run > 0) { m.set(x, y, K.LOCKER); run--; } else if (R.ch(0.16)) { run = R.i(1, 4); m.set(x, y, K.LOCKER); }
   }); };
-  { const p1 = [], p2 = []; for (let x = 2; x < W - 2; x++) { p1.push([x, cy - 1, x, cy]); p2.push([x, cy + 3, x, cy + 2]); } lockerRun(p1); lockerRun(p2); }
-  if (vx > 0) { const a = [], b = []; for (let y = cy + 5; y < H - 2; y++) { a.push([vx - 1, y, vx, y]); b.push([vx + 3, y, vx + 2, y]); } lockerRun(a); lockerRun(b); }
-  for (let x = 3; x < W - 3; x += R.i(5, 9)) if (m.get(x, cy - 1) === K.WALL && m.get(x - 1, cy - 1) !== K.DOOR && m.get(x + 1, cy - 1) !== K.DOOR) m.dec(x, cy - 1, R.p(['poster', 'clock', 'poster']));
-  [[1, cy], [W - 2, cy + 2]].forEach(([x, y]) => { if (g.free(x, y) && R.ch(0.7)) m.set(x, y, R.p([K.PLANT, K.TRASH])); });
+  if (tpl === 'I') {
+    { const p1 = [], p2 = []; for (let x = 2; x < W - 2; x++) { p1.push([x, cy - 1, x, cy]); p2.push([x, cy + 3, x, cy + 2]); } lockerRun(p1); lockerRun(p2); }
+    if (vx > 0) { const a = [], b = []; for (let y = cy + 5; y < H - 2; y++) { a.push([vx - 1, y, vx, y]); b.push([vx + 3, y, vx + 2, y]); } lockerRun(a); lockerRun(b); }
+    for (let x = 3; x < W - 3; x += R.i(5, 9)) if (m.get(x, cy - 1) === K.WALL && m.get(x - 1, cy - 1) !== K.DOOR && m.get(x + 1, cy - 1) !== K.DOOR) m.dec(x, cy - 1, R.p(['poster', 'clock', 'poster']));
+    [[1, cy], [W - 2, cy + 2]].forEach(([x, y]) => { if (g.free(x, y) && R.ch(0.7)) m.set(x, y, R.p([K.PLANT, K.TRASH])); });
+  } else cors.forEach(c => {
+    if (c.h === 3 && c.w > 3) {
+      const p1 = [], p2 = []; for (let x = c.x + 1; x < c.x + c.w - 1; x++) { p1.push([x, c.y - 1, x, c.y]); p2.push([x, c.y + 3, x, c.y + 2]); } lockerRun(p1); lockerRun(p2);
+      for (let x = c.x + 2; x < c.x + c.w - 2; x += R.i(5, 9)) if (m.get(x, c.y - 1) === K.WALL && m.get(x, c.y) === K.FLOOR && m.get(x - 1, c.y - 1) !== K.DOOR && m.get(x + 1, c.y - 1) !== K.DOOR && !m.decor.some(d => d.y === c.y - 1 && x >= d.x - 1 && x <= d.x + (d.w || 1))) m.dec(x, c.y - 1, R.p(['poster', 'clock', 'poster']));
+      [[c.x, c.y + R.i(0, 2)], [c.x + c.w - 1, c.y + R.i(0, 2)]].forEach(([x, y]) => { if (m.get(x - 1, y) === K.WALL && m.get(x + 1, y) === K.WALL) return; if ((x === 1 || x === W - 2) && g.free(x, y) && R.ch(0.6)) m.set(x, y, R.p([K.PLANT, K.TRASH])); });
+    } else {
+      const a = [], b = []; for (let y = c.y + 2; y < c.y + c.h - 1; y++) { a.push([c.x - 1, y, c.x, y]); b.push([c.x + 3, y, c.x + 2, y]); } lockerRun(a); lockerRun(b);
+    }
+  });
+  // des fenêtres partout sur les murs extérieurs (la seule qui s'ouvre est entrouverte, avec son rideau qui vole)
+  {
+    const nearExit = (x, y) => [[0, 0], [1, 0], [-1, 0], [2, 0], [-2, 0], [0, 1], [0, -1]].some(([dx, dy]) => m.get(x + dx, y + dy) > 29);
+    const hasDec = (x, y) => m.decor.some(d => d.y === y && x >= d.x - 1 && x <= d.x + (d.w || 1));
+    for (let x = 2; x < W - 2; x++) if (m.get(x, 0) === K.WALL && m.get(x, 1) === K.FLOOR && !nearExit(x, 0) && !hasDec(x, 0) && R.ch(0.5)) m.dec(x, 0, 'window');
+    let lastB = -9; for (let x = 2; x < W - 2; x++) if (m.get(x, H1) === K.WALL && !isWallish(m.get(x, H1 - 1)) && m.get(x, H1 - 1) !== K.DOOR && !nearExit(x, H1) && x - lastB > 2 && R.ch(0.45)) { m.dec(x, H1, 'winb', { o: 'b' }); lastB = x; }
+    [[0, 1, 'l'], [W1, W1 - 1, 'r']].forEach(([wx, ix, o]) => { let last = -9; for (let y = 2; y < H - 2; y++) if (m.get(wx, y) === K.WALL && !isWallish(m.get(ix, y)) && m.get(ix, y) !== K.DOOR && !nearExit(wx, y) && y - last > 2 && R.ch(0.4)) { m.dec(wx, y, 'winb', { o }); last = y; } });
+  }
   // départ du prof et de l'élève
-  const tR = S.teacher === '@corridor' ? { x: 2, y: cy, w: W - 4, h: 3 } : find(S.teacher); if (!tR) throw 'teacher';
+  const tR = S.teacher === '@corridor' ? { x: 2, y: cors[0].y, w: Math.max(3, cors[0].w - 2), h: 3 } : find(S.teacher); if (!tR) throw 'teacher';
   const freeIn = r => { const a = []; for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (m.get(x, y) === K.FLOOR) a.push([x, y]); return a; };
   const tc = freeIn(tR); if (!tc.length) throw 'tstart';
   const tcx = tR.x + tR.w / 2, tcy = tR.y + tR.h / 2; tc.sort((a, b) => Math.hypot(a[0] - tcx, a[1] - tcy) - Math.hypot(b[0] - tcx, b[1] - tcy));
@@ -367,9 +494,16 @@ function genIndoor(R, S) {
   if (!S.noExits) { if (sc.length < 3) throw 'search'; exits.splice(1, 0, Object.assign({ type: 'search', cands: sc }, S.search)); }
   // rondes dans les couloirs
   const extraPatrol = [];
-  for (let x = 4; x < W - 3; x += 7) extraPatrol.push([x, cy + 1]);
-  if (vx > 0) for (let y = cy + 6; y < H - 2; y += 6) extraPatrol.push([vx + 1, y]);
-  const L = Object.assign({ m, start, tStart, keyPt, exits, extraPatrol, gen: true, rooms: leaves, cy, vx, W, H }, S.meta);
+  if (tpl === 'I') {
+    for (let x = 4; x < W - 3; x += 7) extraPatrol.push([x, cy + 1]);
+    if (vx > 0) for (let y = cy + 6; y < H - 2; y += 6) extraPatrol.push([vx + 1, y]);
+  } else cors.forEach(c => { if (c.h === 3 && c.w > 3) for (let x = c.x + 3; x < c.x + c.w - 2; x += 7) extraPatrol.push([x, c.y + 1]); else for (let y = c.y + 3; y < c.y + c.h - 1; y += 6) extraPatrol.push([c.x + 1, y]); });
+  // les indices des sorties « à tenir » (fenêtre entrouverte, issue de secours, ascenseur), selon le plan du jour
+  const holdHints = exits.filter(e => e.type === 'hold').map(e => {
+    const w = e.where === '@cor' ? 'Au bout d’un couloir' : e.where || 'Quelque part';
+    return e.kind === K.X_WINDOW ? '🪟 ' + w + ' : une fenêtre est restée entrouverte (son rideau vole au vent).' : e.kind === K.X_DOOR ? '🚨 ' + w + ' : une issue de secours… mais l’alarme va sonner !' : '🛗 ' + w + ' : l’ascenseur… s’il arrive à temps !';
+  });
+  const L = Object.assign({ m, start, tStart, keyPt, exits, extraPatrol, gen: true, rooms: leaves, cy, vx, W, H, tpl, cors, holdHints }, S.meta);
   L.tasks = S.tasks && S.tasks.length ? placeTasks(g, L, S.tasks) : [];
   L.g = g;
   return L;

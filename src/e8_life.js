@@ -67,9 +67,9 @@ function lifeFoot(k, dt) {
   if (B.resetT > 0) { tx = k.home[0]; ty = k.home[1]; spd = 1.6 * 16; }
   else if (k === chaser) { const goalX = k.team ? f.x0 : f.x1; tx = B.x - Math.sign(goalX - B.x) * 5; ty = B.y; spd = 2.9 * 16; }
   else { tx = lerp(k.home[0], B.x, 0.35); ty = lerp(k.home[1], B.y, 0.25); spd = 2.2 * 16; }
-  const dx = tx - k.x, dy = ty - k.y, d = Math.hypot(dx, dy);
-  if (d > 3) { const st = Math.min(d, spd * dt), ox = k.x, oy = k.y; moveA(k, dx / d * st, dy / d * st, solidP, 4, 4); const mv = Math.hypot(k.x - ox, k.y - oy); k.moving = mv > 0.05; k.runK = spd > 2.5 * 16; k.dist = (k.dist || 0) + mv; k.anim = (k.anim || 0) + dt; k.face = faceFromAng(Math.atan2(dy, dx)); k.ang = Math.atan2(dy, dx); }
-  else { k.moving = false; k.face = faceFromAng(Math.atan2(B.y - k.y, B.x - k.x)); }
+  // (avec un peu d'hystérésis : sinon il repart / s'arrête / se retourne à chaque image et le sprite clignote)
+  if (!lifeWalk(k, tx, ty, spd, dt, 6, 2.5)) steadyFace(k, faceFromAng(Math.atan2(B.y - k.y, B.x - k.x)), dt, 0.25);
+  k.runK = spd > 2.5 * 16;
   k.kcd = (k.kcd || 0) - dt;
   if (k === chaser && B.resetT <= 0 && k.kcd <= 0 && B.z < 5 && dist(k.x, k.y - 2, B.x, B.y) < 9) {
     const goalX = k.team ? f.x0 : f.x1, goalY = (f.y0 + f.y1) / 2 + rand(-12, 12), a = Math.atan2(goalY - B.y, goalX - B.x) + rand(-0.6, 0.6), sp = rand(70, 140);
@@ -83,14 +83,33 @@ function drawFootBall(c) {
   c.fillStyle = '#222'; c.fillRect(Math.round(B.x) - 1, Math.round(y) - 1, 1, 1); c.fillRect(Math.round(B.x) + 1, Math.round(y), 1, 1);
 }
 // ---------- balades à deux ----------
+// marche vers une cible avec hystérésis (départ au-delà de « go », arrêt sous « stop ») et une pose stable
+function lifeWalk(k, tx, ty, spd, dt, go, stop) {
+  const dx = tx - k.x, dy = ty - k.y, d = Math.hypot(dx, dy);
+  k.lw = k.lw ? d >= stop : d > go;
+  if (!k.lw) { k.mvT = (k.mvT || 0) - dt; if (k.mvT <= 0) k.moving = false; return false; }
+  const st = Math.min(d, spd * dt), ox = k.x, oy = k.y;
+  moveA(k, dx / d * st, dy / d * st, solidP, 4, 4);
+  const mv = Math.hypot(k.x - ox, k.y - oy);
+  if (mv > 0.05) { k.moving = true; k.mvT = 0.2; k.dist = (k.dist || 0) + mv; k.anim = (k.anim || 0) + dt; k.ang = Math.atan2(dy, dx); steadyFace(k, faceFromAng(k.ang), dt, 0.12); }
+  else { k.mvT = (k.mvT || 0) - dt; if (k.mvT <= 0) k.moving = false; }
+  return true;
+}
+// on ne change de direction que si la nouvelle dure un peu (évite le clignotement gauche/droite)
+function steadyFace(k, nf, dt, hold) {
+  if (nf === k.face) { k.fT = 0; k.fC = nf; return; }
+  if (k.fC !== nf) { k.fC = nf; k.fT = 0; }
+  k.fT = (k.fT || 0) + dt; if (k.fT >= hold) { k.face = nf; k.fT = 0; }
+}
 function lifePairF(k, dt) {
   const a = k.mate; if (!a) { k.moving = false; return; }
   const ang = a.moving ? a.ang || 0 : (k.sideA != null ? k.sideA : 0); if (a.moving) k.sideA = ang;
   const tx = a.x + Math.cos(ang + Math.PI / 2) * 11, ty = a.y + Math.sin(ang + Math.PI / 2) * 6;
   const dx = tx - k.x, dy = ty - k.y, d = Math.hypot(dx, dy);
   if (d > 40) { const [kx, ky] = tileOf(k), [ax, ay] = tileOf(a); if ((!k.path || k.pi >= k.path.length || (k.repT = (k.repT || 0) - dt) <= 0) && (G.pathBudget = (G.pathBudget || 0) - 1) >= 0) { k.repT = 1.2; const p = astar(kx, ky, ax, ay, passTeach(false)); if (p) { k.path = p; k.pi = 0; } } followPath(k, 2.4 * 16, dt); return; }
-  if (d > 2) { const st = Math.min(d, (a.moving ? 2.2 : 1.4) * 16 * dt), ox = k.x, oy = k.y; moveA(k, dx / d * st, dy / d * st, solidP, 4, 4); const mv = Math.hypot(k.x - ox, k.y - oy); k.moving = mv > 0.05; k.dist = (k.dist || 0) + mv; k.anim = (k.anim || 0) + dt; k.face = a.moving ? a.face : faceFromAng(Math.atan2(a.y - k.y, a.x - k.x)); }
-  else { k.moving = false; k.face = a.moving ? a.face : faceFromAng(Math.atan2(a.y - k.y, a.x - k.x)); }
+  // en marchant avec le copain : on colle à sa vitesse (rattrapage doux), à l'arrêt : petite marge pour ne pas trembloter
+  if (a.moving) { if (!lifeWalk(k, tx, ty, Math.min(2.6 * 16, 1.5 * 16 + d * 5), dt, 0.6, 0.3)) steadyFace(k, a.face, dt, 0.2); }
+  else if (!lifeWalk(k, tx, ty, 1.4 * 16, dt, 3, 1.2)) steadyFace(k, faceFromAng(Math.atan2(a.y - k.y, a.x - k.x)), dt, 0.25);
   if (!a.moving && !k.moving) a.face = faceFromAng(Math.atan2(k.y - a.y, k.x - a.x));
 }
 // ---------- l'élève aux toilettes ----------
