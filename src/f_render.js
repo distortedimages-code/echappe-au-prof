@@ -4,11 +4,13 @@ const Q_LEVELS = [2, 1.6, 1.3, 1];
 const Perf = {
   q: Math.min(Q_LEVELS.length - 1, Math.max(0, +(store.get('nds_q', 0)) || 0)), acc: 0, n: 0, lowered: false, good: 0,
   tick(dt) {
-    if (G.mode !== 'play' || document.hidden) { this.acc = 0; this.n = 0; return; }
+    // on ne mesure pas les 3 premières secondes d'une partie (chargement des dessins : quelques images lentes, c'est normal)
+    if (G.mode !== 'play' || document.hidden || G.time < 3) { this.acc = 0; this.n = 0; return; }
     this.acc += dt; this.n++;
     if (this.acc < 2) return;
     const avg = this.acc / this.n; this.acc = 0; this.n = 0;
-    if (avg > 0.0215 && this.q < Q_LEVELS.length - 1 && (window.devicePixelRatio || 1) > Q_LEVELS[this.q + 1]) { this.q++; this.lowered = true; this.good = 0; store.set('nds_q', this.q); resizeView(); }
+    this.slow = avg > 0.0215 ? (this.slow || 0) + 1 : 0;
+    if (this.slow >= 2 && this.q < Q_LEVELS.length - 1 && (window.devicePixelRatio || 1) > Q_LEVELS[this.q + 1]) { this.slow = 0; this.q++; this.lowered = true; this.good = 0; store.set('nds_q', this.q); resizeView(); }
     else if (avg < 0.0175 && this.q > 0 && !this.lowered) { if (++this.good >= 6) { this.good = 0; this.q--; store.set('nds_q', this.q); resizeView(); } }
   }
 };
@@ -23,7 +25,9 @@ function resizeView() {
   if (V.sizeKey === w + 'x' + h + '@' + dpr) return;   // rien n'a changé : on ne réalloue pas les canvas (sinon accrocs + mémoire)
   V.sizeKey = w + 'x' + h + '@' + dpr;
   V.dpr = dpr; V.W = Math.round(w * dpr); V.H = Math.round(h * dpr); V.cv.width = V.W; V.cv.height = V.H;
-  V.S = Math.max(2, Math.round(Math.min(w, h) / (12 * 16) * dpr));
+  // le zoom (pixels de l'écran par pixel du jeu) ne dépend pas de la qualité : baisser la qualité ne doit pas zoomer d'un coup
+  const dpr0 = Math.min(Q_LEVELS[0], window.devicePixelRatio || 1), zoom = Math.max(2, Math.round(Math.min(w, h) / (12 * 16) * dpr0)) / dpr0;
+  V.S = zoom * dpr;
   V.lw = Math.ceil(V.W / V.S) + 2; V.lh = Math.ceil(V.H / V.S) + 2;
   V.lo.width = V.lw; V.lo.height = V.lh; V.fog.width = V.lw; V.fog.height = V.lh;
   V.lx.imageSmoothingEnabled = false; V.ctx.imageSmoothingEnabled = false;
