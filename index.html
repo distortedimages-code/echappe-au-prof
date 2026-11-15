@@ -211,6 +211,25 @@ ul.hints li{background:rgba(255,255,255,.06);border-radius:6px;padding:5px 8px;l
 .act.small .as{font-size:15px}
 .act:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink)}
 .act .pg{position:absolute;left:0;bottom:0;height:6px;background:var(--green)}
+/* gros boutons d'action rétro : toujours au même endroit, grisés quand ils ne servent pas */
+#pad{flex:none;margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;--pb:clamp(58px,15.5vmin,94px)}
+#padTip{max-width:min(72vw,360px);background:rgba(20,11,38,.88);border:2px solid var(--ink);border-radius:8px;padding:3px 8px 4px;font-size:clamp(16px,calc(var(--pb)*.24),20px);line-height:1;text-align:right;color:var(--paper);box-shadow:0 2px 0 var(--ink);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+#padGrid{display:grid;grid-template-columns:repeat(2,var(--pb));gap:calc(var(--pb)*.12)}
+.pb{width:var(--pb);height:var(--pb);padding:0;border:3px solid var(--ink);border-radius:calc(var(--pb)*.2);color:var(--ink);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--pb)*.04);
+  box-shadow:0 calc(var(--pb)*.08) 0 var(--ink),inset 0 calc(var(--pb)*-.07) 0 rgba(0,0,0,.2),inset 0 calc(var(--pb)*.05) 0 rgba(255,255,255,.45);transition:filter .15s,opacity .15s}
+.pb canvas{width:calc(var(--pb)*.54);height:calc(var(--pb)*.54);image-rendering:pixelated;pointer-events:none}
+.pb b{font-family:'Press Start 2P',ui-monospace,monospace;font-size:calc(var(--pb)*.108);letter-spacing:-.04em;line-height:1;white-space:nowrap;pointer-events:none}
+.pb[data-c=search]{background:#ffd23f}
+.pb[data-c=hide]{background:#7ee05f}
+.pb[data-c=key]{background:#6fd6f0}
+.pb[data-c=act]{background:#ff8fbf}
+.pb .bd{position:absolute;top:calc(var(--pb)*.03);right:calc(var(--pb)*.05);font-style:normal;font-size:calc(var(--pb)*.24);line-height:1;pointer-events:none}
+.pb .pg{position:absolute;left:0;bottom:0;width:0;height:calc(var(--pb)*.1);background:rgba(255,255,255,.85);pointer-events:none}
+.pb.off{filter:grayscale(1) brightness(.5);opacity:.82;box-shadow:0 calc(var(--pb)*.05) 0 var(--ink)}
+.pb.info{filter:saturate(.5) brightness(.92)}
+.pb.hot{box-shadow:0 calc(var(--pb)*.08) 0 var(--ink),0 0 0 3px #fff,0 0 calc(var(--pb)*.2) calc(var(--pb)*.05) rgba(255,236,140,.85)}
+.pb.hot canvas{animation:bob 1s ease-in-out infinite}
+.pb:not(.off):active{transform:translateY(calc(var(--pb)*.06));box-shadow:0 calc(var(--pb)*.02) 0 var(--ink)}
 #toast{position:absolute;left:50%;top:150px;transform:translateX(-50%);width:min(92%,440px);background:rgba(20,11,38,.92);border:3px solid var(--yel);border-radius:10px;padding:8px 12px;font-size:21px;line-height:1.05;text-align:center;box-shadow:0 4px 0 var(--ink);animation:pop .2s}
 #banner{position:absolute;left:50%;top:60px;transform:translateX(-50%);width:min(94%,460px);background:#e0249a;color:#fff;border:3px solid var(--ink);border-radius:10px;padding:8px 12px;font-size:21px;line-height:1.05;text-align:center;box-shadow:0 4px 0 var(--ink);animation:pop .2s}
 @keyframes pop{from{transform:translateX(-50%) scale(.7);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
@@ -457,7 +476,12 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     <div class="hudBottom">
       <div id="msgs"><div id="hint">Glisse ton doigt pour bouger</div><div id="banner" class="hidden"></div><div id="toast" class="hidden"></div></div>
       <div id="inv"></div>
-      <div id="acts"><button id="act2" class="act small hidden"></button><button id="act1" class="act hidden"></button></div>
+      <div id="pad"><div id="padTip" class="hidden"></div><div id="padGrid">
+        <button class="pb off" data-c="key"><canvas></canvas><b>CLÉ</b><em class="bd"></em><i class="pg"></i></button>
+        <button class="pb off" data-c="act"><canvas></canvas><b>ACTION</b><em class="bd"></em><i class="pg"></i></button>
+        <button class="pb off" data-c="search"><canvas></canvas><b>FOUILLER</b><em class="bd"></em><i class="pg"></i></button>
+        <button class="pb off" data-c="hide"><canvas></canvas><b>CACHER</b><em class="bd"></em><i class="pg"></i></button>
+      </div></div>
     </div>
   </div>
 
@@ -476,7 +500,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
         <button class="tile tChars" id="bChars"><canvas data-ill="chars" width="88" height="56"></canvas><span class="tl"><b>Personnages</b><small>Crée tes élèves</small></span></button>
         <button class="tile tSquish" id="bSquish"><canvas data-ill="squish" width="88" height="56"></canvas><span class="tl"><b>Squishies</b><small id="tSqN">Ta collection</small></span></button>
         <button class="tile tSave" id="bSave"><span class="sv">💾</span><span class="tl"><b>Sauvegarde</b><small>Un code pour garder tes squishies</small></span></button>
-        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 15 nov. · 20h32</small></span></button>
+        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 15 nov. · 20h51</small></span></button>
       </div>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
@@ -1219,12 +1243,13 @@ function drawCharInto(x, c, dir, frame, v, gait) {
       if (pose.arms === 'skid') { R(ax + out, T - 3, 1, 4, sleeveC); R(ax + out, T - 4, 1, 1, sk); R(ax + out * 2, T - 5, 1, 1, sk); if (isRight) handY = T - 4; return; }
       // de dos, les bras levés plongent dans le meuble (de face, ils se raccourcissent vers nous : voir plus bas)
       if (pose.arms === 'dig' && back) {
-        const h = clamp(Math.round(-dy), 0, 9);
-        if (h >= 3) {
-          // dessiné après la tête : les bras qui plongent dans le meuble restent bien visibles par-dessus les cheveux
-          // (au-dessus de l'épaule, le bras s'écarte d'un pixel, la main encore d'un)
-          late.push(() => { for (let y = T - h; y <= T + 1; y++) R(y >= T ? ax : y === T - h ? ax + out * 2 : ax + out, y, 1, 1, y > T - h && T + 1 - y < sleeveN ? sleeveC : sk); });
-          if (isRight) handY = T - h; return;
+        if (-dy >= 6) {
+          // bras levé en diagonale, bien en dehors de la tête : on fouille à pleines mains (dessiné après les cheveux)
+          late.push(() => {
+            [[0, 1], [0, 0], [1, -1], [2, -2], [3, -3]].forEach(([u, v], i) => R(ax + out * u, T + v, 1, 1, i < sleeveN ? sleeveC : sk));
+            R(Math.min(ax + out * 3, ax + out * 4), T - 5, 2, 2, sk);
+          });
+          if (isRight) handY = T - 5; return;
         }
       }
       if (pose.arms === 'dig' && !back) { dy = -dy >= 7 ? -3 : 0; dx = 0; }   // de face : une main plonge vers nous, puis l'autre
@@ -4111,8 +4136,8 @@ function computeActionsT() {
   cand.sort((a, b) => a.prio - b.prio || a.d - b.d);
   const gt = grabTarget();
   if (gt) acts.push({ id: 'grab', who: gt, icon: '✋', label: 'Attraper !', sub: 'tente ta chance !' });
-  if (cand[0]) acts.push(cand[0]);
-  if (acts.length < 2) acts.push({ id: 'shout', icon: '📣', label: 'Crier', sub: '' });
+  const seen = new Set(); cand.forEach(c => { if (!seen.has(c.id)) { seen.add(c.id); acts.push(c); } });
+  acts.push({ id: 'shout', icon: '📣', label: 'Crier', sub: '' });
   return acts;
 }
 function doActionT(a) {
@@ -7682,7 +7707,7 @@ function poolDynamic(c, ox, oy, inView) {
 }
 
 // ================= FOUILLER, EN RIGOLANT =================
-// Pendant une fouille, le perso plonge les bras dans le meuble en gigotant,
+// Pendant une fouille, le perso plonge les bras dans le meuble en gigotant (il reste entier à l'écran),
 // et tout le bazar vole par-dessus son épaule (chaussette, banane, livres, canard en plastique…).
 // Si on ne trouve rien, il arrive qu'un truc lui retombe sur la tête.
 
@@ -7753,7 +7778,6 @@ function junkSetAt(tx, ty) {
 }
 const JUNK_WORDS = { chaussette: 'Beurk !', banane: 'Beurk !', trognon: 'Beurk !', canette: 'Beurk !', sandwich: 'Miam ?', canard: 'Coin !', pq: 'Oups…', plume: 'Atchoum !' };
 
-const NO_DIVE = new Set([K.DOOR, K.TREE, K.PILLAR, K.WALL, K.FENCE]);
 // ---------- qui fouille, et où ----------
 function junkList() { const m = G.m; if (!m) return []; return m.junk || (m.junk = []); }
 // la fouille en cours d'un perso : [x, y] du meuble, ou rien
@@ -7783,20 +7807,20 @@ function digUpdate(dt) {
       // début de fouille : un nuage de poussière, et on se tourne vers le meuble
       a.digSrc = [fx, fy]; a.digN = 0; a.digJ = 0.12; a.digWord = Math.random() < 0.55;
       a.digFace = Math.abs(dx) > Math.abs(dy) * 1.2 ? (dx > 0 ? 2 : 3) : dy < 0 ? 1 : 0;
-      // on plonge la tête la première dans les meubles ; pas dans une porte ni dans un tronc d'arbre
-      const k = G.m.get(Math.floor(fx / 16), Math.floor(fy / 16)); a.digDive = !NO_DIVE.has(k); a.digJunk = k !== K.DOOR;
-      if (a.vis !== false) puff(fx, fy - 2, 4, '#e8e0d4');
+      // derrière une porte, rien ne vole
+      const k = G.m.get(Math.floor(fx / 16), Math.floor(fy / 16)); a.digJunk = k !== K.DOOR;
+      if (a.vis !== false) for (let i = 0; i < 3; i++) part(fx + rand(-6, 6), fy - 3, 'puff', { vx: rand(-14, 14), vy: rand(-12, -4), life: 0.45, col: '#e8e0d4', size: 1.5 });
     }
     a.digT = 0.2;
-    // on se penche dedans (de dos : on plonge carrément), avec un petit tortillement
-    const dive = a.digFace === 1 && a.digDive ? 2 : 1.5, wig = Math.sin(G.time * 31 + (a.ph || 0)) * 0.8;
-    a.digLx = dx / l * dive + (a.digFace === 1 ? wig : 0); a.digLy = dy / l * dive;
+    // on se penche vers le meuble, avec un petit tortillement (le perso reste entier, toujours bien visible)
+    const wig = Math.sin(G.time * 31 + (a.ph || 0)) * 0.8;
+    a.digLx = dx / l * 1.2 + (a.digFace === 1 ? wig : 0); a.digLy = dy / l * 1.2;
     // le bazar vole, un objet toutes les ~0,2 s (le prof, plus lentement)
     a.digJ -= dt;
     if (a.digJ <= 0) {
       const slow = a === G.T || a === G.T2;
       a.digJ = slow ? rand(0.26, 0.38) : rand(0.16, 0.24);
-      if (a.digJunk && a.digN < (slow ? 4 : 7)) { a.digN++; junkThrow(a, fx, fy); if (Math.random() < 0.5) part(fx + rand(-6, 6), fy + 6, 'puff', { vx: rand(-12, 12), vy: rand(-10, -2), life: 0.45, col: '#e8e0d4', size: 2 }); }
+      if (a.digJunk && a.digN < (slow ? 4 : 7)) { a.digN++; junkThrow(a, fx, fy); if (Math.random() < 0.35) part(fx + rand(-7, 7), fy - 2, 'puff', { vx: rand(-12, 12), vy: rand(-10, -2), life: 0.4, col: '#e8e0d4', size: 1.5 }); }
     }
   }
   junkUpdate(dt);
@@ -8763,7 +8787,7 @@ function computeActions() {
   if (G.inf && G.inf.coop) coopActions(cand, P);
   cand.sort((a, b) => a.prio - b.prio || a.d - b.d);
   const seen = new Set();
-  for (const c of cand) { if (seen.has(c.id)) continue; seen.add(c.id); acts.push(c); if (acts.length >= 2) break; }
+  for (const c of cand) { if (seen.has(c.id)) continue; seen.add(c.id); acts.push(c); }   // toutes : chaque gros bouton prend la meilleure de sa catégorie
   return acts;
 }
 function actorInDoor(d) {
@@ -8772,7 +8796,13 @@ function actorInDoor(d) {
   return near(G.T) || (!G.P.hidden && near(G.P)) || d.hideP;
 }
 function locksLeft() { return 3 - G.doors.filter(d => d.locked && d.byPlayer).length; }
+// on note quel gros bouton a lancé l'action en cours (pour y afficher la barre de progression)
 function doAction(a) {
+  doAction0(a);
+  const A = G.net && G.net.role === 'teacher' ? G.T : G.P;
+  if (a && A && A.busy && !A.busy.cat) A.busy.cat = actCat(a.id);
+}
+function doAction0(a) {
   const P = G.P; if (!a || G.mode !== 'play') return;
   AU.init();
   if (G.net && G.net.role === 'teacher') { doActionT(a); return; }
@@ -10068,8 +10098,6 @@ function drawSprite0(c, cfg, v, a, o = {}) {
   // en fouillant : on se penche dans le meuble et on gigote
   const lx = dig ? (a.digLx || 0) : 0, ly = dig ? (a.digLy || 0) : 0;
   c.save(); c.globalAlpha = alpha;
-  // de dos, la tête et les épaules disparaissent DANS le meuble : il ne reste que les jambes qui gigotent
-  if (dig && face === 1 && a.digSrc && a.digDive && !o.noClip) { const cy = Math.floor(a.digSrc[1] / 16) * 16 + 16 - 1; c.beginPath(); c.rect(x - 24, cy, 48, 80); c.clip(); }
   c.translate(rp(x + lx), rp(y - hz + (o.bob || 0) + ly));
   let rot = o.rot || 0;
   if (dig && !o.noLean) rot += Math.sin(G.time * 24 + (a.ph || 0)) * 0.06;
@@ -10906,6 +10934,209 @@ const MenuArt = {
   }
 };
 
+// ================= LES GROS BOUTONS D'ACTION (rétro, toujours au même endroit) =================
+// Quatre boutons fixes en bas à droite : CLÉ, ACTION / FOUILLER, CACHER.
+// Ils sont toujours là ; grisés quand ils ne servent à rien ici, en couleur quand on peut s'en servir.
+
+// ---------- les dessins (pixel art 14×14, contour ajouté automatiquement) ----------
+const PAD_ART = {
+  loupe: [[
+    '...yyyyy......',
+    '..yYYYYYy.....',
+    '.yYbbbbbYy....',
+    'yYbwwbbbbYy...',
+    'yYbwbbbbbYy...',
+    'yYbbbbbbbYy...',
+    'yYbbbbbbbYy...',
+    'yYbbbbbbbYy...',
+    '.yYbbbbbYy....',
+    '..yYYYYYyhh...',
+    '...yyyyy.hhh..',
+    '..........hhh.',
+    '...........hhh',
+    '............hh'], { y: '#c98a12', Y: '#ffd23f', b: '#9fe0ff', w: '#ffffff', h: '#7a4a20' }],
+  buisson: [[
+    '...gg...gg....',
+    '..gGGg.gGGg.g.',
+    '.gGlGGgGlGGgGg',
+    'gGGGGGGGGGGGGg',
+    'gGdGGGGGGGGdGg',
+    '.gGwwkGGwwkGg.',
+    'gGGwwkGGwwkGGg',
+    'gGdGGGGGGGGGdg',
+    '.gGGGGlGGGGGg.',
+    'gGGlGGGGGGlGGg',
+    'gGGGGGGdGGGGGg',
+    '.ggGGGGGGGGgg.',
+    '..gggggggggg..',
+    '....bb..bb....'], { g: '#2e8b3a', G: '#5cc94e', l: '#9be86a', d: '#3fa83e', w: '#ffffff', k: '#1a1028', b: '#7a4a20' }],
+  sortir: [[
+    '......ww......',
+    '.....wwww.....',
+    '....wwwwww....',
+    '...wwwwwwww...',
+    '..wwwwwwwwww..',
+    '.....wwww.....',
+    '.....wwww.....',
+    '.....wwww.....',
+    '.bbb.wwww.bbb.',
+    '.bBb......bBb.',
+    '.bBBBBBBBBBBb.',
+    '.bBBBBBBBBBBb.',
+    '.bbbbbbbbbbbb.',
+    '..............'], { w: '#ffffff', b: '#7a4a20', B: '#b8783a' }],
+  vague: [[
+    '...o.....o....',
+    '..o.o...o.o...',
+    '...o.....o....',
+    '......o.......',
+    '.....o.o......',
+    '......o.......',
+    '..............',
+    '.b...b...b...b',
+    'bBb.bBb.bBb.bB',
+    'BBBBBBBBBBBBBB',
+    'BBlBBBBBlBBBBB',
+    'BBBBBBBBBBBBBB',
+    'bbbbbbbbbbbbbb',
+    '..............'], { o: '#ffffff', b: '#2a7ad0', B: '#4fb0f0', l: '#bfefff' }],
+  cle: [[
+    '..............',
+    '..............',
+    '..............',
+    '.YYYY.........',
+    'YyyyyY........',
+    'Yy..yYYYYYYYYY',
+    'Yy..yyyyyyyyyY',
+    'Yy..yYYYYYyYyY',
+    'YyyyyY....Y.Y.',
+    '.YYYY.........',
+    '..............',
+    '..............',
+    '..............',
+    '..............'], { Y: '#ffd23f', y: '#c98a12' }],
+  main: [[
+    '......ww......',
+    '...ww.ww.ww...',
+    '...ww.ww.ww...',
+    '...ww.ww.ww.ww',
+    '...ww.ww.ww.ww',
+    '...wwwwwwww.ww',
+    '...wwwwwwwwwww',
+    'ww.wwwwwwwwwww',
+    'wwwwwwwwwwwww.',
+    '.wwwwwwwwwwww.',
+    '..wwwwwwwwwww.',
+    '...wwwwwwwww..',
+    '....wwwwwww...',
+    '....wwwwwww...'], { w: '#ffffff' }],
+  sablier: [[
+    '.kkkkkkkkkkkk.',
+    '..wwwwwwwwww..',
+    '..wyyyyyyyyw..',
+    '...wyyyyyyw...',
+    '....wyyyyw....',
+    '.....wyyw.....',
+    '......ww......',
+    '......yy......',
+    '.....w..w.....',
+    '....w....w....',
+    '...w..yy..w...',
+    '..w.yyyyyy.w..',
+    '..wwwwwwwwww..',
+    '.kkkkkkkkkkkk.'], { k: '#7a4a20', w: '#ffffff', y: '#ffd23f' }],
+};
+const PAD_IMG = new Map();
+function padIcon(name) {
+  let c = PAD_IMG.get(name); if (c) return c;
+  const [rows, pal] = PAD_ART[name], W = 16, H = 16, px = new PixCtx(W, H);
+  rows.forEach((r, y) => [...r].forEach((ch, x) => { if (pal[ch]) { px.fillStyle = pal[ch]; px.fillRect(x + 1, y + 1, 1, 1); } }));
+  pixPasses(px.d, W, H);
+  const [cv, x] = mkCanvas(W, H), id = x.createImageData(W, H); id.data.set(px.d); x.putImageData(id, 0, 0);
+  PAD_IMG.set(name, cv); return cv;
+}
+
+// ---------- quelle action va sur quel bouton ----------
+const PAD_ORDER = ['key', 'act', 'search', 'hide'];   // grille 2×2 : en bas à droite, CACHER (le bouton panique)
+const PAD_DEF = {
+  search: { lab: 'FOUILLER', ic: 'loupe', name: 'Fouiller' },
+  hide: { lab: 'CACHER', ic: 'buisson', name: 'Se cacher' },
+  key: { lab: 'CLÉ', ic: 'cle', name: 'Clé : fermer ou ouvrir une porte' },
+  act: { lab: 'ACTION', ic: 'main', name: 'Action' },
+};
+const PAD_KEY_IDS = new Set(['lock', 'unlock', 'openKey', 'lockedDoor', 'tunlock', 'tkeys', 'nokey', 'ccFree', 'free', 'stairLocked']);
+function actCat(id) {
+  if (id === 'search' || id === 'tcheck') return 'search';
+  if (id === 'hide' || id === 'unhide' || id === 'pdive' || id === 'psurface') return 'hide';
+  if (PAD_KEY_IDS.has(id)) return 'key';
+  return 'act';
+}
+// le mot écrit sur le bouton (8 lettres au plus)
+const ACT_SHORT = {
+  task: 'TÂCHE', exit: 'FILER !', secretGo: 'FILER !', small: 'FILER !', locked: 'TÂCHES', gateLocked: 'FERMÉ', gateTwo: 'À DEUX', gag: 'POUSSER',
+  pclimb: 'GRIMPER', pjump: 'SAUTER', pdown: 'RETOUR', power: 'COUPER', alarm: 'ALARME', plan: 'PLAN', stair: 'ESCALIER', stairUp: 'ESCALIER', stairNo: 'FERMÉ',
+  grab: 'ATTRAPE', shout: 'CRIER', knock: 'TOC TOC', unhide: 'SORTIR', pdive: 'PLONGER', psurface: 'REMONTER',
+  lock: 'FERMER', unlock: 'OUVRIR', openKey: 'OUVRIR', lockedDoor: 'FERMÉ', tunlock: 'OUVRIR', tkeys: 'CLÉS', nokey: 'FERMÉ', ccFree: 'LIBÉRER', free: 'LIBÉRER', stairLocked: 'FERMÉ',
+};
+// actions « pour info » (on explique pourquoi ça ne marche pas) : bouton allumé mais sans éclat
+const PAD_INFO = new Set(['locked', 'gateLocked', 'gateTwo', 'lockedDoor', 'nokey', 'stairNo', 'stairLocked']);
+
+const PAD = {
+  els: null, best: {}, sig: {},
+  init() {
+    if (this.els) return;
+    this.els = {};
+    for (const c of PAD_ORDER) {
+      const b = document.querySelector('#padGrid .pb[data-c="' + c + '"]'); if (!b) continue;
+      const cv = b.querySelector('canvas'); cv.width = 16; cv.height = 16;
+      this.els[c] = { b, cv, x: cv.getContext('2d'), lab: b.querySelector('b'), bd: b.querySelector('.bd'), pg: b.querySelector('.pg'), ic: '' };
+      b.addEventListener('pointerdown', e => {
+        e.stopPropagation(); e.preventDefault();
+        const a = this.best[c];
+        if (!a || a.id === 'busy') { b.animate([{ transform: 'translateX(-3px)' }, { transform: 'translateX(3px)' }, { transform: 'none' }], 160); return; }
+        doAction(a); UI.hudSig = null; this.sig = {};
+      });
+    }
+  },
+  // appelé par le HUD à chaque changement d'actions possibles
+  update(acts) {
+    this.init(); if (!this.els) return;
+    const A = G.net && G.net.role === 'teacher' ? G.T : G.P, best = {};
+    const busy = acts[0] && acts[0].id === 'busy' ? acts[0] : null;
+    if (busy) best[(A && A.busy && A.busy.cat) || 'act'] = busy;
+    else acts.forEach(a => { const c = actCat(a.id); if (!best[c]) best[c] = a; });
+    this.best = best;
+    const top = busy ? null : acts[0], hotC = top && !PAD_INFO.has(top.id) ? actCat(top.id) : null;
+    for (const c of PAD_ORDER) {
+      const E = this.els[c]; if (!E) continue;
+      const a = best[c], D = PAD_DEF[c];
+      let ic = D.ic, lab = D.lab, badge = '', st = a ? (PAD_INFO.has(a.id) ? 'info' : 'on') : 'off';
+      if (a) {
+        if (a.id === 'busy') ic = 'sablier';   // en cours : sablier + barre de progression
+        else {
+          if (a.id === 'unhide' || a.id === 'psurface') ic = 'sortir';
+          else if (a.id === 'pdive') ic = 'vague';
+          lab = ACT_SHORT[a.id] || D.lab;
+          if (c === 'act' || c === 'key' || PAD_INFO.has(a.id)) badge = a.icon || '';
+          if (c === 'search' && a.sub === '✨') badge = '✨';
+        }
+      }
+      const pg = a && a.progress != null ? Math.round(a.progress * 100) : -1;
+      const sig = [st, ic, lab, badge, pg, c === hotC].join('|');
+      if (this.sig[c] === sig) continue; this.sig[c] = sig;
+      E.b.classList.toggle('off', st === 'off'); E.b.classList.toggle('info', st === 'info'); E.b.classList.toggle('hot', c === hotC);
+      if (E.ic !== ic) { E.ic = ic; E.x.clearRect(0, 0, 16, 16); E.x.drawImage(padIcon(ic), 0, 0); }
+      if (E.lab.textContent !== lab) E.lab.textContent = lab;
+      if (E.bd.textContent !== badge) E.bd.textContent = badge;
+      E.pg.style.width = pg >= 0 ? pg + '%' : '0';
+      E.b.setAttribute('aria-label', a ? a.label + (a.sub ? ' (' + a.sub + ')' : '') : D.name + ' (rien ici)');
+    }
+    // la phrase complète de l'action la plus utile, au-dessus des boutons
+    const tip = $('padTip'), t = busy ? busy.label + ' · bouge pour annuler' : top ? top.icon + ' ' + top.label + (top.sub ? ' · ' + top.sub : '') : '';
+    if (tip) { setTxt(tip, t); hideEl(tip, !t); }
+  },
+};
+
 // ================= ENTRÉES (joystick + clavier) =================
 const Input = {
   jx: 0, jy: 0, mag: 0, pid: null, ox: 0, oy: 0, keys: {}, used: false, pending: null, el: null, joyEl: null,
@@ -11007,7 +11238,7 @@ const Input = {
 // ================= INTERFACE =================
 const $ = id => document.getElementById(id);
 // ---------- recharger le jeu (pratique quand il est épinglé comme une app sur iPad : pas de bouton du navigateur) ----------
-const GAME_BUILD = '15 nov. · 20h32';
+const GAME_BUILD = '15 nov. · 20h51';
 function refreshGame() {
   try { sessionStorage.setItem('nds_refresh', '1'); } catch (e) { }
   $('tVer').textContent = '⏳ Rechargement…'; try { AU.sfx('blip'); } catch (e) { }
@@ -11119,7 +11350,7 @@ const UI = {
     this.syncTogs();
     $('cName').addEventListener('input', e => { this.editing.name = e.target.value.slice(0, 12); });
     // HUD
-    ['act1', 'act2'].forEach((id, i) => $(id).addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); doAction(G.actions[i]); this.hudSig = null; }));
+    PAD.init();
     $('hTasks').addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); this.tasksOpen = !this.tasksOpen; this.taskPeekT = 0; this.taskSig = null; this.infSig = null; AU.sfx('tick'); });
     $('inv').addEventListener('pointerdown', e => { const b = e.target.closest('.slot'); if (!b) return; e.stopPropagation(); e.preventDefault(); useItem(+b.dataset.i); this.invSig = null; });
     document.addEventListener('visibilitychange', () => { if (document.hidden && G.mode === 'play' && !netLive()) this.pause(); });
@@ -11417,17 +11648,7 @@ const UI = {
     const P = G.P, T = G.T;
     // actions
     const sig = G.actions.map(a => a.id + a.label + a.sub + (a.progress != null ? Math.round(a.progress * 20) : '')).join('|');
-    if (sig !== this.hudSig) {
-      this.hudSig = sig;
-      [$('act1'), $('act2')].forEach((b, i) => {
-        const a = G.actions[i];
-        if (!a) { b.classList.add('hidden'); return; }
-        const was = b.classList.contains('hidden') || b.dataset.id !== a.id; b.dataset.id = a.id;
-        b.classList.remove('hidden');
-        if (was) { b.style.animation = 'none'; void b.offsetWidth; b.style.animation = ''; }
-        b.innerHTML = `<span class="ai">${a.icon}</span>${esc(a.label)}${a.sub ? `<span class="as">${esc(a.sub)}</span>` : ''}${a.progress != null ? `<span class="pg" style="width:${Math.round(a.progress * 100)}%"></span>` : ''}`;
-      });
-    }
+    if (sig !== this.hudSig) { this.hudSig = sig; PAD.update(G.actions); }
     const isig = P.inv.join(',') + '|' + (P.sqIds || []).join(',');
     if (isig !== this.invSig) {
       this.invSig = isig; const inv = $('inv'); inv.innerHTML = '';

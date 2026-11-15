@@ -211,7 +211,7 @@ const UI = {
     this.syncTogs();
     $('cName').addEventListener('input', e => { this.editing.name = e.target.value.slice(0, 12); });
     // HUD
-    ['act1', 'act2'].forEach((id, i) => $(id).addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); doAction(G.actions[i]); this.hudSig = null; }));
+    PAD.init();
     $('hTasks').addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); this.tasksOpen = !this.tasksOpen; this.taskPeekT = 0; this.taskSig = null; this.infSig = null; AU.sfx('tick'); });
     $('inv').addEventListener('pointerdown', e => { const b = e.target.closest('.slot'); if (!b) return; e.stopPropagation(); e.preventDefault(); useItem(+b.dataset.i); this.invSig = null; });
     document.addEventListener('visibilitychange', () => { if (document.hidden && G.mode === 'play' && !netLive()) this.pause(); });
@@ -509,17 +509,7 @@ const UI = {
     const P = G.P, T = G.T;
     // actions
     const sig = G.actions.map(a => a.id + a.label + a.sub + (a.progress != null ? Math.round(a.progress * 20) : '')).join('|');
-    if (sig !== this.hudSig) {
-      this.hudSig = sig;
-      [$('act1'), $('act2')].forEach((b, i) => {
-        const a = G.actions[i];
-        if (!a) { b.classList.add('hidden'); return; }
-        const was = b.classList.contains('hidden') || b.dataset.id !== a.id; b.dataset.id = a.id;
-        b.classList.remove('hidden');
-        if (was) { b.style.animation = 'none'; void b.offsetWidth; b.style.animation = ''; }
-        b.innerHTML = `<span class="ai">${a.icon}</span>${esc(a.label)}${a.sub ? `<span class="as">${esc(a.sub)}</span>` : ''}${a.progress != null ? `<span class="pg" style="width:${Math.round(a.progress * 100)}%"></span>` : ''}`;
-      });
-    }
+    if (sig !== this.hudSig) { this.hudSig = sig; PAD.update(G.actions); }
     const isig = P.inv.join(',') + '|' + (P.sqIds || []).join(',');
     if (isig !== this.invSig) {
       this.invSig = isig; const inv = $('inv'); inv.innerHTML = '';

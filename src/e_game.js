@@ -856,7 +856,7 @@ function computeActions() {
   if (G.inf && G.inf.coop) coopActions(cand, P);
   cand.sort((a, b) => a.prio - b.prio || a.d - b.d);
   const seen = new Set();
-  for (const c of cand) { if (seen.has(c.id)) continue; seen.add(c.id); acts.push(c); if (acts.length >= 2) break; }
+  for (const c of cand) { if (seen.has(c.id)) continue; seen.add(c.id); acts.push(c); }   // toutes : chaque gros bouton prend la meilleure de sa catégorie
   return acts;
 }
 function actorInDoor(d) {
@@ -865,7 +865,13 @@ function actorInDoor(d) {
   return near(G.T) || (!G.P.hidden && near(G.P)) || d.hideP;
 }
 function locksLeft() { return 3 - G.doors.filter(d => d.locked && d.byPlayer).length; }
+// on note quel gros bouton a lancé l'action en cours (pour y afficher la barre de progression)
 function doAction(a) {
+  doAction0(a);
+  const A = G.net && G.net.role === 'teacher' ? G.T : G.P;
+  if (a && A && A.busy && !A.busy.cat) A.busy.cat = actCat(a.id);
+}
+function doAction0(a) {
   const P = G.P; if (!a || G.mode !== 'play') return;
   AU.init();
   if (G.net && G.net.role === 'teacher') { doActionT(a); return; }

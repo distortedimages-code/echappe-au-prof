@@ -368,8 +368,8 @@ function computeActionsT() {
   cand.sort((a, b) => a.prio - b.prio || a.d - b.d);
   const gt = grabTarget();
   if (gt) acts.push({ id: 'grab', who: gt, icon: '✋', label: 'Attraper !', sub: 'tente ta chance !' });
-  if (cand[0]) acts.push(cand[0]);
-  if (acts.length < 2) acts.push({ id: 'shout', icon: '📣', label: 'Crier', sub: '' });
+  const seen = new Set(); cand.forEach(c => { if (!seen.has(c.id)) { seen.add(c.id); acts.push(c); } });
+  acts.push({ id: 'shout', icon: '📣', label: 'Crier', sub: '' });
   return acts;
 }
 function doActionT(a) {

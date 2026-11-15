@@ -1,5 +1,5 @@
 // ================= FOUILLER, EN RIGOLANT =================
-// Pendant une fouille, le perso plonge les bras dans le meuble en gigotant,
+// Pendant une fouille, le perso plonge les bras dans le meuble en gigotant (il reste entier à l'écran),
 // et tout le bazar vole par-dessus son épaule (chaussette, banane, livres, canard en plastique…).
 // Si on ne trouve rien, il arrive qu'un truc lui retombe sur la tête.
 
@@ -70,7 +70,6 @@ function junkSetAt(tx, ty) {
 }
 const JUNK_WORDS = { chaussette: 'Beurk !', banane: 'Beurk !', trognon: 'Beurk !', canette: 'Beurk !', sandwich: 'Miam ?', canard: 'Coin !', pq: 'Oups…', plume: 'Atchoum !' };
 
-const NO_DIVE = new Set([K.DOOR, K.TREE, K.PILLAR, K.WALL, K.FENCE]);
 // ---------- qui fouille, et où ----------
 function junkList() { const m = G.m; if (!m) return []; return m.junk || (m.junk = []); }
 // la fouille en cours d'un perso : [x, y] du meuble, ou rien
@@ -100,20 +99,20 @@ function digUpdate(dt) {
       // début de fouille : un nuage de poussière, et on se tourne vers le meuble
       a.digSrc = [fx, fy]; a.digN = 0; a.digJ = 0.12; a.digWord = Math.random() < 0.55;
       a.digFace = Math.abs(dx) > Math.abs(dy) * 1.2 ? (dx > 0 ? 2 : 3) : dy < 0 ? 1 : 0;
-      // on plonge la tête la première dans les meubles ; pas dans une porte ni dans un tronc d'arbre
-      const k = G.m.get(Math.floor(fx / 16), Math.floor(fy / 16)); a.digDive = !NO_DIVE.has(k); a.digJunk = k !== K.DOOR;
-      if (a.vis !== false) puff(fx, fy - 2, 4, '#e8e0d4');
+      // derrière une porte, rien ne vole
+      const k = G.m.get(Math.floor(fx / 16), Math.floor(fy / 16)); a.digJunk = k !== K.DOOR;
+      if (a.vis !== false) for (let i = 0; i < 3; i++) part(fx + rand(-6, 6), fy - 3, 'puff', { vx: rand(-14, 14), vy: rand(-12, -4), life: 0.45, col: '#e8e0d4', size: 1.5 });
     }
     a.digT = 0.2;
-    // on se penche dedans (de dos : on plonge carrément), avec un petit tortillement
-    const dive = a.digFace === 1 && a.digDive ? 2 : 1.5, wig = Math.sin(G.time * 31 + (a.ph || 0)) * 0.8;
-    a.digLx = dx / l * dive + (a.digFace === 1 ? wig : 0); a.digLy = dy / l * dive;
+    // on se penche vers le meuble, avec un petit tortillement (le perso reste entier, toujours bien visible)
+    const wig = Math.sin(G.time * 31 + (a.ph || 0)) * 0.8;
+    a.digLx = dx / l * 1.2 + (a.digFace === 1 ? wig : 0); a.digLy = dy / l * 1.2;
     // le bazar vole, un objet toutes les ~0,2 s (le prof, plus lentement)
     a.digJ -= dt;
     if (a.digJ <= 0) {
       const slow = a === G.T || a === G.T2;
       a.digJ = slow ? rand(0.26, 0.38) : rand(0.16, 0.24);
-      if (a.digJunk && a.digN < (slow ? 4 : 7)) { a.digN++; junkThrow(a, fx, fy); if (Math.random() < 0.5) part(fx + rand(-6, 6), fy + 6, 'puff', { vx: rand(-12, 12), vy: rand(-10, -2), life: 0.45, col: '#e8e0d4', size: 2 }); }
+      if (a.digJunk && a.digN < (slow ? 4 : 7)) { a.digN++; junkThrow(a, fx, fy); if (Math.random() < 0.35) part(fx + rand(-7, 7), fy - 2, 'puff', { vx: rand(-12, 12), vy: rand(-10, -2), life: 0.4, col: '#e8e0d4', size: 1.5 }); }
     }
   }
   junkUpdate(dt);

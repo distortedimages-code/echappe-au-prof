@@ -103,8 +103,6 @@ function drawSprite0(c, cfg, v, a, o = {}) {
   // en fouillant : on se penche dans le meuble et on gigote
   const lx = dig ? (a.digLx || 0) : 0, ly = dig ? (a.digLy || 0) : 0;
   c.save(); c.globalAlpha = alpha;
-  // de dos, la tête et les épaules disparaissent DANS le meuble : il ne reste que les jambes qui gigotent
-  if (dig && face === 1 && a.digSrc && a.digDive && !o.noClip) { const cy = Math.floor(a.digSrc[1] / 16) * 16 + 16 - 1; c.beginPath(); c.rect(x - 24, cy, 48, 80); c.clip(); }
   c.translate(rp(x + lx), rp(y - hz + (o.bob || 0) + ly));
   let rot = o.rot || 0;
   if (dig && !o.noLean) rot += Math.sin(G.time * 24 + (a.ph || 0)) * 0.06;

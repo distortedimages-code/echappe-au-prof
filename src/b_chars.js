@@ -225,12 +225,13 @@ function drawCharInto(x, c, dir, frame, v, gait) {
       if (pose.arms === 'skid') { R(ax + out, T - 3, 1, 4, sleeveC); R(ax + out, T - 4, 1, 1, sk); R(ax + out * 2, T - 5, 1, 1, sk); if (isRight) handY = T - 4; return; }
       // de dos, les bras levés plongent dans le meuble (de face, ils se raccourcissent vers nous : voir plus bas)
       if (pose.arms === 'dig' && back) {
-        const h = clamp(Math.round(-dy), 0, 9);
-        if (h >= 3) {
-          // dessiné après la tête : les bras qui plongent dans le meuble restent bien visibles par-dessus les cheveux
-          // (au-dessus de l'épaule, le bras s'écarte d'un pixel, la main encore d'un)
-          late.push(() => { for (let y = T - h; y <= T + 1; y++) R(y >= T ? ax : y === T - h ? ax + out * 2 : ax + out, y, 1, 1, y > T - h && T + 1 - y < sleeveN ? sleeveC : sk); });
-          if (isRight) handY = T - h; return;
+        if (-dy >= 6) {
+          // bras levé en diagonale, bien en dehors de la tête : on fouille à pleines mains (dessiné après les cheveux)
+          late.push(() => {
+            [[0, 1], [0, 0], [1, -1], [2, -2], [3, -3]].forEach(([u, v], i) => R(ax + out * u, T + v, 1, 1, i < sleeveN ? sleeveC : sk));
+            R(Math.min(ax + out * 3, ax + out * 4), T - 5, 2, 2, sk);
+          });
+          if (isRight) handY = T - 5; return;
         }
       }
       if (pose.arms === 'dig' && !back) { dy = -dy >= 7 ? -3 : 0; dx = 0; }   // de face : une main plonge vers nous, puis l'autre
