@@ -89,7 +89,7 @@ function squishyCanvas(id, silhouette) {
     if (q.fx === 'stars' || q.fx === 'gold') [[3, 5], [9, 4], [10, 9], [4, 10], [7, 3]].forEach(([x, y]) => { if (on(x, y)) { c.fillStyle = q.fx === 'gold' ? '#fff6a0' : '#ffffff'; c.fillRect(x, y, 1, 1); } });
     if (q.fx === 'rainbow' || q.fx === 'gold') { const rb = ['#ff6f7a', '#ffb03c', '#ffe066', '#7fe08a', '#7fc8ff', '#c99aff']; for (let x = 2; x <= 12; x++) { const y = q.s === 'cloud' ? 9 : 11; if (on(x, y)) { c.fillStyle = rb[(x - 2) % 6]; c.fillRect(x, y, 1, 1); } } }
   }
-  outlinePass(cv, c);
+  if (!silhouette) shadePass(cv, c); outlinePass(cv, c);
   SQ_CACHE[key] = cv; return cv;
 }
 // collection (gardée sur l'appareil)

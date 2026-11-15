@@ -89,7 +89,7 @@ function lifePairF(k, dt) {
   const ang = a.moving ? a.ang || 0 : (k.sideA != null ? k.sideA : 0); if (a.moving) k.sideA = ang;
   const tx = a.x + Math.cos(ang + Math.PI / 2) * 11, ty = a.y + Math.sin(ang + Math.PI / 2) * 6;
   const dx = tx - k.x, dy = ty - k.y, d = Math.hypot(dx, dy);
-  if (d > 40) { const [kx, ky] = tileOf(k), [ax, ay] = tileOf(a); if (!k.path || k.pi >= k.path.length || (k.repT = (k.repT || 0) - dt) <= 0) { k.repT = 1; const p = astar(kx, ky, ax, ay, passTeach(false)); if (p) { k.path = p; k.pi = 0; } } followPath(k, 2.4 * 16, dt); return; }
+  if (d > 40) { const [kx, ky] = tileOf(k), [ax, ay] = tileOf(a); if ((!k.path || k.pi >= k.path.length || (k.repT = (k.repT || 0) - dt) <= 0) && (G.pathBudget = (G.pathBudget || 0) - 1) >= 0) { k.repT = 1.2; const p = astar(kx, ky, ax, ay, passTeach(false)); if (p) { k.path = p; k.pi = 0; } } followPath(k, 2.4 * 16, dt); return; }
   if (d > 2) { const st = Math.min(d, (a.moving ? 2.2 : 1.4) * 16 * dt), ox = k.x, oy = k.y; moveA(k, dx / d * st, dy / d * st, solidP, 4, 4); const mv = Math.hypot(k.x - ox, k.y - oy); k.moving = mv > 0.05; k.dist = (k.dist || 0) + mv; k.anim = (k.anim || 0) + dt; k.face = a.moving ? a.face : faceFromAng(Math.atan2(a.y - k.y, a.x - k.x)); }
   else { k.moving = false; k.face = a.moving ? a.face : faceFromAng(Math.atan2(a.y - k.y, a.x - k.x)); }
   if (!a.moving && !k.moving) a.face = faceFromAng(Math.atan2(k.y - a.y, k.x - a.x));
@@ -113,7 +113,7 @@ function gagsUpdate(dt) {
       }
     } else if (g.st <= 0) { g.state = 'busy'; g.x = g.home[0]; g.y = g.home[1]; }
     else if (g.state === 'scared' || g.state === 'look') { if (P) g.face = faceFromAng(Math.atan2(P.y - g.y, P.x - g.x)); }
-    g.vis = easyOn() || (G.eye && Math.hypot(g.x - G.eye[0], g.y - G.eye[1]) < visRAt(Math.atan2(g.y - G.eye[1], g.x - G.eye[0])) && los(G.eye[0], G.eye[1], g.x, g.y - 10));
+    g.vis = G.net && G.net.role === 'teacher' ? (G.eye && Math.hypot(g.x - G.eye[0], g.y - G.eye[1]) < G.visR && los(G.eye[0], G.eye[1], g.x, g.y - 10)) : regionVisible(g.x, g.y);
   });
   // flaques : elles sèchent, et font glisser
   m.puddles = (m.puddles || []).filter(p => G.time - p.t < 50);

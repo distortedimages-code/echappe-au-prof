@@ -201,6 +201,7 @@ function drawFog() {
     return;
   }
   if (easyOn()) return;   // mode facile : pas de brouillard
+  drawRoomShade(fx, ox, oy); return;   // l'élève : seules les pièces où il n'est pas restent dans le noir
   fx.fillStyle = G.L.outdoor ? 'rgba(18,12,46,0.5)' : 'rgba(14,8,34,0.68)'; fx.fillRect(0, 0, V.lw, V.lh);
   fx.globalCompositeOperation = 'destination-out';
   const [ex, ey] = G.eye, R = G.visR, sx = ex + ox, sy = ey + oy;
@@ -239,7 +240,6 @@ function updateCamera(dt) {
   const P = viewerA(), m = G.m, lw = V.lw - 2, lh = V.lh - 2;
   let tx = P.x + clamp(P.vx || 0, -90, 90) * 0.35 - lw / 2, ty = P.y - 10 + clamp(P.vy || 0, -90, 90) * 0.3 - lh * 0.45;
   if (G.net && G.net.role === 'teacher' && !P.moving) { tx += Math.cos(P.ang) * 22; ty += Math.sin(P.ang) * 18; }
-  else if (G.visCone && G.visAng != null && P === G.P) { tx += Math.cos(G.visAng) * 18; ty += Math.sin(G.visAng) * 14; }
   if (G.mode === 'caught') { tx = (P.x + G.T.x) / 2 - lw / 2; ty = (P.y + G.T.y) / 2 - 10 - lh * 0.45; }
   const mw = m.w * 16, mh = m.h * 16;
   tx = mw < lw ? (mw - lw) / 2 : clamp(tx, -8, mw - lw + 8);
@@ -337,7 +337,7 @@ function renderGame(dt) {
   drawPuddles(ctx);
   const ents = [];
   (G.m.npcGags || []).forEach(g => { if (g.vis) ents.push([g.y, () => occlude(ctx, g, () => drawGag(ctx, g))]); });
-  if (G.foot && G.eye && (easyOn() || (Math.hypot(G.foot.x - G.eye[0], G.foot.y - G.eye[1]) < visRAt(Math.atan2(G.foot.y - G.eye[1], G.foot.x - G.eye[0])) && los(G.eye[0], G.eye[1], G.foot.x, G.foot.y - 2)))) ents.push([G.foot.y, () => drawFootBall(ctx)]);
+  if (G.foot && regionVisible(G.foot.x, G.foot.y)) ents.push([G.foot.y, () => drawFootBall(ctx)]);
   G.items.forEach(it => ents.push([it.y, () => drawItemW(ctx, it)]));
   G.apples.forEach(a => ents.push([a.y, () => { const w = Math.sin(G.time * 4) * 0.12; ctx.save(); ctx.translate(a.x, a.y - 6); ctx.rotate(w); ctx.drawImage(itemCanvas('apple'), -7, -7); ctx.restore(); }]));
   G.kids.forEach(k => {
@@ -545,7 +545,7 @@ function drawOverlay() {
     txt(c, '▼', qx, qy + bob, Math.round(12 * d), '#3fd06a'); txt(c, 'TOI', qx, qy - 13 * d + bob, Math.round(8 * d), '#ffffff');
   }
   // bulles des élèves (« C'est pas moi ! »)
-  G.kids.concat(G.m.npcGags || []).forEach(k => {
+  const bubKid = k => {
     if (!k.bub || !k.vis) return;
     const b = k.bub, al = Math.min(1, (b.dur - b.t) * 4), sc = b.t < 0.16 ? easeOutBack(b.t / 0.16) : 1, F2 = Math.round(8 * d);
     c.font = F2 + 'px ' + FONT; const w = c.measureText(b.text).width + F2 * 1.4, h = F2 * 2;
@@ -555,7 +555,8 @@ function drawOverlay() {
     c.beginPath(); c.moveTo(-4 * d, h / 2 - 1); c.lineTo(0, h / 2 + 6 * d); c.lineTo(4 * d, h / 2 - 1); c.fill();
     c.fillStyle = '#1a1028'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(b.text, 0, 1 * d);
     c.restore(); c.globalAlpha = 1;
-  });
+  };
+  G.kids.forEach(bubKid); if (G.m.npcGags) G.m.npcGags.forEach(bubKid);
   // le coéquipier hors de l'écran ou à un autre étage, et ses appels 📍
   if (G.inf && (G.inf.coop || G.inf.guard) && G.mode === 'play') drawPartnerHint(c, d);
   // signalement d'un prof (surveillant en multi)

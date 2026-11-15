@@ -175,6 +175,8 @@ const AU = {
   },
   say(text, prof, vol = 1) {
     if (!this.set.voice || !window.speechSynthesis || vol < 0.05) return;
+    // pas trop de voix d'affilée : la synthèse vocale peut faire « accrocher » l'image sur téléphone
+    const now = performance.now(); if (vol < 0.9 && now - (this.lastSay || -1e9) < 2600) return; this.lastSay = now;
     try {
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text.replace(/[«»]/g, '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F\u200D]/gu, ''));

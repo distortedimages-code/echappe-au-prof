@@ -39,6 +39,19 @@ function charKey(c, v) {
   if (v) k += '|' + (v.adult ? 1 : 0) + (v.wide ? 1 : 0) + (v.eyes != null ? v.eyes : '') + (v.extras || []).join('');
   return k;
 }
+// volume : un peu de lumière en haut à gauche, un peu d'ombre en bas à droite (avant le contour)
+function shadePass(cv, x) {
+  const w = cv.width, h = cv.height, id = x.getImageData(0, 0, w, h), d = id.data, s = new Uint8ClampedArray(d);
+  const op = (i, y) => i >= 0 && i < w && y >= 0 && y < h && s[(y * w + i) * 4 + 3] > 0;
+  for (let y = 0; y < h; y++) for (let i = 0; i < w; i++) {
+    const p = (y * w + i) * 4; if (!s[p + 3]) continue;
+    let f = 1;
+    if (!op(i + 1, y)) f -= 0.16; if (!op(i, y + 1)) f -= 0.1;
+    if (!op(i - 1, y)) f += 0.08; if (!op(i, y - 1)) f += 0.1;
+    if (f !== 1) { d[p] = Math.min(255, s[p] * f); d[p + 1] = Math.min(255, s[p + 1] * f); d[p + 2] = Math.min(255, s[p + 2] * f); }
+  }
+  x.putImageData(id, 0, 0);
+}
 function outlinePass(cv, x) {
   const w = cv.width, h = cv.height, id = x.getImageData(0, 0, w, h), d = id.data, s = new Uint8ClampedArray(d);
   for (let y = 0; y < h; y++) for (let i = 0; i < w; i++) {
@@ -90,7 +103,7 @@ function charCanvas(cfg, dir, frame, v, gait = 'basic') {
   let c = CHAR_CACHE.get(key); if (c) return c;
   const [cv, x] = mkCanvas(20, 34);
   drawCharInto(x, cfg, dir, frame, v || {}, gait);
-  outlinePass(cv, x);
+  shadePass(cv, x); outlinePass(cv, x);
   if (CHAR_CACHE.size > 2500) CHAR_CACHE.clear();
   CHAR_CACHE.set(key, cv); return cv;
 }
@@ -398,6 +411,6 @@ function itemCanvas(kind) {
     }
     case 'watch': R(2, 3, 8, 8, '#f2c14e'); R(1, 4, 10, 6, '#f2c14e'); R(3, 4, 6, 6, '#fff8e0'); R(2, 5, 8, 4, '#fff8e0'); R(5, 5, 1, 3, '#2a2230'); R(6, 7, 2, 1, '#2a2230'); R(5, 1, 2, 2, '#c99a2e'); R(7, 0, 4, 1, '#c99a2e'); R(10, 1, 1, 2, '#c99a2e'); break;
   }
-  outlinePass(cv, c);
+  shadePass(cv, c); outlinePass(cv, c);
   ITEM_CACHE[kind] = cv; return cv;
 }

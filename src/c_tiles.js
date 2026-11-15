@@ -48,17 +48,17 @@ function drawFloorTile(c, px, py, fs, tx, ty) {
   const R = (a, b, w, h, col) => { c.fillStyle = col; c.fillRect(px + a, py + b, w, h); };
   const h = hash2(tx, ty), h2 = hash2(tx + 77, ty * 3 + 5);
   switch (fs) {
-    case FS.ASPHALT: R(0, 0, 16, 16, '#83869a'); for (let i = 0; i < 6; i++) R((h * 97 + i * 37) % 16 | 0, (h2 * 53 + i * 71) % 16 | 0, 1, 1, i % 2 ? '#9396a8' : '#74778a'); break;
+    case FS.ASPHALT: R(0, 0, 16, 16, '#83869a'); for (let i = 0; i < 6; i++) R((h2 * 61 + i * 23) % 16 | 0, (h * 89 + i * 41) % 16 | 0, 1, 1, i % 3 ? '#8c8fa2' : '#6c6f80'); for (let i = 0; i < 6; i++) R((h * 97 + i * 37) % 16 | 0, (h2 * 53 + i * 71) % 16 | 0, 1, 1, i % 2 ? '#9396a8' : '#74778a'); break;
     case FS.GRASS: R(0, 0, 16, 16, '#5aa64e'); for (let i = 0; i < 5; i++) { const a = (h * 91 + i * 29) % 15 | 0, b = (h2 * 61 + i * 43) % 14 | 0; R(a, b, 1, 2, '#6fbf5e'); R(a + 1, b + 1, 1, 1, '#4a8f40'); } if (h > 0.85) { R(6, 6, 2, 2, '#fff6a0'); R(7, 7, 1, 1, '#f2a33a'); } break;
     case FS.SAND: R(0, 0, 16, 16, '#ecce86'); for (let i = 0; i < 6; i++) R((h * 83 + i * 31) % 16 | 0, (h2 * 47 + i * 59) % 16 | 0, 1, 1, i % 2 ? '#d9b868' : '#f6e0a6'); break;
     case FS.PREAU: R(0, 0, 16, 16, '#9c928a'); R(0, 0, 16, 1, '#8a8078'); R(0, 0, 1, 16, '#8a8078'); R(8, 0, 1, 16, '#938980'); R(0, 8, 16, 1, '#938980'); break;
-    case FS.WOOD: { R(0, 0, 16, 16, '#c99260'); const off = (ty % 2) * 6; for (let r = 0; r < 4; r++) { R(0, r * 4 + 3, 16, 1, '#a8743f'); R((off + r * 5) % 16, r * 4, 1, 3, '#b07c48'); } R((h * 14) | 0, 1, 2, 1, '#d8a46e'); break; }
-    case FS.LINO: R(0, 0, 16, 16, '#cdd5dc'); R(0, 0, 16, 1, '#bfc8d0'); R(0, 0, 1, 16, '#bfc8d0'); for (let i = 0; i < 3; i++) R((h * 71 + i * 37) % 16 | 0, (h2 * 33 + i * 51) % 16 | 0, 1, 1, '#b8c2cc'); break;
-    case FS.TILE: R(0, 0, 16, 16, '#eaf0f2'); for (let i = 0; i < 16; i += 4) { R(i, 0, 1, 16, '#cfd9de'); R(0, i, 16, 1, '#cfd9de'); } break;
+    case FS.WOOD: { for (let r = 0; r < 4; r++) { const row = ty * 4 + r, hv = hash2(tx + ((row * 5) % 3), row); R(0, r * 4, 16, 4, shade('#c99260', (hv - 0.5) * 0.18)); R(0, r * 4, 16, 1, shade('#c99260', 0.1 + (hv - 0.5) * 0.1)); R(0, r * 4 + 3, 16, 1, '#a06c3a'); const sx = ((row * 7 + tx * 16) % 23) % 16; R(sx, r * 4, 1, 3, '#a8743f'); R(((hv * 97) | 0) % 13, r * 4 + 1, 3, 1, shade('#c99260', -0.1)); if (hv > 0.85) R(((hv * 53) | 0) % 14, r * 4 + 2, 1, 1, '#8a5a30'); } break; }
+    case FS.LINO: R(0, 0, 16, 16, '#cdd5dc'); R(0, 0, 16, 1, '#bfc8d0'); R(0, 0, 1, 16, '#bfc8d0'); R(1, 1, 15, 1, '#d8dfe5'); for (let i = 0; i < 7; i++) R((h * 71 + i * 37) % 16 | 0, (h2 * 33 + i * 51) % 16 | 0, 1, 1, i % 3 ? '#b8c2cc' : '#e2e8ec'); break;
+    case FS.TILE: R(0, 0, 16, 16, '#eaf0f2'); for (let a = 0; a < 4; a++) for (let b = 0; b < 4; b++) { const hv = hash2(tx * 4 + a, ty * 4 + b); if (hv > 0.7) R(a * 4 + 1, b * 4 + 1, 3, 3, hv > 0.93 ? '#dfe8ec' : '#f2f6f7'); R(a * 4 + 1, b * 4 + 1, 1, 1, '#ffffff'); } for (let i = 0; i < 16; i += 4) { R(i, 0, 1, 16, '#c8d3d9'); R(0, i, 16, 1, '#c8d3d9'); } break;
     case FS.CARPET: R(0, 0, 16, 16, '#b8344a'); for (let i = 0; i < 16; i += 4) for (let j = 0; j < 16; j += 4) R(i + ((j / 4) % 2) * 2, j + 1, 1, 1, '#a32b3f'); R(0, 0, 16, 1, '#c44a5e'); break;
     case FS.GYM: R(0, 0, 16, 16, '#e3b675'); for (let i = 0; i < 16; i += 4) R(i, 0, 1, 16, '#d2a160'); R(((tx % 4) * 4 + 1) | 0, ((h * 12) | 0), 2, 3, '#eac487'); break;
     case FS.OFFICE: R(0, 0, 16, 16, '#d9caa8'); for (let i = 0; i < 16; i += 2) R(i, (i * 3) % 16, 1, 1, '#c9b994'); R(0, 0, 16, 1, '#cdbd99'); break;
-    case FS.CHECK: { const a = '#ebe6da', b = '#c2b9a8'; R(0, 0, 8, 8, a); R(8, 8, 8, 8, a); R(8, 0, 8, 8, b); R(0, 8, 8, 8, b); break; }
+    case FS.CHECK: { const a = shade('#ebe6da', (h - 0.5) * 0.04), b = shade('#c2b9a8', (h2 - 0.5) * 0.05); R(0, 0, 8, 8, a); R(8, 8, 8, 8, a); R(8, 0, 8, 8, b); R(0, 8, 8, 8, b); R(0, 0, 8, 1, '#f6f2ea'); R(8, 8, 8, 1, '#f6f2ea'); R(8, 0, 8, 1, '#ccc4b4'); R(0, 8, 8, 1, '#ccc4b4'); R(7, 0, 1, 16, 'rgba(0,0,0,0.04)'); break; }
     case FS.ROYAL: R(0, 0, 16, 16, '#3b4f9a'); R(0, 0, 16, 1, '#4a60ae'); if ((tx + ty) % 2 === 0) { R(7, 7, 2, 2, '#c8a84a'); R(6, 8, 4, 0, '#c8a84a'); } break;
   }
 }
@@ -68,12 +68,13 @@ function drawWallTile(c, px, py, ws, face, tx, ty) {
   if (!face) { R(0, 0, 16, 16, S.top); R(0, 0, 16, 1, shade(S.top, 0.12)); if (hash2(tx, ty) > 0.7) R(5, 6, 2, 1, shade(S.top, -0.15)); return; }
   R(0, 0, 16, 16, S.face); R(0, 0, 16, 3, S.top); R(0, 3, 16, 1, S.trim);
   if (ws === WS.BRICK) {
-    for (let r = 0; r < 4; r++) { const yy = 4 + r * 3; R(0, yy + 2, 16, 1, S.faceD); const o = (r % 2) * 4; for (let i = o; i < 16; i += 8) R(i, yy, 1, 2, S.faceD); }
+    for (let r = 0; r < 4; r++) { const yy = 4 + r * 3; const o = (r % 2) * 4; for (let i = o - 8; i < 16; i += 8) { const hv = hash2(tx * 3 + ((i + 16) >> 3), ty * 5 + r); R(Math.max(0, i + 1), yy, Math.min(7, 16 - i - 1, i + 8), 2, shade(S.face, (hv - 0.5) * 0.16)); R(Math.max(0, i + 1), yy, Math.min(7, 16 - i - 1, i + 8), 1, shade(S.face, 0.08)); } R(0, yy + 2, 16, 1, S.faceD); for (let i = o; i < 16; i += 8) R(i, yy, 1, 2, S.faceD); }
   } else if (ws === WS.WOOD) {
     for (let i = 1; i < 16; i += 5) R(i, 4, 1, 10, S.faceD); R(0, 9, 16, 1, S.trim);
     R(0, 13, 16, 3, S.base);
   } else {
-    R(0, 12, 16, 1, S.faceD); R(0, 13, 16, 3, S.base);
+    const hv = hash2(tx * 7, ty * 3); for (let i = 0; i < 4; i++) R(((hv * 97 + i * 37) | 0) % 16, 4 + (((hv * 53 + i * 29) | 0) % 8), 1, 1, shade(S.face, i % 2 ? -0.04 : 0.04));
+    R(0, 4, 16, 1, shade(S.face, 0.06)); R(0, 11, 16, 1, shade(S.face, -0.06)); R(0, 12, 16, 1, S.faceD); R(0, 13, 16, 3, S.base); R(0, 13, 16, 1, shade(S.base, 0.25));
     if (ws === WS.BLUE) { R(0, 7, 16, 2, '#f2f6ff'); }
   }
 }

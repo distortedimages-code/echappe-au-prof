@@ -676,6 +676,8 @@ const AU = {
   },
   say(text, prof, vol = 1) {
     if (!this.set.voice || !window.speechSynthesis || vol < 0.05) return;
+    // pas trop de voix d'affilée : la synthèse vocale peut faire « accrocher » l'image sur téléphone
+    const now = performance.now(); if (vol < 0.9 && now - (this.lastSay || -1e9) < 2600) return; this.lastSay = now;
     try {
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text.replace(/[«»]/g, '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F\u200D]/gu, ''));
@@ -803,7 +805,7 @@ function squishyCanvas(id, silhouette) {
     if (q.fx === 'stars' || q.fx === 'gold') [[3, 5], [9, 4], [10, 9], [4, 10], [7, 3]].forEach(([x, y]) => { if (on(x, y)) { c.fillStyle = q.fx === 'gold' ? '#fff6a0' : '#ffffff'; c.fillRect(x, y, 1, 1); } });
     if (q.fx === 'rainbow' || q.fx === 'gold') { const rb = ['#ff6f7a', '#ffb03c', '#ffe066', '#7fe08a', '#7fc8ff', '#c99aff']; for (let x = 2; x <= 12; x++) { const y = q.s === 'cloud' ? 9 : 11; if (on(x, y)) { c.fillStyle = rb[(x - 2) % 6]; c.fillRect(x, y, 1, 1); } } }
   }
-  outlinePass(cv, c);
+  if (!silhouette) shadePass(cv, c); outlinePass(cv, c);
   SQ_CACHE[key] = cv; return cv;
 }
 // collection (gardée sur l'appareil)
@@ -860,6 +862,19 @@ function charKey(c, v) {
   if (v) k += '|' + (v.adult ? 1 : 0) + (v.wide ? 1 : 0) + (v.eyes != null ? v.eyes : '') + (v.extras || []).join('');
   return k;
 }
+// volume : un peu de lumière en haut à gauche, un peu d'ombre en bas à droite (avant le contour)
+function shadePass(cv, x) {
+  const w = cv.width, h = cv.height, id = x.getImageData(0, 0, w, h), d = id.data, s = new Uint8ClampedArray(d);
+  const op = (i, y) => i >= 0 && i < w && y >= 0 && y < h && s[(y * w + i) * 4 + 3] > 0;
+  for (let y = 0; y < h; y++) for (let i = 0; i < w; i++) {
+    const p = (y * w + i) * 4; if (!s[p + 3]) continue;
+    let f = 1;
+    if (!op(i + 1, y)) f -= 0.16; if (!op(i, y + 1)) f -= 0.1;
+    if (!op(i - 1, y)) f += 0.08; if (!op(i, y - 1)) f += 0.1;
+    if (f !== 1) { d[p] = Math.min(255, s[p] * f); d[p + 1] = Math.min(255, s[p + 1] * f); d[p + 2] = Math.min(255, s[p + 2] * f); }
+  }
+  x.putImageData(id, 0, 0);
+}
 function outlinePass(cv, x) {
   const w = cv.width, h = cv.height, id = x.getImageData(0, 0, w, h), d = id.data, s = new Uint8ClampedArray(d);
   for (let y = 0; y < h; y++) for (let i = 0; i < w; i++) {
@@ -911,7 +926,7 @@ function charCanvas(cfg, dir, frame, v, gait = 'basic') {
   let c = CHAR_CACHE.get(key); if (c) return c;
   const [cv, x] = mkCanvas(20, 34);
   drawCharInto(x, cfg, dir, frame, v || {}, gait);
-  outlinePass(cv, x);
+  shadePass(cv, x); outlinePass(cv, x);
   if (CHAR_CACHE.size > 2500) CHAR_CACHE.clear();
   CHAR_CACHE.set(key, cv); return cv;
 }
@@ -1219,7 +1234,7 @@ function itemCanvas(kind) {
     }
     case 'watch': R(2, 3, 8, 8, '#f2c14e'); R(1, 4, 10, 6, '#f2c14e'); R(3, 4, 6, 6, '#fff8e0'); R(2, 5, 8, 4, '#fff8e0'); R(5, 5, 1, 3, '#2a2230'); R(6, 7, 2, 1, '#2a2230'); R(5, 1, 2, 2, '#c99a2e'); R(7, 0, 4, 1, '#c99a2e'); R(10, 1, 1, 2, '#c99a2e'); break;
   }
-  outlinePass(cv, c);
+  shadePass(cv, c); outlinePass(cv, c);
   ITEM_CACHE[kind] = cv; return cv;
 }
 
@@ -1420,17 +1435,17 @@ function drawFloorTile(c, px, py, fs, tx, ty) {
   const R = (a, b, w, h, col) => { c.fillStyle = col; c.fillRect(px + a, py + b, w, h); };
   const h = hash2(tx, ty), h2 = hash2(tx + 77, ty * 3 + 5);
   switch (fs) {
-    case FS.ASPHALT: R(0, 0, 16, 16, '#83869a'); for (let i = 0; i < 6; i++) R((h * 97 + i * 37) % 16 | 0, (h2 * 53 + i * 71) % 16 | 0, 1, 1, i % 2 ? '#9396a8' : '#74778a'); break;
+    case FS.ASPHALT: R(0, 0, 16, 16, '#83869a'); for (let i = 0; i < 6; i++) R((h2 * 61 + i * 23) % 16 | 0, (h * 89 + i * 41) % 16 | 0, 1, 1, i % 3 ? '#8c8fa2' : '#6c6f80'); for (let i = 0; i < 6; i++) R((h * 97 + i * 37) % 16 | 0, (h2 * 53 + i * 71) % 16 | 0, 1, 1, i % 2 ? '#9396a8' : '#74778a'); break;
     case FS.GRASS: R(0, 0, 16, 16, '#5aa64e'); for (let i = 0; i < 5; i++) { const a = (h * 91 + i * 29) % 15 | 0, b = (h2 * 61 + i * 43) % 14 | 0; R(a, b, 1, 2, '#6fbf5e'); R(a + 1, b + 1, 1, 1, '#4a8f40'); } if (h > 0.85) { R(6, 6, 2, 2, '#fff6a0'); R(7, 7, 1, 1, '#f2a33a'); } break;
     case FS.SAND: R(0, 0, 16, 16, '#ecce86'); for (let i = 0; i < 6; i++) R((h * 83 + i * 31) % 16 | 0, (h2 * 47 + i * 59) % 16 | 0, 1, 1, i % 2 ? '#d9b868' : '#f6e0a6'); break;
     case FS.PREAU: R(0, 0, 16, 16, '#9c928a'); R(0, 0, 16, 1, '#8a8078'); R(0, 0, 1, 16, '#8a8078'); R(8, 0, 1, 16, '#938980'); R(0, 8, 16, 1, '#938980'); break;
-    case FS.WOOD: { R(0, 0, 16, 16, '#c99260'); const off = (ty % 2) * 6; for (let r = 0; r < 4; r++) { R(0, r * 4 + 3, 16, 1, '#a8743f'); R((off + r * 5) % 16, r * 4, 1, 3, '#b07c48'); } R((h * 14) | 0, 1, 2, 1, '#d8a46e'); break; }
-    case FS.LINO: R(0, 0, 16, 16, '#cdd5dc'); R(0, 0, 16, 1, '#bfc8d0'); R(0, 0, 1, 16, '#bfc8d0'); for (let i = 0; i < 3; i++) R((h * 71 + i * 37) % 16 | 0, (h2 * 33 + i * 51) % 16 | 0, 1, 1, '#b8c2cc'); break;
-    case FS.TILE: R(0, 0, 16, 16, '#eaf0f2'); for (let i = 0; i < 16; i += 4) { R(i, 0, 1, 16, '#cfd9de'); R(0, i, 16, 1, '#cfd9de'); } break;
+    case FS.WOOD: { for (let r = 0; r < 4; r++) { const row = ty * 4 + r, hv = hash2(tx + ((row * 5) % 3), row); R(0, r * 4, 16, 4, shade('#c99260', (hv - 0.5) * 0.18)); R(0, r * 4, 16, 1, shade('#c99260', 0.1 + (hv - 0.5) * 0.1)); R(0, r * 4 + 3, 16, 1, '#a06c3a'); const sx = ((row * 7 + tx * 16) % 23) % 16; R(sx, r * 4, 1, 3, '#a8743f'); R(((hv * 97) | 0) % 13, r * 4 + 1, 3, 1, shade('#c99260', -0.1)); if (hv > 0.85) R(((hv * 53) | 0) % 14, r * 4 + 2, 1, 1, '#8a5a30'); } break; }
+    case FS.LINO: R(0, 0, 16, 16, '#cdd5dc'); R(0, 0, 16, 1, '#bfc8d0'); R(0, 0, 1, 16, '#bfc8d0'); R(1, 1, 15, 1, '#d8dfe5'); for (let i = 0; i < 7; i++) R((h * 71 + i * 37) % 16 | 0, (h2 * 33 + i * 51) % 16 | 0, 1, 1, i % 3 ? '#b8c2cc' : '#e2e8ec'); break;
+    case FS.TILE: R(0, 0, 16, 16, '#eaf0f2'); for (let a = 0; a < 4; a++) for (let b = 0; b < 4; b++) { const hv = hash2(tx * 4 + a, ty * 4 + b); if (hv > 0.7) R(a * 4 + 1, b * 4 + 1, 3, 3, hv > 0.93 ? '#dfe8ec' : '#f2f6f7'); R(a * 4 + 1, b * 4 + 1, 1, 1, '#ffffff'); } for (let i = 0; i < 16; i += 4) { R(i, 0, 1, 16, '#c8d3d9'); R(0, i, 16, 1, '#c8d3d9'); } break;
     case FS.CARPET: R(0, 0, 16, 16, '#b8344a'); for (let i = 0; i < 16; i += 4) for (let j = 0; j < 16; j += 4) R(i + ((j / 4) % 2) * 2, j + 1, 1, 1, '#a32b3f'); R(0, 0, 16, 1, '#c44a5e'); break;
     case FS.GYM: R(0, 0, 16, 16, '#e3b675'); for (let i = 0; i < 16; i += 4) R(i, 0, 1, 16, '#d2a160'); R(((tx % 4) * 4 + 1) | 0, ((h * 12) | 0), 2, 3, '#eac487'); break;
     case FS.OFFICE: R(0, 0, 16, 16, '#d9caa8'); for (let i = 0; i < 16; i += 2) R(i, (i * 3) % 16, 1, 1, '#c9b994'); R(0, 0, 16, 1, '#cdbd99'); break;
-    case FS.CHECK: { const a = '#ebe6da', b = '#c2b9a8'; R(0, 0, 8, 8, a); R(8, 8, 8, 8, a); R(8, 0, 8, 8, b); R(0, 8, 8, 8, b); break; }
+    case FS.CHECK: { const a = shade('#ebe6da', (h - 0.5) * 0.04), b = shade('#c2b9a8', (h2 - 0.5) * 0.05); R(0, 0, 8, 8, a); R(8, 8, 8, 8, a); R(8, 0, 8, 8, b); R(0, 8, 8, 8, b); R(0, 0, 8, 1, '#f6f2ea'); R(8, 8, 8, 1, '#f6f2ea'); R(8, 0, 8, 1, '#ccc4b4'); R(0, 8, 8, 1, '#ccc4b4'); R(7, 0, 1, 16, 'rgba(0,0,0,0.04)'); break; }
     case FS.ROYAL: R(0, 0, 16, 16, '#3b4f9a'); R(0, 0, 16, 1, '#4a60ae'); if ((tx + ty) % 2 === 0) { R(7, 7, 2, 2, '#c8a84a'); R(6, 8, 4, 0, '#c8a84a'); } break;
   }
 }
@@ -1440,12 +1455,13 @@ function drawWallTile(c, px, py, ws, face, tx, ty) {
   if (!face) { R(0, 0, 16, 16, S.top); R(0, 0, 16, 1, shade(S.top, 0.12)); if (hash2(tx, ty) > 0.7) R(5, 6, 2, 1, shade(S.top, -0.15)); return; }
   R(0, 0, 16, 16, S.face); R(0, 0, 16, 3, S.top); R(0, 3, 16, 1, S.trim);
   if (ws === WS.BRICK) {
-    for (let r = 0; r < 4; r++) { const yy = 4 + r * 3; R(0, yy + 2, 16, 1, S.faceD); const o = (r % 2) * 4; for (let i = o; i < 16; i += 8) R(i, yy, 1, 2, S.faceD); }
+    for (let r = 0; r < 4; r++) { const yy = 4 + r * 3; const o = (r % 2) * 4; for (let i = o - 8; i < 16; i += 8) { const hv = hash2(tx * 3 + ((i + 16) >> 3), ty * 5 + r); R(Math.max(0, i + 1), yy, Math.min(7, 16 - i - 1, i + 8), 2, shade(S.face, (hv - 0.5) * 0.16)); R(Math.max(0, i + 1), yy, Math.min(7, 16 - i - 1, i + 8), 1, shade(S.face, 0.08)); } R(0, yy + 2, 16, 1, S.faceD); for (let i = o; i < 16; i += 8) R(i, yy, 1, 2, S.faceD); }
   } else if (ws === WS.WOOD) {
     for (let i = 1; i < 16; i += 5) R(i, 4, 1, 10, S.faceD); R(0, 9, 16, 1, S.trim);
     R(0, 13, 16, 3, S.base);
   } else {
-    R(0, 12, 16, 1, S.faceD); R(0, 13, 16, 3, S.base);
+    const hv = hash2(tx * 7, ty * 3); for (let i = 0; i < 4; i++) R(((hv * 97 + i * 37) | 0) % 16, 4 + (((hv * 53 + i * 29) | 0) % 8), 1, 1, shade(S.face, i % 2 ? -0.04 : 0.04));
+    R(0, 4, 16, 1, shade(S.face, 0.06)); R(0, 11, 16, 1, shade(S.face, -0.06)); R(0, 12, 16, 1, S.faceD); R(0, 13, 16, 3, S.base); R(0, 13, 16, 1, shade(S.base, 0.25));
     if (ws === WS.BLUE) { R(0, 7, 16, 2, '#f2f6ff'); }
   }
 }
@@ -5328,7 +5344,7 @@ function lifePairF(k, dt) {
   const ang = a.moving ? a.ang || 0 : (k.sideA != null ? k.sideA : 0); if (a.moving) k.sideA = ang;
   const tx = a.x + Math.cos(ang + Math.PI / 2) * 11, ty = a.y + Math.sin(ang + Math.PI / 2) * 6;
   const dx = tx - k.x, dy = ty - k.y, d = Math.hypot(dx, dy);
-  if (d > 40) { const [kx, ky] = tileOf(k), [ax, ay] = tileOf(a); if (!k.path || k.pi >= k.path.length || (k.repT = (k.repT || 0) - dt) <= 0) { k.repT = 1; const p = astar(kx, ky, ax, ay, passTeach(false)); if (p) { k.path = p; k.pi = 0; } } followPath(k, 2.4 * 16, dt); return; }
+  if (d > 40) { const [kx, ky] = tileOf(k), [ax, ay] = tileOf(a); if ((!k.path || k.pi >= k.path.length || (k.repT = (k.repT || 0) - dt) <= 0) && (G.pathBudget = (G.pathBudget || 0) - 1) >= 0) { k.repT = 1.2; const p = astar(kx, ky, ax, ay, passTeach(false)); if (p) { k.path = p; k.pi = 0; } } followPath(k, 2.4 * 16, dt); return; }
   if (d > 2) { const st = Math.min(d, (a.moving ? 2.2 : 1.4) * 16 * dt), ox = k.x, oy = k.y; moveA(k, dx / d * st, dy / d * st, solidP, 4, 4); const mv = Math.hypot(k.x - ox, k.y - oy); k.moving = mv > 0.05; k.dist = (k.dist || 0) + mv; k.anim = (k.anim || 0) + dt; k.face = a.moving ? a.face : faceFromAng(Math.atan2(a.y - k.y, a.x - k.x)); }
   else { k.moving = false; k.face = a.moving ? a.face : faceFromAng(Math.atan2(a.y - k.y, a.x - k.x)); }
   if (!a.moving && !k.moving) a.face = faceFromAng(Math.atan2(k.y - a.y, k.x - a.x));
@@ -5352,7 +5368,7 @@ function gagsUpdate(dt) {
       }
     } else if (g.st <= 0) { g.state = 'busy'; g.x = g.home[0]; g.y = g.home[1]; }
     else if (g.state === 'scared' || g.state === 'look') { if (P) g.face = faceFromAng(Math.atan2(P.y - g.y, P.x - g.x)); }
-    g.vis = easyOn() || (G.eye && Math.hypot(g.x - G.eye[0], g.y - G.eye[1]) < visRAt(Math.atan2(g.y - G.eye[1], g.x - G.eye[0])) && los(G.eye[0], G.eye[1], g.x, g.y - 10));
+    g.vis = G.net && G.net.role === 'teacher' ? (G.eye && Math.hypot(g.x - G.eye[0], g.y - G.eye[1]) < G.visR && los(G.eye[0], G.eye[1], g.x, g.y - 10)) : regionVisible(g.x, g.y);
   });
   // flaques : elles sèchent, et font glisser
   m.puddles = (m.puddles || []).filter(p => G.time - p.t < 50);
@@ -5384,6 +5400,47 @@ function drawPuddles(c) {
     c.fillStyle = 'rgba(255,246,170,0.6)'; c.fillRect(Math.round(p.x - p.r * 0.4), Math.round(p.y - p.r * 0.2), 2, 1);
     c.globalAlpha = 1;
   });
+}
+
+// ================= ON VOIT PIÈCE PAR PIÈCE =================
+// Plus de cône de vision pour l'élève : on voit les couloirs et la cour, et la pièce où l'on est.
+// Les autres pièces restent dans le noir tant qu'on n'y est pas entré (pas de vue à travers les portes).
+const OPEN_ROOMS = /^Couloir|^Hall|Escalier|Palier|Préau|Cour|Terrain|Aire de jeux|Casiers des élèves/;
+function roomVisSetup(m) {
+  const out = f => f === FS.GRASS || f === FS.ASPHALT || f === FS.SAND || f === FS.PREAU;
+  m.vroomAt = new Int16Array(m.w * m.h).fill(-1); m.vrooms = [];
+  m.rooms.slice().sort((a, b) => a.w * a.h - b.w * b.h).forEach(r => {
+    if (OPEN_ROOMS.test(r.name)) return;
+    let indoor = 0, tot = 0;
+    for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) { tot++; if (!out(m.fs[y * m.w + x])) indoor++; }
+    if (!tot || indoor < tot * 0.6) return;
+    const id = m.vrooms.length; m.vrooms.push({ x: r.x, y: r.y, w: r.w, h: r.h, a: 1, name: r.name });
+    for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (m.vroomAt[y * m.w + x] < 0) m.vroomAt[y * m.w + x] = id;
+  });
+}
+function vroomOf(m, x, y) { const tx = Math.floor(x / 16), ty = Math.floor((y - 4) / 16); if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) return -1; return m.vroomAt[ty * m.w + tx]; }
+function roomVisUpdate(dt, P) {
+  const m = G.m; if (!m) return; if (!m.vroomAt) roomVisSetup(m);
+  const see = new Set(), add = (x, y) => { const i = vroomOf(m, x, y); if (i >= 0) see.add(i); };
+  if (P.hidden) { const s = P.hidden; add(s.x * 16 + 8, s.y * 16 + 12); s.stand && s.stand.forEach(([x, y]) => add(x * 16 + 8, y * 16 + 12)); }
+  else {
+    add(P.x, P.y);
+    // sur le pas d'une porte : on découvre la pièce derrière
+    const tx = Math.floor(P.x / 16), ty = Math.floor((P.y - 4) / 16);
+    if (m.get(tx, ty) === K.DOOR) [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => add((tx + dx) * 16 + 8, (ty + dy) * 16 + 12));
+  }
+  const k = Math.min(1, dt * 7);
+  m.vrooms.forEach((r, i) => { const t = see.has(i) || easyOn() ? 0 : 1; r.a += (t - r.a) * k; if (Math.abs(t - r.a) < 0.01) r.a = t; });
+}
+// une personne est-elle visible ? (dans un couloir, ou dans une pièce qui n'est pas dans le noir)
+function regionVisible(x, y) { const m = G.m; if (!m || !m.vroomAt || easyOn()) return true; const i = vroomOf(m, x, y); return i < 0 || m.vrooms[i].a < 0.97; }
+function drawRoomShade(fx, ox, oy) {
+  const m = G.m; if (!m || !m.vrooms) return;
+  for (const r of m.vrooms) {
+    if (r.a <= 0.01) continue;
+    fx.fillStyle = 'rgba(14,8,34,' + (0.93 * r.a).toFixed(3) + ')';
+    fx.fillRect(r.x * 16 + ox, r.y * 16 + oy, r.w * 16, r.h * 16 - (TALL_KINDS.has(m.get(r.x, r.y + r.h)) ? OVERHANG : 0));
+  }
 }
 
 // ================= MOTEUR DE JEU =================
@@ -5888,8 +5945,8 @@ function checkApples() {
 // ---------- Les enfants de la cour ----------
 function updateKids(dt) {
   if (!G.kids.length) return;
-  const P = G.P, pass = passTeach(false);
-  const kidTarget = (k, r) => { const [kx, ky] = tileOf(k); const near = G.L.kidSpots.filter(([x, y]) => Math.abs(x - kx) + Math.abs(y - ky) < r); const t = pick(near.length ? near : G.L.kidSpots); const p = astar(kx, ky, t[0], t[1], pass); if (p) { k.path = p; k.pi = 0; } };
+  const P = G.P, pass = passTeach(false); G.pathBudget = 3;   // pas trop de calculs de chemin par image (sinon ça accroche)
+  const kidTarget = (k, r) => { if (G.pathBudget-- <= 0) return; const [kx, ky] = tileOf(k); const near = G.L.kidSpots.filter(([x, y]) => Math.abs(x - kx) + Math.abs(y - ky) < r); const t = pick(near.length ? near : G.L.kidSpots); const p = astar(kx, ky, t[0], t[1], pass); if (p) { k.path = p; k.pi = 0; } };
   G.kids.forEach((k, i) => {
     if (k.gone) return;
     switch (k.beh) {
@@ -5917,7 +5974,7 @@ function updateKids(dt) {
           k.st -= dt; if (k.st > 0) { k.moving = false; break; }
           let tgt = null, bd = 1e9; G.kids.forEach((o, j) => { if (o.beh === 'tag' && j !== i) { const d = dist(o.x, o.y, k.x, k.y); if (d < bd) { bd = d; tgt = j; } } });
           if (tgt == null) break;
-          k.rp = (k.rp || 0) - dt; if (k.rp <= 0 || !k.path) { k.rp = 0.7; const [ox, oy] = tileOf(G.kids[tgt]); const [kx, ky] = tileOf(k); const p = astar(kx, ky, ox, oy, pass); if (p) { k.path = p; k.pi = 0; } }
+          k.rp = (k.rp || 0) - dt; if ((k.rp <= 0 || !k.path) && G.pathBudget-- > 0) { k.rp = 0.9; const [ox, oy] = tileOf(G.kids[tgt]); const [kx, ky] = tileOf(k); const p = astar(kx, ky, ox, oy, pass); if (p) { k.path = p; k.pi = 0; } }
           followPath(k, 3.0 * 16, dt);
           if (bd < 12) { G.tagIt = tgt; G.kids[tgt].st = 1.2; hop(G.kids[tgt], 90); G.kids[tgt].path = null; k.path = null; const d = dist(k.x, k.y, P.x, P.y) / 16; if (d < 12 && !k.vis) cue(k.x, k.y - 24, 'kid', 'Chat !'); }
         } else {
@@ -6386,24 +6443,12 @@ function update(dt) {
       G.pVis = vis || (G.mode !== 'play' && G.mode !== 'paused');
       G.kids.forEach(k => { const d = Math.hypot(k.x - G.eye[0], k.y - 10 - G.eye[1]); let v = false; if (T.state !== 'count' && !blind && d < R) { let inC = d < 28; if (!inC) inC = Math.abs(angDiff(Math.atan2(k.y - 10 - G.eye[1], k.x - G.eye[0]), T.ang)) < fov; v = inC && los(G.eye[0], G.eye[1], k.x, k.y - 10); } k.vis = v; });
     } else {
-    G.pVis = true;
-    if (P.hidden) {
-      const hs = P.hidden, hx = hs.x * 16 + 8, hy = hs.y * 16 + 8;
-      if (KP[hs.k] && KP[hs.k].opaque && P.hideFrom) { const fx = P.hideFrom[0] - hx, fy = P.hideFrom[1] - 7 - hy, fl = Math.hypot(fx, fy) || 1; G.eye = [hx + fx / fl * 10, hy + fy / fl * 10]; G.eye[1] = sightY(G.eye[0], G.eye[1]); }
-      else G.eye = [hx, sightY(hx, hy)];
-      G.visR = hs.peek * 16; G.visCone = false;
-    }
-    else {
-      G.eye = playerEye(P); G.visR = (G.L.outdoor ? 12 : 10) * 16 * (P.small > 0 ? 0.85 : 1);
-      const va = playerViewAng(P); if (G.visP !== P || G.visAng == null) { G.visP = P; G.visAng = va; }
-      G.visAng += angDiff(va, G.visAng) * Math.min(1, dt * 10); G.visCone = true;
-    }
-    if (easyOn()) { G.visR = 9999; G.tVis = !T.gone; G.kids.forEach(k => k.vis = !k.gone); }
-    else {
-    const [ex, ey] = G.eye, seen = (x, y) => Math.hypot(x - ex, y - ey) < visRAt(Math.atan2(y - ey, x - ex)) && los(ex, ey, x, y);
-    G.tVis = !T.gone && seen(T.x, T.y - 12);
-    G.kids.forEach(k => k.vis = !k.gone && seen(k.x, k.y - 10));
-    }
+    // l'élève voit pièce par pièce (plus de cône de vision)
+    G.pVis = true; G.visCone = false; G.visR = 9999;
+    G.eye = P.hidden ? [P.hidden.x * 16 + 8, P.hidden.y * 16 + 8] : playerEye(P);
+    roomVisUpdate(dt, P);
+    G.tVis = !T.gone && regionVisible(T.x, T.y);
+    G.kids.forEach(k => k.vis = !k.gone && regionVisible(k.x, k.y));
     }
   }
 }
@@ -7115,6 +7160,7 @@ function drawFog() {
     return;
   }
   if (easyOn()) return;   // mode facile : pas de brouillard
+  drawRoomShade(fx, ox, oy); return;   // l'élève : seules les pièces où il n'est pas restent dans le noir
   fx.fillStyle = G.L.outdoor ? 'rgba(18,12,46,0.5)' : 'rgba(14,8,34,0.68)'; fx.fillRect(0, 0, V.lw, V.lh);
   fx.globalCompositeOperation = 'destination-out';
   const [ex, ey] = G.eye, R = G.visR, sx = ex + ox, sy = ey + oy;
@@ -7153,7 +7199,6 @@ function updateCamera(dt) {
   const P = viewerA(), m = G.m, lw = V.lw - 2, lh = V.lh - 2;
   let tx = P.x + clamp(P.vx || 0, -90, 90) * 0.35 - lw / 2, ty = P.y - 10 + clamp(P.vy || 0, -90, 90) * 0.3 - lh * 0.45;
   if (G.net && G.net.role === 'teacher' && !P.moving) { tx += Math.cos(P.ang) * 22; ty += Math.sin(P.ang) * 18; }
-  else if (G.visCone && G.visAng != null && P === G.P) { tx += Math.cos(G.visAng) * 18; ty += Math.sin(G.visAng) * 14; }
   if (G.mode === 'caught') { tx = (P.x + G.T.x) / 2 - lw / 2; ty = (P.y + G.T.y) / 2 - 10 - lh * 0.45; }
   const mw = m.w * 16, mh = m.h * 16;
   tx = mw < lw ? (mw - lw) / 2 : clamp(tx, -8, mw - lw + 8);
@@ -7251,7 +7296,7 @@ function renderGame(dt) {
   drawPuddles(ctx);
   const ents = [];
   (G.m.npcGags || []).forEach(g => { if (g.vis) ents.push([g.y, () => occlude(ctx, g, () => drawGag(ctx, g))]); });
-  if (G.foot && G.eye && (easyOn() || (Math.hypot(G.foot.x - G.eye[0], G.foot.y - G.eye[1]) < visRAt(Math.atan2(G.foot.y - G.eye[1], G.foot.x - G.eye[0])) && los(G.eye[0], G.eye[1], G.foot.x, G.foot.y - 2)))) ents.push([G.foot.y, () => drawFootBall(ctx)]);
+  if (G.foot && regionVisible(G.foot.x, G.foot.y)) ents.push([G.foot.y, () => drawFootBall(ctx)]);
   G.items.forEach(it => ents.push([it.y, () => drawItemW(ctx, it)]));
   G.apples.forEach(a => ents.push([a.y, () => { const w = Math.sin(G.time * 4) * 0.12; ctx.save(); ctx.translate(a.x, a.y - 6); ctx.rotate(w); ctx.drawImage(itemCanvas('apple'), -7, -7); ctx.restore(); }]));
   G.kids.forEach(k => {
@@ -7459,7 +7504,7 @@ function drawOverlay() {
     txt(c, '▼', qx, qy + bob, Math.round(12 * d), '#3fd06a'); txt(c, 'TOI', qx, qy - 13 * d + bob, Math.round(8 * d), '#ffffff');
   }
   // bulles des élèves (« C'est pas moi ! »)
-  G.kids.concat(G.m.npcGags || []).forEach(k => {
+  const bubKid = k => {
     if (!k.bub || !k.vis) return;
     const b = k.bub, al = Math.min(1, (b.dur - b.t) * 4), sc = b.t < 0.16 ? easeOutBack(b.t / 0.16) : 1, F2 = Math.round(8 * d);
     c.font = F2 + 'px ' + FONT; const w = c.measureText(b.text).width + F2 * 1.4, h = F2 * 2;
@@ -7469,7 +7514,8 @@ function drawOverlay() {
     c.beginPath(); c.moveTo(-4 * d, h / 2 - 1); c.lineTo(0, h / 2 + 6 * d); c.lineTo(4 * d, h / 2 - 1); c.fill();
     c.fillStyle = '#1a1028'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(b.text, 0, 1 * d);
     c.restore(); c.globalAlpha = 1;
-  });
+  };
+  G.kids.forEach(bubKid); if (G.m.npcGags) G.m.npcGags.forEach(bubKid);
   // le coéquipier hors de l'écran ou à un autre étage, et ses appels 📍
   if (G.inf && (G.inf.coop || G.inf.guard) && G.mode === 'play') drawPartnerHint(c, d);
   // signalement d'un prof (surveillant en multi)

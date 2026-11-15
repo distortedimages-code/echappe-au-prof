@@ -500,8 +500,8 @@ function checkApples() {
 // ---------- Les enfants de la cour ----------
 function updateKids(dt) {
   if (!G.kids.length) return;
-  const P = G.P, pass = passTeach(false);
-  const kidTarget = (k, r) => { const [kx, ky] = tileOf(k); const near = G.L.kidSpots.filter(([x, y]) => Math.abs(x - kx) + Math.abs(y - ky) < r); const t = pick(near.length ? near : G.L.kidSpots); const p = astar(kx, ky, t[0], t[1], pass); if (p) { k.path = p; k.pi = 0; } };
+  const P = G.P, pass = passTeach(false); G.pathBudget = 3;   // pas trop de calculs de chemin par image (sinon ça accroche)
+  const kidTarget = (k, r) => { if (G.pathBudget-- <= 0) return; const [kx, ky] = tileOf(k); const near = G.L.kidSpots.filter(([x, y]) => Math.abs(x - kx) + Math.abs(y - ky) < r); const t = pick(near.length ? near : G.L.kidSpots); const p = astar(kx, ky, t[0], t[1], pass); if (p) { k.path = p; k.pi = 0; } };
   G.kids.forEach((k, i) => {
     if (k.gone) return;
     switch (k.beh) {
@@ -529,7 +529,7 @@ function updateKids(dt) {
           k.st -= dt; if (k.st > 0) { k.moving = false; break; }
           let tgt = null, bd = 1e9; G.kids.forEach((o, j) => { if (o.beh === 'tag' && j !== i) { const d = dist(o.x, o.y, k.x, k.y); if (d < bd) { bd = d; tgt = j; } } });
           if (tgt == null) break;
-          k.rp = (k.rp || 0) - dt; if (k.rp <= 0 || !k.path) { k.rp = 0.7; const [ox, oy] = tileOf(G.kids[tgt]); const [kx, ky] = tileOf(k); const p = astar(kx, ky, ox, oy, pass); if (p) { k.path = p; k.pi = 0; } }
+          k.rp = (k.rp || 0) - dt; if ((k.rp <= 0 || !k.path) && G.pathBudget-- > 0) { k.rp = 0.9; const [ox, oy] = tileOf(G.kids[tgt]); const [kx, ky] = tileOf(k); const p = astar(kx, ky, ox, oy, pass); if (p) { k.path = p; k.pi = 0; } }
           followPath(k, 3.0 * 16, dt);
           if (bd < 12) { G.tagIt = tgt; G.kids[tgt].st = 1.2; hop(G.kids[tgt], 90); G.kids[tgt].path = null; k.path = null; const d = dist(k.x, k.y, P.x, P.y) / 16; if (d < 12 && !k.vis) cue(k.x, k.y - 24, 'kid', 'Chat !'); }
         } else {
@@ -998,24 +998,12 @@ function update(dt) {
       G.pVis = vis || (G.mode !== 'play' && G.mode !== 'paused');
       G.kids.forEach(k => { const d = Math.hypot(k.x - G.eye[0], k.y - 10 - G.eye[1]); let v = false; if (T.state !== 'count' && !blind && d < R) { let inC = d < 28; if (!inC) inC = Math.abs(angDiff(Math.atan2(k.y - 10 - G.eye[1], k.x - G.eye[0]), T.ang)) < fov; v = inC && los(G.eye[0], G.eye[1], k.x, k.y - 10); } k.vis = v; });
     } else {
-    G.pVis = true;
-    if (P.hidden) {
-      const hs = P.hidden, hx = hs.x * 16 + 8, hy = hs.y * 16 + 8;
-      if (KP[hs.k] && KP[hs.k].opaque && P.hideFrom) { const fx = P.hideFrom[0] - hx, fy = P.hideFrom[1] - 7 - hy, fl = Math.hypot(fx, fy) || 1; G.eye = [hx + fx / fl * 10, hy + fy / fl * 10]; G.eye[1] = sightY(G.eye[0], G.eye[1]); }
-      else G.eye = [hx, sightY(hx, hy)];
-      G.visR = hs.peek * 16; G.visCone = false;
-    }
-    else {
-      G.eye = playerEye(P); G.visR = (G.L.outdoor ? 12 : 10) * 16 * (P.small > 0 ? 0.85 : 1);
-      const va = playerViewAng(P); if (G.visP !== P || G.visAng == null) { G.visP = P; G.visAng = va; }
-      G.visAng += angDiff(va, G.visAng) * Math.min(1, dt * 10); G.visCone = true;
-    }
-    if (easyOn()) { G.visR = 9999; G.tVis = !T.gone; G.kids.forEach(k => k.vis = !k.gone); }
-    else {
-    const [ex, ey] = G.eye, seen = (x, y) => Math.hypot(x - ex, y - ey) < visRAt(Math.atan2(y - ey, x - ex)) && los(ex, ey, x, y);
-    G.tVis = !T.gone && seen(T.x, T.y - 12);
-    G.kids.forEach(k => k.vis = !k.gone && seen(k.x, k.y - 10));
-    }
+    // l'élève voit pièce par pièce (plus de cône de vision)
+    G.pVis = true; G.visCone = false; G.visR = 9999;
+    G.eye = P.hidden ? [P.hidden.x * 16 + 8, P.hidden.y * 16 + 8] : playerEye(P);
+    roomVisUpdate(dt, P);
+    G.tVis = !T.gone && regionVisible(T.x, T.y);
+    G.kids.forEach(k => k.vis = !k.gone && regionVisible(k.x, k.y));
     }
   }
 }
