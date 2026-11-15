@@ -825,11 +825,11 @@ function computeActions() {
       const dr = doorAt(tx, ty);
       if (dr.locked && !dr.byPlayer) {
         const confisc = dr.jail && P.jail, canKey = ((P.keys || 0) > 0 || (G.inf && G.inf.keys)) && !confisc;
-        if (confisc) cand.push({ id: 'lockedDoor', icon: '🔒', label: 'Fermé à clé', sub: 'clés confisquées !', prio: 3, d }); else cand.push(canKey ? { id: 'openKey', door: dr, icon: '🗝️', label: 'Ouvrir', sub: G.inf && G.inf.keys ? 'avec le trousseau' : 'avec ta clé', prio: 0.4, d } : { id: 'lockedDoor', icon: '🔒', label: 'Fermé à clé', sub: 'il faut une clé 🗝️', prio: 3, d });
+        if (confisc) cand.push({ id: 'lockedDoor', icon: '🔒', label: 'Fermé à clé', sub: 'clés confisquées !', prio: 0.7, d }); else cand.push(canKey ? { id: 'openKey', door: dr, icon: '🗝️', label: 'Ouvrir', sub: G.inf && G.inf.keys ? 'avec le trousseau' : 'avec ta clé', prio: 0.4, d } : { id: 'lockedDoor', icon: '🔒', label: 'Fermé à clé', sub: 'il faut une clé 🗝️', prio: 0.7, d });
       }
       else if (!actorInDoor(dr)) {
-        if (dr.locked && dr.byPlayer) cand.push({ id: 'unlock', door: dr, icon: '🔓', label: 'Déverrouiller', sub: '', prio: 4, d });
-        else if (!dr.locked && locksLeft() > 0) cand.push({ id: 'lock', door: dr, icon: '🔒', label: 'Fermer à clé', sub: locksLeft() + ' clé' + (locksLeft() > 1 ? 's' : ''), prio: 4, d });
+        if (dr.locked && dr.byPlayer) cand.push({ id: 'unlock', door: dr, icon: '🔓', label: 'Déverrouiller', sub: '', prio: 0.45, d });
+        else if (!dr.locked && locksLeft() > 0) cand.push({ id: 'lock', door: dr, icon: '🔒', label: 'Fermer à clé', sub: locksLeft() + ' clé' + (locksLeft() > 1 ? 's' : ''), prio: 0.45, d });
       }
     }
     const gag = m.gags.find(g => g.x === tx && g.y === ty);

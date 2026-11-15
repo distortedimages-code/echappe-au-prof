@@ -4201,16 +4201,6 @@ function infActions(cand, P) {
     if (L.alarmPt && !I.alarmUsed && near(L.alarmPt, 20)) cand.push({ id: 'alarm', icon: '🔥', label: 'Alarme incendie', sub: 'tout le monde dehors !', prio: 0.6, d: 0 });
     if (!I.plan && I.cur === I.planFloor && near(L.planPt, 20)) cand.push({ id: 'plan', icon: '🗺️', label: 'Prendre le plan', sub: 'du collège', prio: 0.5, d: 0 });
   }
-  // regarder par le trou de la serrure
-  const [ptx, pty] = tileOf(P);
-  for (const [dx, dy] of D4) {
-    const x = ptx + dx, y = pty + dy; if (G.m.get(x, y) !== K.DOOR) continue;
-    const dr = doorAt(x, y); if (!dr || dr.open > 0.3 || actorInDoor(dr)) continue;
-    const back = dr.horiz ? [0, y > pty ? 1 : -1] : [x > ptx ? 1 : -1, 0];
-    if (G.m.get(x + back[0], y + back[1]) !== K.FLOOR && !KP[G.m.get(x + back[0], y + back[1])]) continue;
-    cand.push({ id: 'peek', door: dr, dir: back, icon: '👁️', label: 'Serrure', sub: 'regarder derrière', prio: 3.5, d: Math.hypot(dx, dy) * 10 });
-    break;
-  }
 }
 function infDo(a) {
   const I = G.inf, P = G.P;
@@ -4377,15 +4367,6 @@ function infActsT(cand) {
     if (st.up) cand.push({ id: 'stairUp', to: I.cur + 1, letter: s, icon: '⬆️', label: 'Monter', sub: 'au ' + INF_FLOOR_META[I.cur + 1].name, prio: 0.3, d: 0 });
     if (!st.down && !st.up) cand.push({ id: 'stairNo', icon: '🚧', label: 'Escalier ' + s, sub: 'fermé (travaux)', prio: 0.4, d: 0 });
   });
-  const [ptx, pty] = tileOf(T);
-  for (const [dx, dy] of D4) {
-    const x = ptx + dx, y = pty + dy; if (G.m.get(x, y) !== K.DOOR) continue;
-    const dr = doorAt(x, y); if (!dr || dr.open > 0.3 || dr.locked || actorInDoor(dr)) continue;
-    const back = dr.horiz ? [0, y > pty ? 1 : -1] : [x > ptx ? 1 : -1, 0];
-    if (G.m.get(x + back[0], y + back[1]) === K.WALL) continue;
-    cand.push({ id: 'peek', door: dr, dir: back, icon: '👁️', label: 'Serrure', sub: 'regarder derrière', prio: 3.5, d: 9 });
-    break;
-  }
 }
 function infDoT(a) {
   const T = G.T;
@@ -7773,11 +7754,11 @@ function computeActions() {
       const dr = doorAt(tx, ty);
       if (dr.locked && !dr.byPlayer) {
         const confisc = dr.jail && P.jail, canKey = ((P.keys || 0) > 0 || (G.inf && G.inf.keys)) && !confisc;
-        if (confisc) cand.push({ id: 'lockedDoor', icon: '🔒', label: 'Fermé à clé', sub: 'clés confisquées !', prio: 3, d }); else cand.push(canKey ? { id: 'openKey', door: dr, icon: '🗝️', label: 'Ouvrir', sub: G.inf && G.inf.keys ? 'avec le trousseau' : 'avec ta clé', prio: 0.4, d } : { id: 'lockedDoor', icon: '🔒', label: 'Fermé à clé', sub: 'il faut une clé 🗝️', prio: 3, d });
+        if (confisc) cand.push({ id: 'lockedDoor', icon: '🔒', label: 'Fermé à clé', sub: 'clés confisquées !', prio: 0.7, d }); else cand.push(canKey ? { id: 'openKey', door: dr, icon: '🗝️', label: 'Ouvrir', sub: G.inf && G.inf.keys ? 'avec le trousseau' : 'avec ta clé', prio: 0.4, d } : { id: 'lockedDoor', icon: '🔒', label: 'Fermé à clé', sub: 'il faut une clé 🗝️', prio: 0.7, d });
       }
       else if (!actorInDoor(dr)) {
-        if (dr.locked && dr.byPlayer) cand.push({ id: 'unlock', door: dr, icon: '🔓', label: 'Déverrouiller', sub: '', prio: 4, d });
-        else if (!dr.locked && locksLeft() > 0) cand.push({ id: 'lock', door: dr, icon: '🔒', label: 'Fermer à clé', sub: locksLeft() + ' clé' + (locksLeft() > 1 ? 's' : ''), prio: 4, d });
+        if (dr.locked && dr.byPlayer) cand.push({ id: 'unlock', door: dr, icon: '🔓', label: 'Déverrouiller', sub: '', prio: 0.45, d });
+        else if (!dr.locked && locksLeft() > 0) cand.push({ id: 'lock', door: dr, icon: '🔒', label: 'Fermer à clé', sub: locksLeft() + ' clé' + (locksLeft() > 1 ? 's' : ''), prio: 0.45, d });
       }
     }
     const gag = m.gags.find(g => g.x === tx && g.y === ty);
@@ -9804,7 +9785,6 @@ const UI = {
       '🪑 Elle écrit au tableau ? C’est le moment de filer.',
       '🪜 Escaliers alternés : traverse chaque étage. Merci l’architecte.',
       '🔑 Le trousseau (bureau d’un prof) ouvre la grille du 1er et le portail.',
-      '👁️ Porte fermée ? Regarde par la serrure d’abord.',
       '🗺️ Un plan dans un couloir montre où sont les profs.',
       '🔥 L’alarme vide les étages. Mais gare à l’appel !',
       '🇬🇧 2e : Miss Teacup donne des leçons d’anglais. Bonne réponse = cadeau.',
@@ -9891,7 +9871,7 @@ const UI = {
       p.innerHTML = `<div class="bigtitle" style="color:var(--red)">RETOUR<br>EN CLASSE !</div>
         <div class="prof"><canvas id="rProf" width="20" height="34"></canvas><div class="quote"></div></div>
         <div class="stats"><span>⏱️ ${mm}</span><span>📍 ${INF_FLOOR_META[I.cur].name}</span></div>
-        <div class="tips">💡 ${esc(pick(['Regarde par la serrure avant d’ouvrir une porte !', 'File quand la maîtresse écrit au tableau : elle te tourne le dos.', 'Le plan d’évacuation montre où sont tous les profs.', 'L’alarme incendie vide les étages… sois dans le rang au moment de l’appel !', 'Le trousseau ouvre la grille du 1er étage ET le portail.', 'Cache-toi dans un casier quand le surveillant approche.']))}</div>
+        <div class="tips">💡 ${esc(pick(['File quand la maîtresse écrit au tableau : elle te tourne le dos.', 'Le plan d’évacuation montre où sont tous les profs.', 'L’alarme incendie vide les étages… sois dans le rang au moment de l’appel !', 'Le trousseau ouvre la grille du 1er étage ET le portail.', 'Cache-toi dans un casier quand le surveillant approche.']))}</div>
         <button class="btn big green" id="rAgain">↻ Réessayer (même collège)</button>
         <button class="btn" id="rNew">🎲 Un autre collège</button>
         <button class="btn ghost" id="rLv">🏠 Menu</button>`;

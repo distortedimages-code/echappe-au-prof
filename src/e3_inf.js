@@ -430,16 +430,6 @@ function infActions(cand, P) {
     if (L.alarmPt && !I.alarmUsed && near(L.alarmPt, 20)) cand.push({ id: 'alarm', icon: '🔥', label: 'Alarme incendie', sub: 'tout le monde dehors !', prio: 0.6, d: 0 });
     if (!I.plan && I.cur === I.planFloor && near(L.planPt, 20)) cand.push({ id: 'plan', icon: '🗺️', label: 'Prendre le plan', sub: 'du collège', prio: 0.5, d: 0 });
   }
-  // regarder par le trou de la serrure
-  const [ptx, pty] = tileOf(P);
-  for (const [dx, dy] of D4) {
-    const x = ptx + dx, y = pty + dy; if (G.m.get(x, y) !== K.DOOR) continue;
-    const dr = doorAt(x, y); if (!dr || dr.open > 0.3 || actorInDoor(dr)) continue;
-    const back = dr.horiz ? [0, y > pty ? 1 : -1] : [x > ptx ? 1 : -1, 0];
-    if (G.m.get(x + back[0], y + back[1]) !== K.FLOOR && !KP[G.m.get(x + back[0], y + back[1])]) continue;
-    cand.push({ id: 'peek', door: dr, dir: back, icon: '👁️', label: 'Serrure', sub: 'regarder derrière', prio: 3.5, d: Math.hypot(dx, dy) * 10 });
-    break;
-  }
 }
 function infDo(a) {
   const I = G.inf, P = G.P;
@@ -606,15 +596,6 @@ function infActsT(cand) {
     if (st.up) cand.push({ id: 'stairUp', to: I.cur + 1, letter: s, icon: '⬆️', label: 'Monter', sub: 'au ' + INF_FLOOR_META[I.cur + 1].name, prio: 0.3, d: 0 });
     if (!st.down && !st.up) cand.push({ id: 'stairNo', icon: '🚧', label: 'Escalier ' + s, sub: 'fermé (travaux)', prio: 0.4, d: 0 });
   });
-  const [ptx, pty] = tileOf(T);
-  for (const [dx, dy] of D4) {
-    const x = ptx + dx, y = pty + dy; if (G.m.get(x, y) !== K.DOOR) continue;
-    const dr = doorAt(x, y); if (!dr || dr.open > 0.3 || dr.locked || actorInDoor(dr)) continue;
-    const back = dr.horiz ? [0, y > pty ? 1 : -1] : [x > ptx ? 1 : -1, 0];
-    if (G.m.get(x + back[0], y + back[1]) === K.WALL) continue;
-    cand.push({ id: 'peek', door: dr, dir: back, icon: '👁️', label: 'Serrure', sub: 'regarder derrière', prio: 3.5, d: 9 });
-    break;
-  }
 }
 function infDoT(a) {
   const T = G.T;

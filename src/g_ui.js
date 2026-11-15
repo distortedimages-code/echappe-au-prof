@@ -393,7 +393,6 @@ const UI = {
       '🪑 Elle écrit au tableau ? C’est le moment de filer.',
       '🪜 Escaliers alternés : traverse chaque étage. Merci l’architecte.',
       '🔑 Le trousseau (bureau d’un prof) ouvre la grille du 1er et le portail.',
-      '👁️ Porte fermée ? Regarde par la serrure d’abord.',
       '🗺️ Un plan dans un couloir montre où sont les profs.',
       '🔥 L’alarme vide les étages. Mais gare à l’appel !',
       '🇬🇧 2e : Miss Teacup donne des leçons d’anglais. Bonne réponse = cadeau.',
@@ -480,7 +479,7 @@ const UI = {
       p.innerHTML = `<div class="bigtitle" style="color:var(--red)">RETOUR<br>EN CLASSE !</div>
         <div class="prof"><canvas id="rProf" width="20" height="34"></canvas><div class="quote"></div></div>
         <div class="stats"><span>⏱️ ${mm}</span><span>📍 ${INF_FLOOR_META[I.cur].name}</span></div>
-        <div class="tips">💡 ${esc(pick(['Regarde par la serrure avant d’ouvrir une porte !', 'File quand la maîtresse écrit au tableau : elle te tourne le dos.', 'Le plan d’évacuation montre où sont tous les profs.', 'L’alarme incendie vide les étages… sois dans le rang au moment de l’appel !', 'Le trousseau ouvre la grille du 1er étage ET le portail.', 'Cache-toi dans un casier quand le surveillant approche.']))}</div>
+        <div class="tips">💡 ${esc(pick(['File quand la maîtresse écrit au tableau : elle te tourne le dos.', 'Le plan d’évacuation montre où sont tous les profs.', 'L’alarme incendie vide les étages… sois dans le rang au moment de l’appel !', 'Le trousseau ouvre la grille du 1er étage ET le portail.', 'Cache-toi dans un casier quand le surveillant approche.']))}</div>
         <button class="btn big green" id="rAgain">↻ Réessayer (même collège)</button>
         <button class="btn" id="rNew">🎲 Un autre collège</button>
         <button class="btn ghost" id="rLv">🏠 Menu</button>`;
