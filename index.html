@@ -501,7 +501,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
         <button class="tile tChars" id="bChars"><canvas data-ill="chars" width="88" height="56"></canvas><span class="tl"><b>Personnages</b><small>Crée tes élèves</small></span></button>
         <button class="tile tSquish" id="bSquish"><canvas data-ill="squish" width="88" height="56"></canvas><span class="tl"><b>Squishies</b><small id="tSqN">Ta collection</small></span></button>
         <button class="tile tSave" id="bSave"><span class="sv">💾</span><span class="tl"><b>Sauvegarde</b><small>Un code pour garder tes squishies</small></span></button>
-        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 15 nov. · 22h57</small></span></button>
+        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 15 nov. · 23h11</small></span></button>
       </div>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
@@ -4528,7 +4528,7 @@ function infWatcherSee(k, dt, P) {
       if (inCone && los(ex, ey, px, py)) sees = true;
     }
     if (sees) {
-      const rate = (d < 36 ? 6 : 1.4 + 2.4 * (1 - d / range)) * (P.running ? 1.5 : 1) * (P.disguised ? 0.6 : 1);
+      const rate = detectRate(d, range) * (P.running ? 1.5 : 1) * (P.disguised ? 0.6 : 1);
       const was = k.detect; k.detect = Math.min(1.2, k.detect + rate * dt);
       if (was < 0.3 && k.detect >= 0.3) { setMark(k, '?', 0.7); if (k.state === 'board' || k.state === 'teach') { k.state = 'look'; k.st = 1; k.lookBase = Math.atan2(py - ey, px - ex); } }
       if (k.detect >= 1) infWarn(k);
@@ -7374,7 +7374,7 @@ function classTeacher(k, dt) {
   // (à deux : il surveille les deux élèves)
   let d = 0, W = P; if (k.cool <= 0) for (const t of classTargets()) { const dd = classSees(k, k.prof.range, k.prof.fov, t); if (dd && (!d || dd < d)) { d = dd; W = t; } }
   if (d) {
-    const rate = (d < 36 ? 4.5 : 1 + 1.9 * (1 - d / (k.prof.range * 16))) * (W.running ? 1.5 : 1) * (W.disguised ? 0.3 : 1);
+    const rate = detectRate(d, k.prof.range * 16) * (W.running ? 1.5 : 1) * (W.disguised ? 0.3 : 1);
     const was = k.detect; k.detect = Math.min(1.2, k.detect + rate * dt);
     if (was < 0.3 && k.detect >= 0.3) { teamMark(k, '?', 0.8); if (k.state === 'board' || k.state === 'teach') { k.state = 'look'; k.st = 1.4; k.lookBase = Math.atan2(W.y - k.y, W.x - k.x); } }
     if (k.detect >= 1) {
@@ -7386,15 +7386,16 @@ function classTeacher(k, dt) {
     }
   } else k.detect = Math.max(0, k.detect - dt * 0.5);
 }
-// les élèves qui balancent : un « ! » au-dessus de la tête… et s'ils te voient encore une seconde, ils crient
+// les élèves qui balancent : un « ! » au-dessus de la tête… et s'ils te voient encore un moment, ils crient
 function classSnitch(k, dt) {
   if (k.markT > 0) k.markT -= dt;
   if (k.snCool > 0) { k.snCool -= dt; k.snT = 0; return; }
   let d = 0, P = G.P; for (const t of classTargets()) { const dd = !t.disguised ? classSees(k, 4.5, k.beh === 'sit' || k.beh === 'bench' ? 3.2 : 1.4, t) : 0; if (dd && (!d || dd < d)) { d = dd; P = t; } }
   if (!d) { k.snT = Math.max(0, k.snT - dt * 0.8); return; }
-  const was = k.snT; k.snT += dt * (P.running ? 1.4 : 1);
+  // même règle que les profs : 1 s collé, jusqu'à 4 s au bout de sa vue
+  const was = k.snT; k.snT += dt * detectRate(d, 4.5 * 16) * (P.running ? 1.4 : 1);
   if (was < 0.3 && k.snT >= 0.3) { teamMark(k, '!', 1.2); if (k.path) { k.path = null; k.moving = false; } k.face = faceFromAng(Math.atan2(P.y - k.y, P.x - k.x)); }
-  if (k.snT >= 1.3) {
+  if (k.snT >= 1) {
     k.snT = 0; k.snCool = 25; const n = G.T.prof.name;
     infSay(k, SN_LINES(n), 2.6); teamMark(k, '!', 1.6); hop(k, 90);
     if (callTeacher(P.x, P.y, k)) ccTell(P, '🙊 Un élève t’a balancé·e ! ' + n + ' arrive…', 2.6);
@@ -7811,6 +7812,8 @@ function digTarget(a) {
   if (a.busy && a.busy.dig) return a.busy.dig;
   if (a.net && Array.isArray(a.net.rm)) return a.net.rm;
   // le prof qui inspecte une cachette : la cachette la plus proche
+  // le prof qui fouille : ce qu'il est en train d'inspecter (cachette ou meuble)
+  if ((a.isTeacher || a === G.T || a === G.T2) && a.state === 'check' && !a.moving && a.searchQ && a.searchQ[a.searchI]) { const s = a.searchQ[a.searchI]; return [s.x * 16 + 8, s.y * 16 + 8]; }
   if ((a.isTeacher || a === G.T || a === G.T2) && a.state === 'check' && !a.moving && G.L && G.L.hides) {
     let best = null, bd = 30;
     for (const s of G.L.hides) { const d = dist(a.x, a.y, s.x * 16 + 8, s.y * 16 + 8); if (d < bd) { bd = d; best = s; } }
@@ -8253,6 +8256,15 @@ function npcChatter(dt) {
     if (nb && Math.random() < 0.35) { nb.bub = { text: 'SEVEN !', t: 0, dur: 1.9 }; nb.sixT = 2.2; }
   }
 }
+// ---------- Le temps qu'il faut pour « tilter » ----------
+// Quelqu'un qui te voit met un moment avant de réagir : 1 s si tu passes collé à lui,
+// ~4 s si tu es au bout de son champ de vision, et entre les deux, de plus en plus long avec la distance.
+// (courir le fait tilter plus vite, être déguisé·e plus lentement)
+const DETECT_NEAR = 1, DETECT_FAR = 4;
+function detectRate(d, range) {
+  const f = clamp((d - 18) / Math.max(1, range - 18), 0, 1);
+  return 1 / (DETECT_NEAR + (DETECT_FAR - DETECT_NEAR) * f);
+}
 // ---------- Le prof ----------
 function perceive(dt) {
   const T = G.T, P = G.P, pr = T.prof;
@@ -8266,24 +8278,32 @@ function perceive(dt) {
       if (!inCone) inCone = Math.abs(angDiff(Math.atan2(py - ey, px - ex), T.ang)) < pr.fov;
       if (inCone && los(ex, ey, px, py)) sees = true;
     }
+    T.seeD = d; T.seeR = range;
     if (sees && G.inf && T.state !== 'chase' && (G.inf.grace > 0 || !infOut(T))) sees = false;
     if (sees && G.inf && T.state === 'chase' && !infOut(T)) sees = false;
     if (sees) {
-      const rate = (d < 40 ? 8 : (1.3 + 2.6 * (1 - d / range)) * (P.running ? 1.5 : 1)) * (P.disguised ? 0.5 : 1);
+      const rate = detectRate(d, range) * (P.running ? 1.5 : 1) * (P.disguised ? 0.5 : 1);
       T.detect = Math.min(1.3, T.detect + rate * dt); T.lastSeen = [P.x, P.y];
     }
   }
   if (!sees) T.detect = Math.max(0, T.detect - dt * (T.state === 'chase' ? 0.25 : 0.45));
   T.seeNow = sees;
   if (sees && T.state !== 'tired') {
-    if (T.detect >= 1 && T.state !== 'chase' && T.state !== 'edge') { if (G.inf && !G.inf.hunt) infWarn(T); else enterChase(); }
-    else if (T.detect > 0.3 && ['patrol', 'look', 'search', 'check', 'investigate'].includes(T.state)) { T.state = 'alert'; T.st = 0.55; T.path = null; setMark(T, '?', 0.8); hop(T, 60); }
+    if (T.detect >= 1 && T.state !== 'chase' && T.state !== 'edge') {
+      if (G.inf && !G.inf.hunt) infWarn(T);
+      // vu de près : il court ; vu au loin : il tilte (« Hé ?! ») et vient voir d'un bon pas, il ne court qu'une fois assez près
+      else if (T.seeD <= Math.max(3 * 16, T.seeR * 0.5) || G.m.pools) enterChase();
+      else if (!T.rush) { T.rush = true; T.rushRe = 0; T.state = 'investigate'; T.path = null; setMark(T, '!', 1.1); hop(T, 70); say(pick(RUSH_LINES)); AU.sfx('spot', 0.45); }
+    }
+    else if (T.detect > 0.3 && !T.rush && ['patrol', 'look', 'search', 'check', 'investigate'].includes(T.state)) { T.state = 'alert'; T.st = 0.55; T.path = null; setMark(T, '?', 0.8); hop(T, 60); }
   }
   return sees;
 }
+const RUSH_LINES = ['Hé ?!', 'Qui va là ?!', 'Hé, toi, là-bas !', 'J’ai vu quelque chose…', 'Une minute, toi !'];
+const INSPECT_LINES = ['Hmm… y a quelqu’un par ici ?', 'Je vais jeter un œil…', 'Ça sent l’élève caché, ça…', 'Voyons voir par là…', 'Je suis sûr d’avoir entendu quelque chose…'];
 function enterChase() {
   const T = G.T, pr = T.prof;
-  T.state = 'chase'; T.chaseT = 0; T.repathT = 0; T.goingLast = false; T.goingSpot = false; T.path = null; T.lostT = 0;
+  T.rush = false; T.state = 'chase'; T.chaseT = 0; T.repathT = 0; T.goingLast = false; T.goingSpot = false; T.path = null; T.lostT = 0;
   if (G.time - T.lastSpotT > 4) {
     G.spotted++; say(pick(pr.lines.spot)); AU.sfx('spot'); G.shake = 0.25; setMark(T, '!', 1.3); FX.spotted(); T.flashT = 0.18; hop(T, 90);
     if (pr.whistle) { AU.sfx('whistle', 0.8); cue(T.x, T.y - 26, 'word', 'PRIIIT !', { col: '#9fe0ff', life: 1 }); }
@@ -8297,12 +8317,29 @@ function onLocked(T, door) {
   else { T.state = 'fetch'; say('Fermé à clé ?! Je vais chercher mes clés…'); setMark(T, '?', 1); if (!goTo(T, G.L.keyPt[0], G.L.keyPt[1], true)) { T.state = 'unlock'; T.st = 4; } }
   if (AU.songName === 'chase') AU.play('sneak');
 }
-function startSearch(center, n) {
+// les meubles qu'on peut fouiller autour d'un point (pas des cachettes : on y fouille pour le suspense, sans danger)
+function searchFurn(center, R) {
+  const m = G.m, out = [], cx = Math.floor(center[0] / 16), cy = Math.floor(center[1] / 16), hid = new Set(G.L.hides.map(s => s.y * m.w + s.x));
+  for (let y = cy - R; y <= cy + R; y++) for (let x = cx - R; x <= cx + R; x++) {
+    if (x < 1 || y < 1 || x >= m.w - 1 || y >= m.h - 1 || hid.has(y * m.w + x)) continue;
+    const k = m.get(x, y); if (!(SEARCHABLE_KINDS.has(k) || STASH_KINDS.has(k))) continue;
+    const stand = [[x, y + 1], [x - 1, y], [x + 1, y], [x, y - 1]].filter(([a, b]) => { const kk = m.get(a, b); return KP[kk] && KP[kk].solid === 0 && kk !== K.WATER && kk !== K.DOOR; });
+    if (stand.length) out.push({ x, y, stand, furn: true });
+  }
+  return out;
+}
+// la fouille du prof : quelques cachettes et quelques meubles autour, dans un ordre un peu au hasard
+// opt.excl : cachettes à ne pas ouvrir (inspection « au cas où » : on fouille autour de toi, pas chez toi)
+function startSearch(center, n, opt = {}) {
   const T = G.T, pr = T.prof; if (!center) center = [T.x, T.y];
-  let spots = G.L.hides.filter(s => (!s.small || pr.smart) && Math.hypot(s.x * 16 + 8 - center[0], s.y * 16 + 8 - center[1]) < 6.5 * 16);
-  spots = spots.map(s => [s, Math.hypot(s.x * 16 + 8 - center[0], s.y * 16 + 8 - center[1]) + rand(0, 45)]).sort((a, b) => a[1] - b[1]).map(a => a[0]).slice(0, n || pr.searchN);
-  if (T.knows) { spots = spots.filter(s => s !== T.knows); spots.unshift(T.knows); }
-  T.searchQ = spots; T.searchI = 0; T.state = 'search'; T.path = null;
+  const dC = s => Math.hypot(s.x * 16 + 8 - center[0], s.y * 16 + 8 - center[1]);
+  const excl = opt.excl || [];
+  let spots = G.L.hides.filter(s => (!s.small || pr.smart) && !excl.includes(s) && dC(s) < 6.5 * 16);
+  spots = spots.map(s => [s, dC(s) + rand(0, 45)]).sort((a, b) => a[1] - b[1]).slice(0, n || pr.searchN);
+  const furn = searchFurn(center, 5).map(s => [s, dC(s) + rand(0, 60)]).sort((a, b) => a[1] - b[1]).slice(0, opt.furn != null ? opt.furn : 2);
+  spots = spots.concat(furn).sort((a, b) => a[1] - b[1]).map(a => a[0]);
+  if (T.knows && !excl.includes(T.knows)) { spots = spots.filter(s => s !== T.knows); spots.unshift(T.knows); }
+  T.searchQ = spots; T.searchI = 0; T.state = 'search'; T.path = null; T.rush = false;
   if (AU.songName === 'chase') AU.play('sneak');
 }
 function goToSpot(T, s) {
@@ -8344,6 +8381,16 @@ function updateTeacher(dt) {
   if (!['eat', 'sleep', 'caught', 'fetch', 'keys', 'unlock'].includes(T.state)) checkApples();
   if (G.m.pools && poolTeacher(T, dt, sees, slow)) return;
   const L = pr.lines;
+  // tu es caché·e pas loin : de temps en temps il vient fouiller les meubles et cachettes autour de toi (jamais la tienne, s'il ne t'a pas vu·e)
+  if ((T.state === 'patrol' || T.state === 'look') && !T.after && !T.knows) {
+    T.inspT = (T.inspT == null ? rand(4, 8) : T.inspT) - dt;
+    if (T.inspT <= 0) {
+      T.inspT = rand(7, 12);
+      const hid = [G.P, G.P2].filter(a => a && a.hidden && !a.out && a.x > -9000);
+      const H = hid.find(a => dist(T.x, T.y, a.hidden.x * 16 + 8, a.hidden.y * 16 + 8) < 8 * 16);
+      if (H && Math.random() < 0.65) { startSearch([H.hidden.x * 16 + 8, H.hidden.y * 16 + 8], 3, { excl: hid.map(a => a.hidden), furn: 2 }); if (T.searchQ.length) say(pick(INSPECT_LINES)); else T.state = 'patrol'; }
+    }
+  }
   switch (T.state) {
     case 'power': teacherPower(T, dt, slow); break;
     case 'warn':
@@ -8367,8 +8414,11 @@ function updateTeacher(dt) {
       if (T.st <= 0) { T.state = 'investigate'; const [x, y] = tileXY(T.lastSeen[0], T.lastSeen[1]); if (!goTo(T, x, y)) { T.state = 'look'; T.st = 1; T.lookBase = T.ang; } }
       break;
     case 'investigate': {
-      const r = followPath(T, (pr.patrol + pr.chase) / 2 * 16 * slow, dt);
-      if (r === 'done') { T.state = 'look'; T.st = 1.3; T.lookBase = T.ang; T.after = 'search'; T.path = null; }
+      // il a tilté au loin : il va voir d'un bon pas, en visant là où il te voit
+      if (T.rush && sees && T.lastSeen) { T.rushRe -= dt; if (T.rushRe <= 0 || !T.path) { T.rushRe = 0.5; const [x, y] = tileXY(T.lastSeen[0], T.lastSeen[1]); goTo(T, x, y); } }
+      if (!T.path && T.rush && T.lastSeen) { const [x, y] = tileXY(T.lastSeen[0], T.lastSeen[1]); if (!goTo(T, x, y)) { T.rush = false; T.state = 'look'; T.st = 1; T.lookBase = T.ang; break; } }
+      const r = followPath(T, (T.rush ? pr.patrol * 0.35 + pr.chase * 0.65 : (pr.patrol + pr.chase) / 2) * 16 * slow, dt);
+      if (r === 'done') { T.rush = false; T.state = 'look'; T.st = 1.3; T.lookBase = T.ang; T.after = 'search'; T.path = null; }
       else if (r && r.x !== undefined) onLocked(T, r);
       break;
     }
@@ -10217,11 +10267,14 @@ function conePath(c, A) {
 function drawCone(c, A) {
   const T = A || G.T, pr = T.prof, ex = T.x, ey = T.y - 12, R = pr.range * 16;
   conePath(c, T);
-  const col = T.state === 'chase' ? '255,60,80' : ((G.inf && G.inf.coop ? T.detShow || 0 : T.detect) > 0.3 || T.state === 'alert' || T.state === 'investigate') ? '255,160,50' : '255,236,140';
+  // le cône rougit à mesure qu'il te remarque : jaune pâle → orange → rouge (rouge vif en poursuite)
+  const v = T.state === 'chase' || T.rush ? 1 : clamp(detVal(T), 0, 1), q = v < 0.5 ? v * 2 : (v - 0.5) * 2;
+  const col = v < 0.5 ? [255, Math.round(lerp(236, 160, q)), Math.round(lerp(140, 50, q))].join(',') : [255, Math.round(lerp(160, 50, q)), Math.round(lerp(50, 70, q))].join(',');
+  const al = 0.32 + 0.2 * v;
   const g = c.createRadialGradient(ex, ey, 4, ex, ey, R);
-  g.addColorStop(0, `rgba(${col},0.38)`); g.addColorStop(0.7, `rgba(${col},0.16)`); g.addColorStop(1, `rgba(${col},0)`);
+  g.addColorStop(0, `rgba(${col},${al.toFixed(2)})`); g.addColorStop(0.7, `rgba(${col},${(al * 0.45).toFixed(2)})`); g.addColorStop(1, `rgba(${col},0)`);
   c.fillStyle = g; c.fill();
-  c.strokeStyle = `rgba(${col},0.35)`; c.lineWidth = 0.6; c.setLineDash([2, 2]); c.lineDashOffset = -G.time * 8; c.stroke(); c.setLineDash([]);
+  c.strokeStyle = `rgba(${col},${(0.3 + 0.3 * v).toFixed(2)})`; c.lineWidth = 0.6; c.setLineDash([2, 2]); c.lineDashOffset = -G.time * 8; c.stroke(); c.setLineDash([]);
 }
 function drawItemW(c, it) {
   const bob = Math.sin(G.time * 3 + it.ph) * 1.6, x = it.x, y = it.y;
@@ -10408,7 +10461,12 @@ function renderGame(dt) {
   const showT = G.tVis || G.mode === 'caught';
   lx.save(); lx.translate(-ci, -cj);
   if (showT && !T.gone && !['sleep', 'caught', 'count', 'evac'].includes(T.state) && !isBlind(T)) drawCone(lx);
-  G.kids.forEach(k => { if (k.vis && k.isWatcher && !k.gone && k.state !== 'evac' && !isDark()) { lx.globalAlpha = 0.75; drawCone(lx, k); lx.globalAlpha = 1; } });
+  G.kids.forEach(k => {
+    if (!k.vis || k.gone || k.state === 'evac' || isDark()) return;
+    if (k.isWatcher) { lx.globalAlpha = 0.75; drawCone(lx, k); lx.globalAlpha = 1; }
+    // le prof qui fait cours : son regard n'apparaît que quand il commence à te remarquer, et rougit
+    else if (k.beh === 'cteach' && k.prof) { const v = detVal(k); if (v > 0.03) { lx.globalAlpha = Math.min(0.85, v * 2.5); drawCone(lx, k); lx.globalAlpha = 1; } }
+  });
   { const [ex, ey] = G.eye, R = G.visR; if (R > 0 && R < 2000) { lx.globalAlpha = G.L.outdoor ? 0.07 : 0.09; lx.imageSmoothingEnabled = true; lx.drawImage(glowSprite(), ex - R, ey - R, R * 2, R * 2); lx.imageSmoothingEnabled = false; lx.globalAlpha = 1; } }
   lx.restore();
   // le brouillard : en jeu normal, de simples rectangles sombres posés sur les pièces où l'on n'est pas
@@ -10596,6 +10654,14 @@ function clampEdge(sx, sy) { const e = screenEdges(); const cx = clamp(sx, e.l, 
 function drawArrow(c, x, y, ang, col, size) {
   c.save(); c.translate(x, y); c.rotate(ang); const p = 1 + Math.sin(G.time * 10) * 0.12; c.scale(p, p); c.fillStyle = col; c.strokeStyle = '#1a1028'; c.lineWidth = size / 4;
   c.beginPath(); c.moveTo(size, 0); c.lineTo(-size * 0.6, -size * 0.7); c.lineTo(-size * 0.3, 0); c.lineTo(-size * 0.6, size * 0.7); c.closePath(); c.stroke(); c.fill(); c.restore();
+}
+// à quel point quelqu'un t'a remarqué·e (0 : rien, 1 : il a tilté) — sert à faire rougir son cône
+function detVal(a) {
+  if (!a) return 0;
+  if (a.snitch) return Math.min(1, a.snT || 0);
+  if (a === G.T && G.inf && G.inf.coop) return a.detShow || 0;
+  if (a.det) { let m = a.detect || 0; for (const k in a.det) m = Math.max(m, a.det[k] || 0); return m; }
+  return a.detect || 0;
 }
 // les émojis sont lents à dessiner sur iPhone : chacun est dessiné une fois dans une petite image, puis recopié
 const EMOJI_IMG = new Map();
@@ -11267,7 +11333,7 @@ const Input = {
 // ================= INTERFACE =================
 const $ = id => document.getElementById(id);
 // ---------- recharger le jeu (pratique quand il est épinglé comme une app sur iPad : pas de bouton du navigateur) ----------
-const GAME_BUILD = '15 nov. · 22h57';
+const GAME_BUILD = '15 nov. · 23h11';
 function refreshGame() {
   try { sessionStorage.setItem('nds_refresh', '1'); } catch (e) { }
   $('tVer').textContent = '⏳ Rechargement…'; try { AU.sfx('blip'); } catch (e) { }

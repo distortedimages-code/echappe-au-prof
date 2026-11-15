@@ -197,11 +197,14 @@ function conePath(c, A) {
 function drawCone(c, A) {
   const T = A || G.T, pr = T.prof, ex = T.x, ey = T.y - 12, R = pr.range * 16;
   conePath(c, T);
-  const col = T.state === 'chase' ? '255,60,80' : ((G.inf && G.inf.coop ? T.detShow || 0 : T.detect) > 0.3 || T.state === 'alert' || T.state === 'investigate') ? '255,160,50' : '255,236,140';
+  // le cône rougit à mesure qu'il te remarque : jaune pâle → orange → rouge (rouge vif en poursuite)
+  const v = T.state === 'chase' || T.rush ? 1 : clamp(detVal(T), 0, 1), q = v < 0.5 ? v * 2 : (v - 0.5) * 2;
+  const col = v < 0.5 ? [255, Math.round(lerp(236, 160, q)), Math.round(lerp(140, 50, q))].join(',') : [255, Math.round(lerp(160, 50, q)), Math.round(lerp(50, 70, q))].join(',');
+  const al = 0.32 + 0.2 * v;
   const g = c.createRadialGradient(ex, ey, 4, ex, ey, R);
-  g.addColorStop(0, `rgba(${col},0.38)`); g.addColorStop(0.7, `rgba(${col},0.16)`); g.addColorStop(1, `rgba(${col},0)`);
+  g.addColorStop(0, `rgba(${col},${al.toFixed(2)})`); g.addColorStop(0.7, `rgba(${col},${(al * 0.45).toFixed(2)})`); g.addColorStop(1, `rgba(${col},0)`);
   c.fillStyle = g; c.fill();
-  c.strokeStyle = `rgba(${col},0.35)`; c.lineWidth = 0.6; c.setLineDash([2, 2]); c.lineDashOffset = -G.time * 8; c.stroke(); c.setLineDash([]);
+  c.strokeStyle = `rgba(${col},${(0.3 + 0.3 * v).toFixed(2)})`; c.lineWidth = 0.6; c.setLineDash([2, 2]); c.lineDashOffset = -G.time * 8; c.stroke(); c.setLineDash([]);
 }
 function drawItemW(c, it) {
   const bob = Math.sin(G.time * 3 + it.ph) * 1.6, x = it.x, y = it.y;
@@ -388,7 +391,12 @@ function renderGame(dt) {
   const showT = G.tVis || G.mode === 'caught';
   lx.save(); lx.translate(-ci, -cj);
   if (showT && !T.gone && !['sleep', 'caught', 'count', 'evac'].includes(T.state) && !isBlind(T)) drawCone(lx);
-  G.kids.forEach(k => { if (k.vis && k.isWatcher && !k.gone && k.state !== 'evac' && !isDark()) { lx.globalAlpha = 0.75; drawCone(lx, k); lx.globalAlpha = 1; } });
+  G.kids.forEach(k => {
+    if (!k.vis || k.gone || k.state === 'evac' || isDark()) return;
+    if (k.isWatcher) { lx.globalAlpha = 0.75; drawCone(lx, k); lx.globalAlpha = 1; }
+    // le prof qui fait cours : son regard n'apparaît que quand il commence à te remarquer, et rougit
+    else if (k.beh === 'cteach' && k.prof) { const v = detVal(k); if (v > 0.03) { lx.globalAlpha = Math.min(0.85, v * 2.5); drawCone(lx, k); lx.globalAlpha = 1; } }
+  });
   { const [ex, ey] = G.eye, R = G.visR; if (R > 0 && R < 2000) { lx.globalAlpha = G.L.outdoor ? 0.07 : 0.09; lx.imageSmoothingEnabled = true; lx.drawImage(glowSprite(), ex - R, ey - R, R * 2, R * 2); lx.imageSmoothingEnabled = false; lx.globalAlpha = 1; } }
   lx.restore();
   // le brouillard : en jeu normal, de simples rectangles sombres posés sur les pièces où l'on n'est pas
@@ -576,6 +584,14 @@ function clampEdge(sx, sy) { const e = screenEdges(); const cx = clamp(sx, e.l, 
 function drawArrow(c, x, y, ang, col, size) {
   c.save(); c.translate(x, y); c.rotate(ang); const p = 1 + Math.sin(G.time * 10) * 0.12; c.scale(p, p); c.fillStyle = col; c.strokeStyle = '#1a1028'; c.lineWidth = size / 4;
   c.beginPath(); c.moveTo(size, 0); c.lineTo(-size * 0.6, -size * 0.7); c.lineTo(-size * 0.3, 0); c.lineTo(-size * 0.6, size * 0.7); c.closePath(); c.stroke(); c.fill(); c.restore();
+}
+// à quel point quelqu'un t'a remarqué·e (0 : rien, 1 : il a tilté) — sert à faire rougir son cône
+function detVal(a) {
+  if (!a) return 0;
+  if (a.snitch) return Math.min(1, a.snT || 0);
+  if (a === G.T && G.inf && G.inf.coop) return a.detShow || 0;
+  if (a.det) { let m = a.detect || 0; for (const k in a.det) m = Math.max(m, a.det[k] || 0); return m; }
+  return a.detect || 0;
 }
 // les émojis sont lents à dessiner sur iPhone : chacun est dessiné une fois dans une petite image, puis recopié
 const EMOJI_IMG = new Map();

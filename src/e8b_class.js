@@ -149,7 +149,7 @@ function classTeacher(k, dt) {
   // (à deux : il surveille les deux élèves)
   let d = 0, W = P; if (k.cool <= 0) for (const t of classTargets()) { const dd = classSees(k, k.prof.range, k.prof.fov, t); if (dd && (!d || dd < d)) { d = dd; W = t; } }
   if (d) {
-    const rate = (d < 36 ? 4.5 : 1 + 1.9 * (1 - d / (k.prof.range * 16))) * (W.running ? 1.5 : 1) * (W.disguised ? 0.3 : 1);
+    const rate = detectRate(d, k.prof.range * 16) * (W.running ? 1.5 : 1) * (W.disguised ? 0.3 : 1);
     const was = k.detect; k.detect = Math.min(1.2, k.detect + rate * dt);
     if (was < 0.3 && k.detect >= 0.3) { teamMark(k, '?', 0.8); if (k.state === 'board' || k.state === 'teach') { k.state = 'look'; k.st = 1.4; k.lookBase = Math.atan2(W.y - k.y, W.x - k.x); } }
     if (k.detect >= 1) {
@@ -161,15 +161,16 @@ function classTeacher(k, dt) {
     }
   } else k.detect = Math.max(0, k.detect - dt * 0.5);
 }
-// les élèves qui balancent : un « ! » au-dessus de la tête… et s'ils te voient encore une seconde, ils crient
+// les élèves qui balancent : un « ! » au-dessus de la tête… et s'ils te voient encore un moment, ils crient
 function classSnitch(k, dt) {
   if (k.markT > 0) k.markT -= dt;
   if (k.snCool > 0) { k.snCool -= dt; k.snT = 0; return; }
   let d = 0, P = G.P; for (const t of classTargets()) { const dd = !t.disguised ? classSees(k, 4.5, k.beh === 'sit' || k.beh === 'bench' ? 3.2 : 1.4, t) : 0; if (dd && (!d || dd < d)) { d = dd; P = t; } }
   if (!d) { k.snT = Math.max(0, k.snT - dt * 0.8); return; }
-  const was = k.snT; k.snT += dt * (P.running ? 1.4 : 1);
+  // même règle que les profs : 1 s collé, jusqu'à 4 s au bout de sa vue
+  const was = k.snT; k.snT += dt * detectRate(d, 4.5 * 16) * (P.running ? 1.4 : 1);
   if (was < 0.3 && k.snT >= 0.3) { teamMark(k, '!', 1.2); if (k.path) { k.path = null; k.moving = false; } k.face = faceFromAng(Math.atan2(P.y - k.y, P.x - k.x)); }
-  if (k.snT >= 1.3) {
+  if (k.snT >= 1) {
     k.snT = 0; k.snCool = 25; const n = G.T.prof.name;
     infSay(k, SN_LINES(n), 2.6); teamMark(k, '!', 1.6); hop(k, 90);
     if (callTeacher(P.x, P.y, k)) ccTell(P, '🙊 Un élève t’a balancé·e ! ' + n + ' arrive…', 2.6);

@@ -299,7 +299,7 @@ function infWatcherSee(k, dt, P) {
       if (inCone && los(ex, ey, px, py)) sees = true;
     }
     if (sees) {
-      const rate = (d < 36 ? 6 : 1.4 + 2.4 * (1 - d / range)) * (P.running ? 1.5 : 1) * (P.disguised ? 0.6 : 1);
+      const rate = detectRate(d, range) * (P.running ? 1.5 : 1) * (P.disguised ? 0.6 : 1);
       const was = k.detect; k.detect = Math.min(1.2, k.detect + rate * dt);
       if (was < 0.3 && k.detect >= 0.3) { setMark(k, '?', 0.7); if (k.state === 'board' || k.state === 'teach') { k.state = 'look'; k.st = 1; k.lookBase = Math.atan2(py - ey, px - ex); } }
       if (k.detect >= 1) infWarn(k);

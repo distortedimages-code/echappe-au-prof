@@ -78,6 +78,8 @@ function digTarget(a) {
   if (a.busy && a.busy.dig) return a.busy.dig;
   if (a.net && Array.isArray(a.net.rm)) return a.net.rm;
   // le prof qui inspecte une cachette : la cachette la plus proche
+  // le prof qui fouille : ce qu'il est en train d'inspecter (cachette ou meuble)
+  if ((a.isTeacher || a === G.T || a === G.T2) && a.state === 'check' && !a.moving && a.searchQ && a.searchQ[a.searchI]) { const s = a.searchQ[a.searchI]; return [s.x * 16 + 8, s.y * 16 + 8]; }
   if ((a.isTeacher || a === G.T || a === G.T2) && a.state === 'check' && !a.moving && G.L && G.L.hides) {
     let best = null, bd = 30;
     for (const s of G.L.hides) { const d = dist(a.x, a.y, s.x * 16 + 8, s.y * 16 + 8); if (d < bd) { bd = d; best = s; } }

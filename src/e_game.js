@@ -297,6 +297,15 @@ function npcChatter(dt) {
     if (nb && Math.random() < 0.35) { nb.bub = { text: 'SEVEN !', t: 0, dur: 1.9 }; nb.sixT = 2.2; }
   }
 }
+// ---------- Le temps qu'il faut pour « tilter » ----------
+// Quelqu'un qui te voit met un moment avant de réagir : 1 s si tu passes collé à lui,
+// ~4 s si tu es au bout de son champ de vision, et entre les deux, de plus en plus long avec la distance.
+// (courir le fait tilter plus vite, être déguisé·e plus lentement)
+const DETECT_NEAR = 1, DETECT_FAR = 4;
+function detectRate(d, range) {
+  const f = clamp((d - 18) / Math.max(1, range - 18), 0, 1);
+  return 1 / (DETECT_NEAR + (DETECT_FAR - DETECT_NEAR) * f);
+}
 // ---------- Le prof ----------
 function perceive(dt) {
   const T = G.T, P = G.P, pr = T.prof;
@@ -310,24 +319,32 @@ function perceive(dt) {
       if (!inCone) inCone = Math.abs(angDiff(Math.atan2(py - ey, px - ex), T.ang)) < pr.fov;
       if (inCone && los(ex, ey, px, py)) sees = true;
     }
+    T.seeD = d; T.seeR = range;
     if (sees && G.inf && T.state !== 'chase' && (G.inf.grace > 0 || !infOut(T))) sees = false;
     if (sees && G.inf && T.state === 'chase' && !infOut(T)) sees = false;
     if (sees) {
-      const rate = (d < 40 ? 8 : (1.3 + 2.6 * (1 - d / range)) * (P.running ? 1.5 : 1)) * (P.disguised ? 0.5 : 1);
+      const rate = detectRate(d, range) * (P.running ? 1.5 : 1) * (P.disguised ? 0.5 : 1);
       T.detect = Math.min(1.3, T.detect + rate * dt); T.lastSeen = [P.x, P.y];
     }
   }
   if (!sees) T.detect = Math.max(0, T.detect - dt * (T.state === 'chase' ? 0.25 : 0.45));
   T.seeNow = sees;
   if (sees && T.state !== 'tired') {
-    if (T.detect >= 1 && T.state !== 'chase' && T.state !== 'edge') { if (G.inf && !G.inf.hunt) infWarn(T); else enterChase(); }
-    else if (T.detect > 0.3 && ['patrol', 'look', 'search', 'check', 'investigate'].includes(T.state)) { T.state = 'alert'; T.st = 0.55; T.path = null; setMark(T, '?', 0.8); hop(T, 60); }
+    if (T.detect >= 1 && T.state !== 'chase' && T.state !== 'edge') {
+      if (G.inf && !G.inf.hunt) infWarn(T);
+      // vu de près : il court ; vu au loin : il tilte (« Hé ?! ») et vient voir d'un bon pas, il ne court qu'une fois assez près
+      else if (T.seeD <= Math.max(3 * 16, T.seeR * 0.5) || G.m.pools) enterChase();
+      else if (!T.rush) { T.rush = true; T.rushRe = 0; T.state = 'investigate'; T.path = null; setMark(T, '!', 1.1); hop(T, 70); say(pick(RUSH_LINES)); AU.sfx('spot', 0.45); }
+    }
+    else if (T.detect > 0.3 && !T.rush && ['patrol', 'look', 'search', 'check', 'investigate'].includes(T.state)) { T.state = 'alert'; T.st = 0.55; T.path = null; setMark(T, '?', 0.8); hop(T, 60); }
   }
   return sees;
 }
+const RUSH_LINES = ['Hé ?!', 'Qui va là ?!', 'Hé, toi, là-bas !', 'J’ai vu quelque chose…', 'Une minute, toi !'];
+const INSPECT_LINES = ['Hmm… y a quelqu’un par ici ?', 'Je vais jeter un œil…', 'Ça sent l’élève caché, ça…', 'Voyons voir par là…', 'Je suis sûr d’avoir entendu quelque chose…'];
 function enterChase() {
   const T = G.T, pr = T.prof;
-  T.state = 'chase'; T.chaseT = 0; T.repathT = 0; T.goingLast = false; T.goingSpot = false; T.path = null; T.lostT = 0;
+  T.rush = false; T.state = 'chase'; T.chaseT = 0; T.repathT = 0; T.goingLast = false; T.goingSpot = false; T.path = null; T.lostT = 0;
   if (G.time - T.lastSpotT > 4) {
     G.spotted++; say(pick(pr.lines.spot)); AU.sfx('spot'); G.shake = 0.25; setMark(T, '!', 1.3); FX.spotted(); T.flashT = 0.18; hop(T, 90);
     if (pr.whistle) { AU.sfx('whistle', 0.8); cue(T.x, T.y - 26, 'word', 'PRIIIT !', { col: '#9fe0ff', life: 1 }); }
@@ -341,12 +358,29 @@ function onLocked(T, door) {
   else { T.state = 'fetch'; say('Fermé à clé ?! Je vais chercher mes clés…'); setMark(T, '?', 1); if (!goTo(T, G.L.keyPt[0], G.L.keyPt[1], true)) { T.state = 'unlock'; T.st = 4; } }
   if (AU.songName === 'chase') AU.play('sneak');
 }
-function startSearch(center, n) {
+// les meubles qu'on peut fouiller autour d'un point (pas des cachettes : on y fouille pour le suspense, sans danger)
+function searchFurn(center, R) {
+  const m = G.m, out = [], cx = Math.floor(center[0] / 16), cy = Math.floor(center[1] / 16), hid = new Set(G.L.hides.map(s => s.y * m.w + s.x));
+  for (let y = cy - R; y <= cy + R; y++) for (let x = cx - R; x <= cx + R; x++) {
+    if (x < 1 || y < 1 || x >= m.w - 1 || y >= m.h - 1 || hid.has(y * m.w + x)) continue;
+    const k = m.get(x, y); if (!(SEARCHABLE_KINDS.has(k) || STASH_KINDS.has(k))) continue;
+    const stand = [[x, y + 1], [x - 1, y], [x + 1, y], [x, y - 1]].filter(([a, b]) => { const kk = m.get(a, b); return KP[kk] && KP[kk].solid === 0 && kk !== K.WATER && kk !== K.DOOR; });
+    if (stand.length) out.push({ x, y, stand, furn: true });
+  }
+  return out;
+}
+// la fouille du prof : quelques cachettes et quelques meubles autour, dans un ordre un peu au hasard
+// opt.excl : cachettes à ne pas ouvrir (inspection « au cas où » : on fouille autour de toi, pas chez toi)
+function startSearch(center, n, opt = {}) {
   const T = G.T, pr = T.prof; if (!center) center = [T.x, T.y];
-  let spots = G.L.hides.filter(s => (!s.small || pr.smart) && Math.hypot(s.x * 16 + 8 - center[0], s.y * 16 + 8 - center[1]) < 6.5 * 16);
-  spots = spots.map(s => [s, Math.hypot(s.x * 16 + 8 - center[0], s.y * 16 + 8 - center[1]) + rand(0, 45)]).sort((a, b) => a[1] - b[1]).map(a => a[0]).slice(0, n || pr.searchN);
-  if (T.knows) { spots = spots.filter(s => s !== T.knows); spots.unshift(T.knows); }
-  T.searchQ = spots; T.searchI = 0; T.state = 'search'; T.path = null;
+  const dC = s => Math.hypot(s.x * 16 + 8 - center[0], s.y * 16 + 8 - center[1]);
+  const excl = opt.excl || [];
+  let spots = G.L.hides.filter(s => (!s.small || pr.smart) && !excl.includes(s) && dC(s) < 6.5 * 16);
+  spots = spots.map(s => [s, dC(s) + rand(0, 45)]).sort((a, b) => a[1] - b[1]).slice(0, n || pr.searchN);
+  const furn = searchFurn(center, 5).map(s => [s, dC(s) + rand(0, 60)]).sort((a, b) => a[1] - b[1]).slice(0, opt.furn != null ? opt.furn : 2);
+  spots = spots.concat(furn).sort((a, b) => a[1] - b[1]).map(a => a[0]);
+  if (T.knows && !excl.includes(T.knows)) { spots = spots.filter(s => s !== T.knows); spots.unshift(T.knows); }
+  T.searchQ = spots; T.searchI = 0; T.state = 'search'; T.path = null; T.rush = false;
   if (AU.songName === 'chase') AU.play('sneak');
 }
 function goToSpot(T, s) {
@@ -388,6 +422,16 @@ function updateTeacher(dt) {
   if (!['eat', 'sleep', 'caught', 'fetch', 'keys', 'unlock'].includes(T.state)) checkApples();
   if (G.m.pools && poolTeacher(T, dt, sees, slow)) return;
   const L = pr.lines;
+  // tu es caché·e pas loin : de temps en temps il vient fouiller les meubles et cachettes autour de toi (jamais la tienne, s'il ne t'a pas vu·e)
+  if ((T.state === 'patrol' || T.state === 'look') && !T.after && !T.knows) {
+    T.inspT = (T.inspT == null ? rand(4, 8) : T.inspT) - dt;
+    if (T.inspT <= 0) {
+      T.inspT = rand(7, 12);
+      const hid = [G.P, G.P2].filter(a => a && a.hidden && !a.out && a.x > -9000);
+      const H = hid.find(a => dist(T.x, T.y, a.hidden.x * 16 + 8, a.hidden.y * 16 + 8) < 8 * 16);
+      if (H && Math.random() < 0.65) { startSearch([H.hidden.x * 16 + 8, H.hidden.y * 16 + 8], 3, { excl: hid.map(a => a.hidden), furn: 2 }); if (T.searchQ.length) say(pick(INSPECT_LINES)); else T.state = 'patrol'; }
+    }
+  }
   switch (T.state) {
     case 'power': teacherPower(T, dt, slow); break;
     case 'warn':
@@ -411,8 +455,11 @@ function updateTeacher(dt) {
       if (T.st <= 0) { T.state = 'investigate'; const [x, y] = tileXY(T.lastSeen[0], T.lastSeen[1]); if (!goTo(T, x, y)) { T.state = 'look'; T.st = 1; T.lookBase = T.ang; } }
       break;
     case 'investigate': {
-      const r = followPath(T, (pr.patrol + pr.chase) / 2 * 16 * slow, dt);
-      if (r === 'done') { T.state = 'look'; T.st = 1.3; T.lookBase = T.ang; T.after = 'search'; T.path = null; }
+      // il a tilté au loin : il va voir d'un bon pas, en visant là où il te voit
+      if (T.rush && sees && T.lastSeen) { T.rushRe -= dt; if (T.rushRe <= 0 || !T.path) { T.rushRe = 0.5; const [x, y] = tileXY(T.lastSeen[0], T.lastSeen[1]); goTo(T, x, y); } }
+      if (!T.path && T.rush && T.lastSeen) { const [x, y] = tileXY(T.lastSeen[0], T.lastSeen[1]); if (!goTo(T, x, y)) { T.rush = false; T.state = 'look'; T.st = 1; T.lookBase = T.ang; break; } }
+      const r = followPath(T, (T.rush ? pr.patrol * 0.35 + pr.chase * 0.65 : (pr.patrol + pr.chase) / 2) * 16 * slow, dt);
+      if (r === 'done') { T.rush = false; T.state = 'look'; T.st = 1.3; T.lookBase = T.ang; T.after = 'search'; T.path = null; }
       else if (r && r.x !== undefined) onLocked(T, r);
       break;
     }
