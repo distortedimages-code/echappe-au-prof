@@ -104,6 +104,7 @@ const Net = {
   studentCfg() { return this.role === 'student' ? UI.cfg() : this.them.cfg; },
   newRound(swap, level) {
     if (!this.isHost) { this.send({ t: 'rematch', swap: !!swap, lvl: level }); return; }
+    if ((this.mode === 'coop' || this.mode === 'guard') && this.teamLevel >= 0) { if (this.mode === 'coop') ccHostRound(); else cgHostRound(); return; }
     if (this.mode === 'guard') {
       // deux surveillants contre deux fugueurs (l'ordinateur)
       this.role = 'teacher';
@@ -147,7 +148,8 @@ const Net = {
   },
   enter(setup) {
     this.timeLeft = setup.time; this.ready = { me: false, them: false };
-    G.net = { role: this.role };
+    const sub = setup.mode === 'cc' || setup.mode === 'cg' ? setup.mode : null;
+    G.net = { role: this.role, cc: sub === 'cc', cg: sub === 'cg', solo: sub === 'cg' };
     const T = G.T; T.hasKeys = !!T.prof.hasKeys; T.netLocal = this.role === 'teacher'; G.alarmT = 0;
     Multi.intro();
   },
@@ -161,6 +163,7 @@ const Net = {
     G.mode = 'play'; UI.show('play'); FX.iris = { mode: 'in', t: 0, dur: 0.75 }; AU.play('sneak');
     UI.hudSig = null; UI.invSig = null; $('bGo').disabled = false;
     const T = G.T; if (G.inf) { if (!G.inf.coop) T.state = 'free'; G.inf.grace = 2; } else { T.state = 'count'; T.st = 3.3; T.countN = 0; }
+    if (G.net && G.net.cg) { $('hud').classList.add('solo'); Solo.sig = null; G.T2.state = 'count'; }
     $('hint').classList.add('hidden');
   },
   // ---------- réception ----------
@@ -177,6 +180,8 @@ const Net = {
         if (d.mode === 'guard') { this.role = 'teacher'; infStart(UI.cfg() || randomChar('Surveillant'), d.seed, { role: 'teacher', guard: true, host: false, fugs: d.fugs }); }
         else if (d.mode === 'coop') { this.role = 'student'; infStart(d.cfgG, d.seed, { coop: true, host: false, cfg2: d.cfgH }); }
         else if (d.mode === 'inf') infStart(d.student, d.seed, { role: this.role });
+        else if (d.mode === 'cc') ccGuestRound(d);
+        else if (d.mode === 'cg') cgGuestRound(d);
         else { this.level = d.lvl; startLevel(d.lvl, d.student, d); }
         this.enter(d);
         break;
@@ -188,6 +193,8 @@ const Net = {
     if (!G.net || !G.P) return;
     if (G.inf && G.inf.coop && coopRecv(d)) return;
     if (G.inf && G.inf.guard && guardRecv(d)) return;
+    if (G.net.cc && ccRecv(d)) return;
+    if (G.net.cg && cgRecv(d)) return;
     switch (d.t) {
       case 's': if (this.role === 'teacher') { P.sqN = d.sq || 0; P.sqId = d.sqi || 0; if (G.inf) infRecvPos(P, d); else P.net = d; } break;
       case 'T': if (this.role === 'student') { if (G.inf) infRecvPos(T, d); else T.net = d; } break;
@@ -236,7 +243,7 @@ const Net = {
     if (this.sendT <= 0) {
       this.sendT = 0.05;
       const P = G.P, T = G.T;
-      if (this.role === 'student') this.send({ t: 's', fl: G.inf ? G.inf.cur : undefined, x: +P.x.toFixed(1), y: +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0, sq: squishyCount(P), sqi: P.sqIds && P.sqIds.length ? P.sqIds[0] : 0 });
+      if (this.role === 'student') this.send({ t: 's', fl: G.inf ? G.inf.cur : undefined, x: +P.x.toFixed(1), y: +P.y.toFixed(1), f: P.face, m: P.moving ? 1 : 0, r: P.running ? 1 : 0, sm: P.small > 0 ? 1 : 0, sl: P.slip > 0 ? 1 : 0, h: P.hidden ? P.hidden.idx : -1, sk: P.skidT > 0 ? 1 : 0, sq: squishyCount(P), sqi: P.sqIds && P.sqIds.length ? P.sqIds[0] : 0, u: P.under ? 1 : 0, lf: P.lift > 0 ? Math.round(P.lift) : 0 });
       else this.send({ t: 'T', fl: G.inf ? G.inf.cur : undefined, x: +T.x.toFixed(1), y: +T.y.toFixed(1), a: +T.ang.toFixed(2), f: T.face, m: T.moving ? 1 : 0, r: T.running ? 1 : 0, st: T.state, k: T.hasKeys ? 1 : 0 });
     }
     if (G.inf && G.inf.guard) guardNetTick(dt);
@@ -373,7 +380,7 @@ function doActionT(a) {
       const w = a.who; hop(T, 60); AU.sfx('whistle', 0.4); T.ang = Math.atan2(w.y - T.y, w.x - T.x); T.face = faceFromAng(T.ang);
       cue(w.x, w.y - 30, 'word', 'ATTRAPÉ ?!', { col: '#ffd23f', pop: true, life: 0.9 });
       if (w.isFug) guardTry(w, 'grab');
-      else if (w === P) { if (!P.hidden && dist(T.x, T.y, P.x, P.y) < 30) { if (P.sqN > 0) { P.sqN = 0; Net.send({ t: 'sqUse' }); squishyOnMe(P.sqId); } else { Net.send({ t: 'caught', r: 'chase' }); caught('chase', true); } } }
+      else if (w === P) { if (!P.hidden && dist(T.x, T.y, P.x, P.y) < 30) { if (P.sqN > 0) { P.sqN = 0; Net.send({ t: 'sqUse' }); squishyOnMe(P.sqId); } else { Net.send({ t: 'caught', r: 'chase', x: Math.round(T.x), y: Math.round(T.y) }); caught('chase', true); } } }
       else grabFail(G.kids.indexOf(w));
       break;
     }
@@ -382,7 +389,7 @@ function doActionT(a) {
       T.ang = Math.atan2(spot.y * 16 + 8 - T.y, spot.x * 16 + 8 - T.x); T.face = faceFromAng(T.ang);
       for (let i = 0; i < 7; i++) part(spot.x * 16 + 8, spot.y * 16 + 4, 'junk', { vx: rand(-45, 45), vy: rand(-80, -30), g: 200, life: 0.9, col: pick(['#ffffff', '#ff6f91', '#fec43a', '#9fd7ff', '#63c74d']), size: 2 });
       Net.send({ t: 'tcheck', i: spot.idx });
-      T.busy = { label: 'Je fouille…', dur: 0.9, t: 0, done: () => { const fh = G.inf && G.inf.guard && G.inf.fugs.find(f => f.fl === G.inf.cur && f.st === 'hide' && f.hide === spot.idx); if (fh) { guardTry(fh, 'found'); return; } if (P.hidden === spot) { if (P.sqN > 0) { P.sqN = 0; Net.send({ t: 'sqUse' }); squishyOnMe(P.sqId); } else { Net.send({ t: 'caught', r: 'found' }); caught('found', true); } } else { AU.sfx('fail'); toast(pick(['Personne…', 'Vide !', 'Raté, pas ici !', 'Juste de la poussière…']), 1.2); } } };
+      T.busy = { label: 'Je fouille…', dur: 0.9, t: 0, done: () => { const fh = G.inf && G.inf.guard && G.inf.fugs.find(f => f.fl === G.inf.cur && f.st === 'hide' && f.hide === spot.idx); if (fh) { guardTry(fh, 'found'); return; } if (P.hidden === spot) { if (P.sqN > 0) { P.sqN = 0; Net.send({ t: 'sqUse' }); squishyOnMe(P.sqId); } else { Net.send({ t: 'caught', r: 'found', i: spot.idx }); caught('found', true); } } else { AU.sfx('fail'); toast(pick(['Personne…', 'Vide !', 'Raté, pas ici !', 'Juste de la poussière…']), 1.2); } } };
       break;
     }
     case 'tkeys': T.state = 'keys'; AU.sfx('keys'); T.busy = { label: 'Je prends les clés…', dur: 1.3, t: 0, done: () => { T.hasKeys = true; Net.send({ t: 'keys' }); toast('🔑 Clés en poche. Aucune porte ne te résiste.', 2.2); } }; break;
@@ -404,6 +411,8 @@ function timeUp() {
   AU.sfx('alarm'); AU.play(null); G.P.busy = null; if (G.T.busy) G.T.busy = null;
 }
 function netUpdate(dt) {
+  if (G.net.cc) { ccUpdate(dt); return; }
+  if (G.net.cg) { cgUpdate(dt); return; }
   if (G.inf && G.inf.coop) { coopUpdate(dt); return; }
   if (G.inf && G.inf.guard) { guardUpdate(dt); return; }
   const P = G.P, T = G.T;
@@ -427,7 +436,7 @@ function netUpdate(dt) {
     if (G.net.solo) { Solo.tick(dt); if (G.mode !== 'play') return; }
     else if (P.net) {
       Net.smooth(P, dt); const s = P.net;
-      P.small = s.sm ? 10 : 0; P.slip = s.sl ? 1 : 0; P.skidT = s.sk ? 0.1 : 0;
+      P.small = s.sm ? 10 : 0; P.slip = s.sl ? 1 : 0; P.skidT = s.sk ? 0.1 : 0; P.under = !!s.u; P.lift = s.lf || 0;
       const hs = s.h >= 0 ? G.L.hides[s.h] : null;
       if (hs !== P.hidden) {
         if (P.hidden && P.hidden.k === K.DOOR) { const dr = doorAt(P.hidden.x, P.hidden.y); if (dr) dr.hideP = false; }

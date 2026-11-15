@@ -67,7 +67,7 @@ function infStart(cfg, seed, mopt) {
   if (coop) { G.P2 = { x: I.seat2[0] * 16 + 8, y: I.seat2[1] * 16 + 12, face: 1, moving: false, running: false, anim: 0, small: 0, slip: 0, hidden: null, busy: null, inv: [], cfg: mopt.cfg2, fl: INF_TOP, seat: I.seat2, key: 'them', isPartner: true }; }
   else G.P2 = null;
   if (multi && !coop) { const T = newTeacher(infProfMulti(), I.floors[1].L); T.state = 'free'; T.fl = 1; T.hasKeys = false; G.T = T; }
-  G.P = P; G.lvl = 'inf'; G.lessons = 0; G.time = 0; G.spotted = 0; G.reveal = 0; G.slowT = 0; G.shake = 0; G.found = 0; G.alarmT = 0; G.pVis = true; G.appleId = 0;
+  G.P = P; G.lvl = 'inf'; G.lessons = 0; G.time = 0; G.spotted = 0; G.reveal = 0; G.slowT = 0; G.shake = 0; G.found = 0; G.petFound = false; G.alarmT = 0; G.pVis = true; G.appleId = 0;
   G.tasks = []; G.tasksDone = 0; G.tasksRemote = 0; G.banner = null; G.heartT = 0; G.intercomT = 999; G.kidCueT = 3; G.smallDoorTip = false;
   const itemPlan = R.sh(['cake', 'apple', 'lamp', 'slipper', 'watch', 'mirror', 'cake', 'apple']);
   I.floors.forEach(F => infSetupFloor(F, R, itemPlan));
@@ -225,7 +225,7 @@ function infWarn(by) {
 }
 function infSay(k, text, dur) {
   k.bub = { text: nameLine(text), t: 0, dur: dur || 2.2 };
-  if (G.inf && G.inf.coop && G.inf.auth) Net.send({ t: 'bub', w: G.kids.indexOf(k), text: k.bub.text, dur: k.bub.dur });
+  if ((G.inf && G.inf.coop && G.inf.auth) || (G.net && G.net.cc && Net.isHost)) Net.send({ t: 'bub', w: G.kids.indexOf(k), text: k.bub.text, dur: k.bub.dur });
   const d = dist(k.x, k.y, G.P.x, G.P.y) / 16;
   if (d < 14) AU.say(k.bub.text, { voice: k.voice || { pitch: 1, rate: 1.1 } }, clamp(1.1 - d / 12, 0.15, 1));
 }
@@ -501,7 +501,7 @@ function infDrawPlan(cv, f) {
   c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#f6efd8'; c.fillRect(0, 0, W, H);
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
     const k = m.get(x, y); let col = null;
-    if (k === K.WALL || k === K.FENCE) col = '#2a2140'; else if (k === K.DOOR) col = '#e0a030'; else if (k === K.FLOOR) col = null; else if (k >= 30) col = '#2ce8d5'; else col = '#b8ad90';
+    if (k === K.WALL || k === K.FENCE) col = '#2a2140'; else if (k === K.DOOR) col = '#e0a030'; else if (k === K.FLOOR) col = null; else if (isExitK(k)) col = '#2ce8d5'; else col = '#b8ad90';
     if (col) { c.fillStyle = col; c.fillRect(ox + x * s, oy + y * s, Math.ceil(s), Math.ceil(s)); }
   }
   c.font = `bold ${Math.max(8, s * 0.9) | 0}px VT323, monospace`; c.textAlign = 'center'; c.textBaseline = 'middle';

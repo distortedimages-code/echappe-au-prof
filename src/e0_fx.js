@@ -39,6 +39,7 @@ function frameOf(a, g) { const L = POSE[g]; if (!L || L.length === 1) return 0; 
 // le bruit de chaque pas : le sien (doux en marchant sur la pointe des pieds), ceux des élèves tout près
 function stepSound(a, g) {
   if (G.mode !== 'play' || a.hidden) return;
+  if (a.swim) return;
   if (a === G.P) {
     if (a.slip > 0 || (G.net && G.net.role === 'teacher')) return;
     AU.foot(floorMat(a.x, a.y), a.small > 0 ? 'tiny' : g === 'run' ? 'run' : 'walk', g === 'run' ? 0.55 : g === 'sneak' ? 0.13 : 0.3, 0);

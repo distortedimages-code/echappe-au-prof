@@ -29,7 +29,8 @@ function completeTask(t) {
   if (t.done) return;
   t.done = true; G.tasksDone = G.tasks.filter(x => x.done).length;
   const P = G.P; AU.sfx('found'); confetti(P.x, P.y - 12, 26); hop(P, 100);
-  if (G.net) Net.send({ t: 'task', n: G.tasksDone });
+  if (G.net && G.net.cc) Net.send({ t: 'ccTask', i: G.tasks.indexOf(t) });
+  else if (G.net) Net.send({ t: 'task', n: G.tasksDone });
   if (G.tasksDone >= G.tasks.length) { UI.banner('🎉 Tâches finies ! Maintenant : la sortie.'); FX.flash = 0.6; FX.flashCol = '200,255,200'; AU.sfx('win'); }
   else toast('✅ Tâche faite ! (' + G.tasksDone + '/' + G.tasks.length + ')', 2);
 }

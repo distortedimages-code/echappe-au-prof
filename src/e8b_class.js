@@ -96,9 +96,8 @@ function callTeacher(x, y, by) {
   AU.sfx('spot', 0.45); UI.hudSig = null;
   return true;
 }
-function classSees(k, range, fov) {
-  const P = G.P;
-  if (P.hidden || P.out || G.mode !== 'play' || G.dark) return 0;
+function classSees(k, range, fov, P = G.P) {
+  if (P.hidden || P.out || P.under || G.mode !== 'play' || G.dark) return 0;
   const ex = k.x, ey = k.y - 12, px = P.x, py = P.y - (P.small > 0 ? 3 : 7), d = Math.hypot(px - ex, py - ey), R = range * 16 * (P.small > 0 ? 0.55 : 1);
   if (d > R) return 0;
   const inCone = d < 20 || fov >= 3.1 || Math.abs(angDiff(Math.atan2(py - ey, px - ex), k.ang)) < fov;
@@ -113,7 +112,7 @@ function classTeacher(k, dt) {
   const atHome = () => Math.abs(k.x - (k.home[0] * 16 + 8)) < 3 && Math.abs(k.y - (k.home[1] * 16 + 12)) < 3;
   const turn = a => { k.ang += angDiff(a, k.ang) * Math.min(1, dt * 8); k.face = faceFromAng(k.ang); };
   switch (k.state) {
-    case 'warn': k.moving = false; turn(Math.atan2(P.y - k.y, P.x - k.x)); k.st -= dt; if (k.st <= 0) { k.state = 'teach'; k.st = rand(2, 4); } break;
+    case 'warn': { const W = k.warnWho || P; k.moving = false; turn(Math.atan2(W.y - k.y, W.x - k.x)); } k.st -= dt; if (k.st <= 0) { k.state = 'teach'; k.st = rand(2, 4); } break;
     case 'dark': {
       // noir complet : il cherche l'interrupteur à tâtons
       k.st -= dt; k.ang += dt * 1.4; k.face = faceFromAng(k.ang); k.moving = false;
@@ -147,33 +146,33 @@ function classTeacher(k, dt) {
   }
   if (G.dark) { if (k.state !== 'dark') { k.state = 'dark'; k.path = null; k.st = 0; if (dist(k.x, k.y, P.x, P.y) < 12 * 16) infSay(k, pick(['Hé ! Qui a éteint la lumière ?!', 'Restez assis ! Personne ne bouge !', 'Mais… on n’y voit rien !']), 2); } k.detect = 0; return; }
   // vision : un prof qui fait cours voit ce qui se passe dans sa classe (et un peu par la porte)
-  const d = k.cool > 0 ? 0 : classSees(k, k.prof.range, k.prof.fov);
+  // (à deux : il surveille les deux élèves)
+  let d = 0, W = P; if (k.cool <= 0) for (const t of classTargets()) { const dd = classSees(k, k.prof.range, k.prof.fov, t); if (dd && (!d || dd < d)) { d = dd; W = t; } }
   if (d) {
-    const rate = (d < 36 ? 4.5 : 1 + 1.9 * (1 - d / (k.prof.range * 16))) * (P.running ? 1.5 : 1) * (P.disguised ? 0.3 : 1);
+    const rate = (d < 36 ? 4.5 : 1 + 1.9 * (1 - d / (k.prof.range * 16))) * (W.running ? 1.5 : 1) * (W.disguised ? 0.3 : 1);
     const was = k.detect; k.detect = Math.min(1.2, k.detect + rate * dt);
-    if (was < 0.3 && k.detect >= 0.3) { setMark(k, '?', 0.8); if (k.state === 'board' || k.state === 'teach') { k.state = 'look'; k.st = 1.4; k.lookBase = Math.atan2(P.y - k.y, P.x - k.x); } }
+    if (was < 0.3 && k.detect >= 0.3) { teamMark(k, '?', 0.8); if (k.state === 'board' || k.state === 'teach') { k.state = 'look'; k.st = 1.4; k.lookBase = Math.atan2(W.y - k.y, W.x - k.x); } }
     if (k.detect >= 1) {
-      k.detect = 0; k.cool = 12; k.state = 'warn'; k.st = 2.4; k.path = null; setMark(k, '!', 1.4);
+      k.detect = 0; k.cool = 12; k.state = 'warn'; k.st = 2.4; k.path = null; k.warnWho = W; teamMark(k, '!', 1.4);
       const T = G.T, n = T.prof.name;
       infSay(k, (k.office ? pick(CT_OFFICE) : pick(CT_SEEN)) + ' ' + CT_CALL(n), 3);
-      if (callTeacher(P.x, P.y, k)) toast('📣 ' + k.name + ' t’a vu·e et prévient ' + n + ' ! Bouge de là !', 2.6);
+      if (callTeacher(W.x, W.y, k)) ccTell(W, '📣 ' + k.name + ' t’a vu·e et prévient ' + n + ' ! Bouge de là !', 2.6);
       G.shake = Math.max(G.shake, 0.12);
     }
   } else k.detect = Math.max(0, k.detect - dt * 0.5);
 }
 // les élèves qui balancent : un « ! » au-dessus de la tête… et s'ils te voient encore une seconde, ils crient
 function classSnitch(k, dt) {
-  const P = G.P;
   if (k.markT > 0) k.markT -= dt;
   if (k.snCool > 0) { k.snCool -= dt; k.snT = 0; return; }
-  const d = !P.disguised ? classSees(k, 4.5, k.beh === 'sit' || k.beh === 'bench' ? 3.2 : 1.4) : 0;
+  let d = 0, P = G.P; for (const t of classTargets()) { const dd = !t.disguised ? classSees(k, 4.5, k.beh === 'sit' || k.beh === 'bench' ? 3.2 : 1.4, t) : 0; if (dd && (!d || dd < d)) { d = dd; P = t; } }
   if (!d) { k.snT = Math.max(0, k.snT - dt * 0.8); return; }
   const was = k.snT; k.snT += dt * (P.running ? 1.4 : 1);
-  if (was < 0.3 && k.snT >= 0.3) { setMark(k, '!', 1.2); if (k.path) { k.path = null; k.moving = false; } k.face = faceFromAng(Math.atan2(P.y - k.y, P.x - k.x)); }
+  if (was < 0.3 && k.snT >= 0.3) { teamMark(k, '!', 1.2); if (k.path) { k.path = null; k.moving = false; } k.face = faceFromAng(Math.atan2(P.y - k.y, P.x - k.x)); }
   if (k.snT >= 1.3) {
     k.snT = 0; k.snCool = 25; const n = G.T.prof.name;
-    infSay(k, SN_LINES(n), 2.6); setMark(k, '!', 1.6); hop(k, 90);
-    if (callTeacher(P.x, P.y, k)) toast('🙊 Un élève t’a balancé·e ! ' + n + ' arrive…', 2.6);
+    infSay(k, SN_LINES(n), 2.6); teamMark(k, '!', 1.6); hop(k, 90);
+    if (callTeacher(P.x, P.y, k)) ccTell(P, '🙊 Un élève t’a balancé·e ! ' + n + ' arrive…', 2.6);
   }
 }
 function classUpdate(dt) {

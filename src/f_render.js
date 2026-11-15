@@ -55,6 +55,7 @@ function tinted(cv, col) {
 }
 // Dessine un personnage (coordonnées monde, contexte déjà transformé)
 function drawSprite(c, cfg, v, a, o = {}) {
+  if (G.m && G.m.pools && !o.noSwim && !(a.lift > 0) && a.x > -9000 && inWater(a)) { try { drawSwimmer(c, cfg, v, a, o); } catch (e) { } return; }
   try { drawSprite0(c, cfg, v, a, o); }
   catch (e) { window.__sprErr = (window.__sprErr || 0) + 1; window.__lastErr = String(e && e.message || e).slice(0, 90); try { c.restore(); } catch (e2) { } c.fillStyle = '#1a1028'; c.fillRect(a.x - 5, a.y - 26, 10, 26); c.fillStyle = (cfg && cfg.topCol) || '#ff6f91'; c.fillRect(a.x - 4, a.y - 16, 8, 9); }
 }
@@ -109,6 +110,7 @@ function drawDynamic(c, ox, oy) {
     drawFurniture(c, s.k, px + j, py, s.x, s.y, m, L);
   });
   G.doors.forEach(d => { if (inView(d.x, d.y)) drawDoor(c, d, d.x * 16 + ox, d.y * 16 + oy); });
+  if (m.pools) poolDynamic(c, ox, oy, inView);
   L.exits.forEach(e => {
     if (e.type === 'hold' && inView(e.x, e.y) && !e.done && e.progress <= 0 && e.from) {
       // la fenêtre entrouverte : un rayon de soleil au sol et un rideau qui vole ; l'issue de secours : un panneau vert qui brille
@@ -391,11 +393,13 @@ function renderGame(dt) {
   if (!P.hidden && !P.out && G.pVis !== false) {
     let sc = P.small > 0 ? 0.5 : 1; if (P.small > 0 && P.small < 3 && (G.time * 7 | 0) % 2) sc = 0.75;
     let al = 1; if (G.mode === 'escape') { al = clamp(1 - (G.escT - 0.5) / 0.6, 0, 1); sc *= clamp(1 - (G.escT - 0.4) / 0.8, 0.2, 1); }
-    ents.push([P.y, () => occlude(ctx, P, () => drawSprite(ctx, P.cfg, null, P, { scale: sc, alpha: al, dx: P.trem ? Math.sin(G.time * 70) * P.trem : 0 }))]);
+    ents.push([P.y + (P.lift > 0 ? 40 : 0), () => occlude(ctx, P, () => drawSprite(ctx, P.cfg, null, P, { scale: sc, alpha: al, dx: P.trem ? Math.sin(G.time * 70) * P.trem : 0, hz: P.lift > 0 ? P.lift : undefined }))]);
   }
   // le coéquipier (toujours visible pour toi)
   const Q = G.P2;
-  if (Q && G.inf && G.inf.coop && !Q.out && !Q.hidden && Q.x > -9000) ents.push([Q.y, () => occlude(ctx, Q, () => drawSprite(ctx, Q.cfg, null, Q, { scale: Q.small > 0 ? 0.5 : 1 }))]);
+  if (Q && ((G.inf && G.inf.coop) || (G.net && G.net.cc)) && !Q.out && !Q.hidden && Q.x > -9000) ents.push([Q.y + (Q.lift > 0 ? 40 : 0), () => occlude(ctx, Q, () => { drawSprite(ctx, Q.cfg, null, Q, { scale: Q.small > 0 ? 0.5 : 1, hz: Q.lift > 0 ? Q.lift : undefined }); if (G.net && G.net.cc && Q.jail) txt(ctx, '🔒', Q.x, Q.y - 40, 9, '#fff'); })]);
+  // surveillants à deux sur un niveau : le collègue
+  if (G.net && G.net.cg && G.T2 && G.T2.x > -9000) { const Q2 = G.T2; ents.push([Q2.y, () => occlude(ctx, Q2, () => drawTeacher(ctx, Q2))]); }
   // surveillants en équipe : le coéquipier et les fugueurs que je vois
   if (G.inf && G.inf.guard) {
     const Q2 = G.T2; if (Q2 && Q2.fl === G.inf.cur && Q2.x > -9000) ents.push([Q2.y, () => occlude(ctx, Q2, () => drawTeacher(ctx, Q2))]);
@@ -410,19 +414,21 @@ function renderGame(dt) {
     const bob = p.moving || p.jump > 0 ? Math.abs(Math.sin(p.t * 12)) * 3 : Math.sin(p.t * 3) * 0.6;
     ents.push([p.y, () => {
       ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 5, 2, 0, 0, 7); ctx.fill();
-      ctx.globalAlpha = p.leaveT != null ? Math.max(0, p.leaveT / 1.2) : 1;
+      const def = PETS[p.i], al = p.leaveT != null ? Math.max(0, p.leaveT / 1.2) : 1;
+      if (def && def.px) { try { drawCutePet(ctx, p, def, al); } catch (e) { } return; }
+      ctx.globalAlpha = al;
       ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#000'; ctx.fillText(p.e, p.x, p.y + 1 - bob);
       ctx.globalAlpha = 1;
     }]);
   };
-  drawPet(P); if (Q && G.inf && G.inf.coop && Q.fl === G.inf.cur) drawPet(Q);
+  drawPet(P); if (Q && ((G.inf && G.inf.coop && Q.fl === G.inf.cur) || (G.net && G.net.cc))) drawPet(Q);
   if (G.ball) {
     const a = G.kids[G.ball.from], b = G.kids[G.ball.to];
     if (a && b && (a.vis || b.vis)) { const t = G.ball.t, bx = lerp(a.x, b.x, t), by = lerp(a.y, b.y, t); ents.push([by, () => { const h = Math.sin(Math.PI * t) * 14 + 10; ctx.fillStyle = 'rgba(10,6,20,0.3)'; ctx.beginPath(); ctx.ellipse(bx, by, 2.2, 0.9, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#f77622'; ctx.beginPath(); ctx.arc(bx, by - h, 2.2, 0, 7); ctx.fill(); ctx.fillStyle = '#ffb070'; ctx.fillRect(bx - 1, by - h - 1.5, 1, 1); }]); }
   }
   // arbres, cabane… : redessinés à leur profondeur, pour cacher qui passe derrière
   { const x0 = ci - 24, x1 = ci + lw + 24, y0 = cj - 24, y1 = cj + lh + 40;
-    (G.L.fronts || []).forEach(f => { if (f.x > x1 || f.x + f.w < x0 || f.y > y1 || f.y + f.h < y0) return; ents.push([f.base, () => ctx.drawImage(frontSprite(f.k), f.x, f.y)]); }); }
+    (G.L.fronts || []).forEach(f => { if (f.x > x1 || f.x + f.w < x0 || f.y > y1 || f.y + f.h < y0) return; ents.push([f.base, () => ctx.drawImage(f.cv || frontSprite(f.k), f.x, f.y)]); }); }
   ents.sort((a, b) => a[0] - b[0]).forEach(e => e[1]());
   if (P.hidden && viewerA() === P) drawEyes(ctx, P.hidden);
   if (G.inf && G.inf.guard) { const Q2 = G.T2; if (Q2 && Q2.fl === G.inf.cur && Q2.x > -9000) { txt(ctx, Q2.prof.name, Q2.x, Q2.y - 44, 6, '#7ff0ff'); if (Q2.bubble) txt(ctx, Q2.bubble.text, Q2.x, Q2.y - 52, 6, '#ffffff'); } G.inf.fugs.forEach(f => { if (f.vis && f.bub) txt(ctx, f.bub.text, f.x, f.y - 30, 6, '#ffe6a0'); }); }

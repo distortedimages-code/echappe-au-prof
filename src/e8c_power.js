@@ -2,7 +2,7 @@
 // Un disjoncteur dans le couloir : on coupe tout, le collège passe en noir et blanc,
 // tout le monde se cogne… et le prof part à tâtons rallumer. Parfait pour faire diversion.
 const POWER_USES = 2, POWER_AUTO = 30;
-const isDark = () => !!(G.dark && G.power && !G.inf && !G.net);
+const isDark = () => !!(G.dark && G.power && !G.inf && !(G.net && !G.net.cc));
 function powerSetup() {
   G.power = null; G.dark = false;
   const L = G.L, m = G.m; if (G.net || G.inf || !m || L.outdoor) return;
@@ -10,7 +10,7 @@ function powerSetup() {
   const decNear = (x, y) => m.decor.some(d => d.y === y && x >= d.x - 1 && x <= d.x + (d.w || 1));
   for (let y = 1; y < m.h - 2; y++) for (let x = 2; x < m.w - 2; x++) {
     if (m.get(x, y) !== K.WALL || m.get(x, y + 1) !== K.FLOOR || decNear(x, y)) continue;
-    if ([[-1, 0], [1, 0], [-1, 1], [1, 1], [0, 2]].some(([dx, dy]) => m.get(x + dx, y + dy) === K.DOOR || m.get(x + dx, y + dy) > 29)) continue;
+    if ([[-1, 0], [1, 0], [-1, 1], [1, 1], [0, 2]].some(([dx, dy]) => m.get(x + dx, y + dy) === K.DOOR || isExitK(m.get(x + dx, y + dy)))) continue;
     if (Math.abs(x - sx) + Math.abs(y + 1 - sy) < 7 || Math.abs(x - tx) + Math.abs(y + 1 - ty) < 6) continue;
     if (G.tasks.some(t => Math.abs(t.x - x) + Math.abs(t.y - y) < 2)) continue;
     const rn = m.roomAt(x, y + 1);

@@ -298,9 +298,9 @@ const UI = {
     this.paintProc($('bProc'));
     const list = $('lvlList'); list.innerHTML = '';
     LEVELS.forEach((L, i) => {
-      const pr = PROFS[L.prof], lock = i + 1 > this.prog.unlocked, st = this.prog.stars[i] || 0;
+      const pr = PROFS[L.prof], lock = i + 1 > this.prog.unlocked && !L.bonus, st = this.prog.stars[i] || 0;
       const b = document.createElement('button'); b.className = 'lvl' + (lock ? ' lock' : '');
-      b.innerHTML = `<canvas width="22" height="34"></canvas><div style="flex:1"><div class="ln">NIVEAU ${i + 1}</div><div class="lt"></div><div class="lp"></div><div class="st">${lock ? '🔒' : '★'.repeat(st) + '<span style="opacity:.25">' + '★'.repeat(3 - st) + '</span>'}</div></div>`;
+      b.innerHTML = `<canvas width="22" height="34"></canvas><div style="flex:1"><div class="ln">${L.bonus ? '🚌 SORTIE SCOLAIRE' : 'NIVEAU ' + (i + 1)}</div><div class="lt"></div><div class="lp"></div><div class="st">${lock ? '🔒' : '★'.repeat(st) + '<span style="opacity:.25">' + '★'.repeat(3 - st) + '</span>'}</div></div>`;
       b.querySelector('.lt').textContent = L.title; b.querySelector('.lp').textContent = pr.name + ', ' + pr.title;
       portrait(b.querySelector('canvas'), pr.cfg, pr.v, 1);
       b.addEventListener('click', () => { AU.init(); if (lock) { AU.sfx('fail'); b.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], 200); return; } AU.sfx('blip'); this.launch(i); });
@@ -364,7 +364,7 @@ const UI = {
   launch(i, keepSeed) {
     startLevel(i, this.cfg(), null, { seed: keepSeed && G.seed != null ? G.seed : (this.procOn() ? newSeed() : null) });
     const L = LEVELS[i], pr = PROFS[L.prof];
-    $('inNum').textContent = 'NIVEAU ' + (i + 1) + ' · ' + L.place.toUpperCase();
+    $('inNum').textContent = (L.bonus ? '🚌 SORTIE SCOLAIRE' : 'NIVEAU ' + (i + 1)) + ' · ' + L.place.toUpperCase();
     $('inTitle').textContent = L.title;
     $('inName').textContent = pr.name; $('inRole').textContent = pr.title.charAt(0).toUpperCase() + pr.title.slice(1);
     $('inQuote').textContent = '« ' + pr.lines.start + ' »';
@@ -372,11 +372,13 @@ const UI = {
     portrait($('inProf'), pr.cfg, pr.v, 1);
     const hints = []; if (G.L.holdHints) { let put = false; L.hints.forEach(h => { if (/^(🪟|🚨|🛗)/u.test(h)) { if (!put) { hints.push(...G.L.holdHints); put = true; } } else hints.push(h); }); if (!put) hints.push(...G.L.holdHints); } else hints.push(...L.hints);
     $('inHints').innerHTML = ''; $('inHints').dataset.title = '🚪 Les ' + G.L.exits.length + ' sorties secrètes'; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
-    const extra = ['📋 Les <b>tâches</b> = les ⭐ jaunes. Ensuite seulement, la sortie.', '✨ Les <b>objets magiques</b> sont cachés dans les bureaux, armoires et casiers — un par pièce. Un éclat brille quand tu passes à côté.', '🧸 Un <b>squishy</b> et un 🥸 <b>déguisement</b> en font partie.'];
+    const extra = ['📋 Les <b>tâches</b> = les ⭐ jaunes. Ensuite seulement, la sortie.', '✨ Les <b>objets magiques</b> sont cachés dans les bureaux, armoires et casiers — un par pièce. Un éclat brille quand tu passes à côté.', '🧸 Un <b>squishy</b> et un 🥸 <b>déguisement</b> en font partie.', '🐾 Parfois, un <b>compagnon tout mignon</b> s’y cache aussi !'];
     if (pr.tires) extra.push('💨 Rapide… mais vite essoufflé.');
     if (pr.chatty) extra.push('🗣️ Parle non-stop. Pratique pour la repérer.');
     if (pr.hasKeys) extra.push('🔑 A TOUTES les clés. Et connaît toutes les cachettes.');
     if (pr.hear > 1.2) extra.push('👂 Oreille de chauve-souris. Marche doucement.');
+    if (G.L.pool) extra.unshift('🤿 Saute dans l’eau et <b>plonge</b> : personne ne te voit… pendant 10 secondes !', '🪜 Le <b>plongeoir</b> : grimpe, et SAUTE quand le maître nageur arrive. Il ne nage pas !');
+    if (G.L.museum) extra.unshift('🦖 Le gardien a <b>toutes les clés</b> du musée. Cache-toi sous les squelettes, derrière les vitrines et les animaux empaillés !');
     if (G.power) extra.push('⚡ Un <b>disjoncteur</b> traîne dans le couloir : coupe le courant (2 fois max) pour semer la panique. Le prof ira rallumer…');
     if (G.cls && G.cls.teachers.length) extra.push('👩‍🏫 Des <b>profs font cours</b> : s’ils te voient, ils préviennent ' + pr.name + '.');
     if (G.cls && G.cls.snitches.length) extra.push(i === 0 ? '🙊 Les autres élèves ne balancent pas. Normalement. (Un « ! » au-dessus d’une tête = file !)' : '🙊 Certains élèves <b>balancent</b> : un « ! » au-dessus d’une tête = file vite !');

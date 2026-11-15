@@ -4,7 +4,7 @@
 // Attrapé : il part en colle, on patrouille jusqu'au prochain signalement. 3 évasions = fin de service.
 const SOLO_TIME = 420, SOLO_LIVES = 3;
 const SOLO_NAMES = ['Léa', 'Hugo', 'Inès', 'Nathan', 'Jade', 'Lucas', 'Chloé', 'Tom', 'Manon', 'Noah', 'Zoé', 'Adam', 'Lina', 'Gabin', 'Rose', 'Sacha', 'Mila', 'Théo', 'Alice', 'Malo'];
-const netLive = () => !!(G.net && !G.net.solo);
+const netLive = () => !!(G.net && (!G.net.solo || G.net.cg));
 
 // ---------- l'élève ordinateur ----------
 const Bot = {
@@ -169,7 +169,7 @@ const Bot = {
         B.noiseT -= dt; if (B.noiseT <= 0) { B.noiseT = rand(1.4, 2.6); const nz = t.def.noise; if (nz) this.noise(t.x * 16 + 8, t.y * 16 + 8, nz.r, nz.w); }
         if (t.botP >= 1) {
           t.done = true; G.tasksDone = G.tasks.filter(x => x.done).length; G.tasksRemote = G.tasksDone;
-          const n = G.tasks.length; toast('📋 ' + P.cfg.name + ' a fini une tâche (' + G.tasksDone + '/' + n + ')' + (G.tasksDone >= n ? ' : sorties ouvertes ! 😱' : ' !'), 2.4); AU.sfx('ding', 0.5);
+          const n = G.tasks.length, txt = '📋 ' + P.cfg.name + ' a fini une tâche (' + G.tasksDone + '/' + n + ')' + (G.tasksDone >= n ? ' : sorties ouvertes ! 😱' : ' !'); toast(txt, 2.4); if (G.net && G.net.cg) Net.send({ t: 'cgToast', text: txt }); AU.sfx('ding', 0.5);
           B.st = 'plan'; B.t = rand(0.4, 1);
         }
         break;
@@ -229,7 +229,7 @@ const Solo = {
     const list = $('lvlList'); list.innerHTML = ''; const best = this.best();
     LEVELS.forEach((L, i) => {
       const pr = PROFS[L.prof], b = document.createElement('button'); b.className = 'lvl';
-      b.innerHTML = `<canvas width="22" height="34"></canvas><div style="flex:1"><div class="ln">NIVEAU ${i + 1}</div><div class="lt"></div><div class="lp"></div><div class="st">${best[i] ? '🚨 Record : ' + best[i] + ' attrapé' + (best[i] > 1 ? 's' : '') : '<span style="opacity:.5">Jamais surveillé</span>'}</div></div>`;
+      b.innerHTML = `<canvas width="22" height="34"></canvas><div style="flex:1"><div class="ln">${L.bonus ? '🚌 SORTIE SCOLAIRE' : 'NIVEAU ' + (i + 1)}</div><div class="lt"></div><div class="lp"></div><div class="st">${best[i] ? '🚨 Record : ' + best[i] + ' attrapé' + (best[i] > 1 ? 's' : '') : '<span style="opacity:.5">Jamais surveillé</span>'}</div></div>`;
       b.querySelector('.lt').textContent = L.title; b.querySelector('.lp').textContent = 'Tu es ' + pr.name + ', ' + pr.title;
       portrait(b.querySelector('canvas'), pr.cfg, pr.v, 1);
       b.addEventListener('click', () => { AU.init(); AU.sfx('blip'); this.start(i); });
@@ -283,7 +283,7 @@ const Solo = {
     const S = G.solo, P = G.P; if (G.pVis || G.T.state === 'count') { S.rumorT = Math.max(S.rumorT, 20); return; }
     S.rumorT -= dt; if (S.rumorT > 0) return; S.rumorT = 30;
     const [x, y] = P.hidden ? [P.hidden.x, P.hidden.y] : Bot.tile(P), room = G.m.roomAt(x, y) || 'le couloir';
-    UI.banner('📻 Un élève a vu ' + P.cfg.name + ' : « ' + room + ' »'); AU.sfx('ding', 0.4);
+    soloBanner('📻 Un élève a vu ' + P.cfg.name + ' : « ' + room + ' »'); AU.sfx('ding', 0.4);
   },
   caught(reason) {
     const S = G.solo, P = G.P, T = G.T; if (!S || S.phase !== 'hunt') return;
@@ -294,7 +294,7 @@ const Solo = {
     cue(P.x, P.y - 38, 'word', pick(['Nooon !', 'Pas juste !', 'Zut !', 'J’ai rien fait !']), { col: '#ffffff', pop: true, life: 1.5 });
     FX.comic = { t: 0, text: reason === 'found' ? 'TROUVÉ !' : 'ATTRAPÉ !' }; FX.punch(0.22); FX.flash = 0.8; FX.flashCol = '255,255,255'; G.shake = 0.4; AU.sfx('caught');
     const mx = (P.x + T.x) / 2, my = (P.y + T.y) / 2 - 10; puff(mx, my, 18, '#ffffff'); for (let i = 0; i < 8; i++) part(mx, my, 'star', { vx: rand(-60, 60), vy: rand(-70, 10), g: 80, life: 1, col: pick(['#ffd23f', '#ffffff', '#ff6f91']) });
-    UI.banner('🚨 ' + n + ' file en colle ! (' + S.caught + ' attrapé' + (S.caught > 1 ? 's' : '') + ')');
+    soloBanner('🚨 ' + n + ' file en colle ! (' + S.caught + ' attrapé' + (S.caught > 1 ? 's' : '') + ')');
     G.tasksRemote = 0; this.sig = null;
   },
   escaped(ex, x, y) {
@@ -304,7 +304,7 @@ const Solo = {
     confetti(wx, wy, 30); sparkle(wx, wy, 16); cue(wx, wy - 24, 'word', 'ÉVADÉ·E !', { col: '#ff8a96', pop: true, life: 1.8 });
     FX.comic = { t: 0, text: 'ÉVADÉ·E !' }; FX.punch(0.15); AU.sfx('fail');
     T.bubble = { text: pick(['Mais… ! Reviens ici !', 'Noooon !', 'Pas encore une évasion !', 'Le directeur va me tuer…']), t: 0, dur: 2.4 };
-    UI.banner('😱 ' + n + ' s’est évadé·e ! ' + (S.lives > 0 ? '❤️'.repeat(S.lives) + ' restant' + (S.lives > 1 ? 's' : '') : 'Fin de service…'));
+    soloBanner('😱 ' + n + ' s’est évadé·e ! ' + (S.lives > 0 ? '❤️'.repeat(S.lives) + ' restant' + (S.lives > 1 ? 's' : '') : 'Fin de service…'));
     G.tasksRemote = 0; this.sig = null;
   },
   // un nouvel élève sèche les cours
@@ -322,7 +322,7 @@ const Solo = {
     P.x = s[0] * 16 + 8; P.y = s[1] * 16 + 12;
     Bot.reset(P, S.wave); S.phase = 'hunt'; S.rumorT = 32; this.sig = null;
     const room = G.m.roomAt(s[0], s[1]) || 'le couloir';
-    UI.banner('📻 Signalement : ' + name + ' sèche les cours (« ' + room + ' ») !'); AU.sfx('ding'); setMark(T, '!', 1.2);
+    soloBanner('📻 Signalement : ' + name + ' sèche les cours (« ' + room + ' ») !'); AU.sfx('ding'); setMark(T, '!', 1.2);
     T.bubble = { text: pick(['Encore un·e !', 'On ne m’échappe pas, ' + name + ' !', 'Allez, au travail…', 'Je t’ai à l’œil, ' + name + ' !']), t: 0, dur: 2.2 };
   },
   // la photo de l'élève recherché, en haut à droite
@@ -340,6 +340,7 @@ const Solo = {
     if (hunt) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
   },
   end(why) {
+    if (G.net && G.net.cg) { cgEnd(why); return; }
     if (G.mode === 'result') return; G.mode = 'result'; $('hud').classList.remove('solo'); AU.play(null);
     const S = G.solo, best = this.best(), lv = this.lv, rec = S.caught > (best[lv] || 0);
     if (rec) { best[lv] = S.caught; store.set('nds_solo', best); }

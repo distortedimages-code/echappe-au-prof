@@ -445,8 +445,8 @@ function genIndoor(R, S) {
   leaves.forEach(r => { FURN[r.def.f](g, r, r.def.o); g.repair(r); });
   // casiers encastrés et déco des couloirs
   const decAt = new Set(); m.decor.forEach(d => { for (let i = 0; i < (d.w || 1); i++) decAt.add(d.y * W + d.x + i); });
-  const lockerRun = (pts) => { let run = 0; pts.forEach(([x, y, cx, cy]) => {
-    const okp = !decAt.has(y * W + x) && m.get(x, y) === K.WALL && m.get(cx, cy) === K.FLOOR && ![[0, 0], ...D4, [1, 1], [-1, 1], [1, -1], [-1, -1]].some(([dx, dy]) => m.get(x + dx, y + dy) === K.DOOR || m.get(x + dx, y + dy) > 29);
+  const lockerRun = (pts) => { if (S.noLockers) return; let run = 0; pts.forEach(([x, y, cx, cy]) => {
+    const okp = !decAt.has(y * W + x) && m.get(x, y) === K.WALL && m.get(cx, cy) === K.FLOOR && ![[0, 0], ...D4, [1, 1], [-1, 1], [1, -1], [-1, -1]].some(([dx, dy]) => m.get(x + dx, y + dy) === K.DOOR || isExitK(m.get(x + dx, y + dy)));
     if (!okp) { run = 0; return; }
     if (run > 0) { m.set(x, y, K.LOCKER); run--; } else if (R.ch(0.16)) { run = R.i(1, 4); m.set(x, y, K.LOCKER); }
   }); };
@@ -466,7 +466,7 @@ function genIndoor(R, S) {
   });
   // des fenêtres partout sur les murs extérieurs (la seule qui s'ouvre est entrouverte, avec son rideau qui vole)
   {
-    const nearExit = (x, y) => [[0, 0], [1, 0], [-1, 0], [2, 0], [-2, 0], [0, 1], [0, -1]].some(([dx, dy]) => m.get(x + dx, y + dy) > 29);
+    const nearExit = (x, y) => [[0, 0], [1, 0], [-1, 0], [2, 0], [-2, 0], [0, 1], [0, -1]].some(([dx, dy]) => isExitK(m.get(x + dx, y + dy)));
     const hasDec = (x, y) => m.decor.some(d => d.y === y && x >= d.x - 1 && x <= d.x + (d.w || 1));
     for (let x = 2; x < W - 2; x++) if (m.get(x, 0) === K.WALL && m.get(x, 1) === K.FLOOR && !nearExit(x, 0) && !hasDec(x, 0) && R.ch(0.5)) m.dec(x, 0, 'window');
     let lastB = -9; for (let x = 2; x < W - 2; x++) if (m.get(x, H1) === K.WALL && !isWallish(m.get(x, H1 - 1)) && m.get(x, H1 - 1) !== K.DOOR && !nearExit(x, H1) && x - lastB > 2 && R.ch(0.45)) { m.dec(x, H1, 'winb', { o: 'b' }); lastB = x; }
@@ -527,6 +527,7 @@ function placeTasks(g, L, ids) {
     let c = [];
     if (a.k) for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) if (a.k.includes(m.get(x, y)) && hasStand(x, y)) c.push([x, y]);
     if (a.wall) m.decor.forEach(d => { if (!a.wall.includes(d.t)) return; for (let i = 0; i < (d.w || 1); i++) if (m.get(d.x + i, d.y) === K.WALL && m.get(d.x + i, d.y + 1) === K.FLOOR) c.push([d.x + i, d.y + 1]); });
+    if (a.near != null) for (let y = 1; y < m.h - 1; y++) for (let x = 1; x < m.w - 1; x++) if (m.get(x, y) === K.FLOOR && D4.some(([dx, dy]) => m.get(x + dx, y + dy) === a.near)) c.push([x, y]);
     if (a.fdec) m.fdecor.forEach(d => { if (d.t === a.fdec && m.get(d.x, d.y + 1) === K.FLOOR) c.push([d.x, d.y + 1]); });
     if (a.floor) for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) if (m.get(x, y) === K.FLOOR && a.floor.test(m.roomAt(x, y))) c.push([x, y]);
     if (a.room) { const f = c.filter(([x, y]) => a.room.test(m.roomAt(x, y) || m.roomAt(x, y + 1) || m.roomAt(x + 1, y) || m.roomAt(x - 1, y))); if (f.length) c = f; }

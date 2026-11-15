@@ -139,7 +139,7 @@ const PETS = [
 ];
 const PET_CHARGES = 3;
 function petGive(P) {
-  const def = pick(PETS);
+  const def = pick(PETS.filter(p => !p.px));
   P.pet = { i: PETS.indexOf(def), e: def.e, n: def.n, charges: PET_CHARGES, x: P.x - 10, y: P.y + 2, hop: 0, t: 0 };
   return def;
 }
@@ -151,8 +151,10 @@ function petFollow(A, dt) {
   const fx = A.face === 2 ? 1 : A.face === 3 ? -1 : 0, fy = A.face === 0 ? 1 : A.face === 1 ? -1 : 0;
   const tx = A.hidden ? A.hidden.x * 16 + 8 + 12 : A.x - fx * 14 - (fx ? 0 : 8), ty = A.hidden ? A.hidden.y * 16 + 14 : A.y - fy * 12 + 2;
   const d = Math.hypot(tx - p.x, ty - p.y);
+  const ox = p.x;
   if (d > 4) { const k = Math.min(1, dt * (d > 60 ? 10 : 5)); p.x += (tx - p.x) * k; p.y += (ty - p.y) * k; p.moving = true; } else p.moving = false;
   if (d > 160) { p.x = tx; p.y = ty; }
+  p.vx = (p.x - ox) / Math.max(dt, 1e-3); cutePetMood(A, dt);
 }
 // le compagnon saute sur le prof qui t'attrape : il s'enfuit !
 function petScare(T, A, remote) {

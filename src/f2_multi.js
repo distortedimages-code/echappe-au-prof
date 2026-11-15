@@ -1,6 +1,6 @@
 // ================= SALON DU MODE À DEUX =================
 const Multi = {
-  role: 'student', level: 0, mode: 'classic',
+  role: 'student', level: 0, mode: 'classic', teamLevel: -1,
   open() {
     if (!UI.chars.length && Net.available()) { UI.openCreator(-1, 'multi'); return; }
     G.mode = 'menu'; UI.show('sMulti'); AU.play('menu'); this.menu();
@@ -27,7 +27,9 @@ const Multi = {
   },
   create() {
     const me = UI.cfg();
-    const b = this.body(`<div class="modes"><button class="mode" data-m="classic"><b>🏃 Cache-cache</b><span>5 niveaux, tu choisis ton rôle</span></button><button class="mode" data-m="inf"><b>🕵️ Infiltration</b><span>4 étages, rôles tirés au sort</span></button><button class="mode" data-m="coop"><b>🤝 En équipe</b><span>2 élèves contre les profs</span></button><button class="mode" data-m="guard"><b>👮 Surveillants</b><span>2 surveillants contre 2 fugueurs</span></button></div>
+    const b = this.body(`<div class="modes"><button class="mode" data-m="classic"><b>🏃 Cache-cache</b><span>1 élève contre 1 prof</span></button><button class="mode" data-m="inf"><b>🕵️ Infiltration</b><span>4 étages, rôles tirés au sort</span></button><button class="mode" data-m="coop"><b>🤝 En équipe</b><span>2 élèves contre les profs</span></button><button class="mode" data-m="guard"><b>👮 Surveillants</b><span>2 surveillants contre les fugueurs</span></button></div>
+      <div id="mTeamPick"><h3 class="px" style="font-size:11px;color:var(--cyan)">Où ?</h3><div class="lvlpick" id="mTeamLv"><button data-t="-1"><b>🏫</b><span>Le grand collège (4 étages)</span></button>${LEVELS.map((L, i) => `<button data-t="${i}"><b>${L.bonus ? '🚌' : i + 1}</b><span>${esc(L.title)}</span></button>`).join('')}</div></div>
+      <div id="mTeamLvInfo" class="panel howto"></div>
       <div id="mGuardInfo" class="panel howto">👮 <b>Surveillants en équipe</b> : vous êtes <b>deux surveillants</b>. Deux élèves vont filer de leur classe du 3e étage pour s’échapper du collège. Trouvez-les parmi les autres élèves et attrapez-les (✋) avant qu’ils ne sortent !<br>🔍 Ils se cachent quand ils vous voient : fouillez les cachettes. 🔔 Écoutez : quelqu’un qui crochète la grille du 1er, ça fait du bruit… 📍 Appelez-vous et partagez-vous les étages !</div>
       <div id="mCoopInfo" class="panel howto">🤝 <b>Infiltration en équipe</b> : vous êtes <b>deux élèves</b>, assis côte à côte au 3e étage. Échappez-vous du collège <b>tous les deux</b> !<br>🥁 Faites diversion, ✊ frappez aux portes pour attirer les profs, 📍 appelez-vous… Si l’un se fait attraper, il part en <b>salle de colle</b> (1er étage) : l’autre doit venir le libérer. Le vieux portail ? Il faut être deux pour le pousser !</div>
       <div id="mInfInfo" class="panel howto">🕵️ <b>Infiltration à deux</b> : l’élève part de sa classe au 3e étage et doit s’échapper par la cour. L’autre joueur est <b>le surveillant</b> : il se promène dans tous les couloirs, d’étage en étage, pour l’attraper.<br>🎲 Les rôles sont tirés au sort à chaque partie, et l’élève choisit une nouvelle apparence au début.</div>
@@ -37,24 +39,30 @@ const Multi = {
         <button class="role" data-r="teacher"><canvas width="20" height="34"></canvas><b>Le prof</b><span>celui du niveau</span></button>
       </div>
       <h3 class="px" style="font-size:11px;color:var(--cyan)">Niveau</h3>
-      <div class="lvlpick">${LEVELS.map((L, i) => PROFS[L.prof].lesson ? '' : `<button data-l="${i}"><b>${i + 1}</b><span>${esc(L.title)}</span></button>`).join('')}</div>
+      <div class="lvlpick">${LEVELS.map((L, i) => `<button data-l="${i}"><b>${L.bonus ? '🚌' : i + 1}</b><span>${esc(L.title)}</span></button>`).join('')}</div>
       <button class="procTog" id="mProc"></button></div>
       <button class="btn big green" id="mGo">Créer ▶</button>
       <button class="btn ghost" id="mBack">◀ Retour</button>`);
     const paint = () => {
       b.querySelectorAll('.role').forEach(r => r.classList.toggle('sel', r.dataset.r === this.role));
-      b.querySelectorAll('.lvlpick button').forEach(r => r.classList.toggle('sel', +r.dataset.l === this.level));
+      b.querySelectorAll('#mClassic .lvlpick button').forEach(r => r.classList.toggle('sel', +r.dataset.l === this.level));
       const pr = PROFS[LEVELS[this.level].prof], cvs = b.querySelectorAll('.role canvas');
       portrait(cvs[0], me, null, 1); portrait(cvs[1], pr.cfg, pr.v, 1);
       b.querySelector('.role[data-r="teacher"] span').textContent = pr.name;
       b.querySelectorAll('.mode').forEach(r => r.classList.toggle('sel', r.dataset.m === this.mode));
-      $('mClassic').classList.toggle('hidden', this.mode !== 'classic'); $('mInfInfo').classList.toggle('hidden', this.mode !== 'inf'); $('mCoopInfo').classList.toggle('hidden', this.mode !== 'coop'); $('mGuardInfo').classList.toggle('hidden', this.mode !== 'guard');
+      const team = this.mode === 'coop' || this.mode === 'guard', college = this.teamLevel < 0;
+      b.querySelectorAll('#mTeamLv button').forEach(r => r.classList.toggle('sel', +r.dataset.t === this.teamLevel));
+      $('mClassic').classList.toggle('hidden', this.mode !== 'classic'); $('mInfInfo').classList.toggle('hidden', this.mode !== 'inf'); $('mTeamPick').classList.toggle('hidden', !team);
+      $('mCoopInfo').classList.toggle('hidden', !(this.mode === 'coop' && college)); $('mGuardInfo').classList.toggle('hidden', !(this.mode === 'guard' && college));
+      const tl = $('mTeamLvInfo'); tl.classList.toggle('hidden', !team || college);
+      if (team && !college) { const L = LEVELS[this.teamLevel], pr = PROFS[L.prof]; tl.innerHTML = this.mode === 'coop' ? '🤝 <b>' + esc(L.title) + '</b> à deux contre <b>' + esc(pr.name) + '</b> (l’ordinateur). Faites les 3 tâches (à vous deux) et sortez <b>tous les deux</b> ! Attrapé·e ? Direction la <b>salle de colle</b> : l’autre peut venir ouvrir la porte (🔓).' : '👮 <b>' + esc(L.title) + '</b> : vous êtes deux surveillants. Des élèves sèchent les cours (l’ordinateur) : ils font leurs tâches puis filent par une sortie secrète. Attrapez-les (✋) ou fouillez leurs cachettes (🔍) ! 3 évasions et c’est fini.'; }
     };
     b.querySelectorAll('.mode').forEach(r => r.onclick = () => { AU.sfx('tick'); this.mode = r.dataset.m; paint(); });
     b.querySelectorAll('.role').forEach(r => r.onclick = () => { AU.sfx('tick'); this.role = r.dataset.r; paint(); });
-    b.querySelectorAll('.lvlpick button').forEach(r => r.onclick = () => { AU.sfx('tick'); this.level = +r.dataset.l; paint(); });
+    b.querySelectorAll('#mClassic .lvlpick button').forEach(r => r.onclick = () => { AU.sfx('tick'); this.level = +r.dataset.l; paint(); });
+    b.querySelectorAll('#mTeamLv button').forEach(r => r.onclick = () => { AU.sfx('tick'); this.teamLevel = +r.dataset.t; paint(); });
     paint(); UI.paintProc($('mProc'));
-    $('mGo').onclick = () => { AU.init(); AU.sfx('blip'); this.status('Création de la partie…', true); Net.mode = this.mode; Net.host(this.role, this.level); };
+    $('mGo').onclick = () => { AU.init(); AU.sfx('blip'); this.status('Création de la partie…', true); Net.mode = this.mode; Net.teamLevel = this.teamLevel; Net.host(this.role, this.level); };
     $('mBack').onclick = () => { AU.sfx('blip'); this.menu(); };
   },
   waiting(code) {
@@ -92,6 +100,8 @@ const Multi = {
     $('mBack').onclick = () => { AU.sfx('blip'); Net.close(true); G.net = null; UI.openTitle(); };
   },
   intro() {
+    if (G.net && G.net.cc) { this.introCC(); return; }
+    if (G.net && G.net.cg) { this.introCG(); return; }
     if (G.inf && G.inf.guard) { this.introGuard(); return; }
     if (G.inf && G.inf.coop) { this.introCoop(); return; }
     if (G.inf) { this.introInf(); return; }
@@ -227,6 +237,61 @@ const Multi = {
     $('toast').classList.add('hidden'); $('banner').classList.add('hidden');
     AU.play('sneak');
   },
+  introCC() {
+    const L = LEVELS[Net.setup.lvl], pr = PROFS[L.prof], me = G.P.cfg, Q = G.P2;
+    $('inNum').textContent = '🤝 EN ÉQUIPE · ' + L.place.toUpperCase();
+    $('inTitle').textContent = L.title;
+    portrait($('inProf'), pr.cfg, pr.v, 1); $('inName').textContent = pr.name; $('inRole').textContent = 'Contre vous deux. Ton équipier : ' + (Q.cfg.name || 'ton équipier');
+    $('inQuote').textContent = '« ' + pr.lines.start + ' »';
+    $('inMission').innerHTML = '<b style="color:var(--yel)">Votre mission :</b> 3 <b>tâches</b> (à vous deux), puis sortez <b>tous les deux</b>. 7 min.'
+      + '<div class="looks"><button class="btn cyan" id="bLook">🎲 Changer d’apparence</button><button class="btn ghost" id="bMine">😀 Mon perso</button></div>';
+    const hints = (G.L.holdHints ? L.hints.filter(h => !/^(🪟|🚨|🛗)/u.test(h)).concat(G.L.holdHints) : L.hints.slice()).concat([
+      '🔒 Attrapé·e ? Salle de colle' + (G.cc.jail ? ' : « ' + G.cc.jail.r.name + ' »' : '') + '. Ton équipier peut venir t’ouvrir (🔓).',
+      '📋 Une tâche faite par l’un compte pour les deux.']);
+    $('inHints').innerHTML = ''; $('inHints').dataset.title = '💡 Comment jouer'; hints.forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
+    $('inTips').innerHTML = (G.L.pool ? '🤿 Plonge (10 s) · 🪜 saute du plongeoir !<br>' : '') + (G.power ? '⚡ Un disjoncteur : coupez le courant !<br>' : '') + '✨ Objets magiques cachés dans les meubles.<br>👆 Un peu = discret · à fond = bruyant.';
+    const setLook = cfg => { cfg.name = me.name; G.P.cfg = cfg; portrait($('inProf'), cfg, null, 1); Net.send({ t: 'look', cfg }); AU.sfx('pouf', 0.5); };
+    $('bLook').onclick = () => setLook(randomChar(me.name));
+    $('bMine').onclick = () => { const c = UI.cfg(); if (c) setLook(Object.assign({}, c)); };
+    $('bGo').textContent = 'Prêt !'; $('bGo').disabled = false;
+    G.mode = 'intro'; UI.show('sIntro'); UI.hudSig = null; UI.invSig = null;
+    $('toast').classList.add('hidden'); $('banner').classList.add('hidden');
+    AU.play('sneak');
+  },
+  introCG() {
+    const L = LEVELS[Net.setup.lvl], pr = G.T.prof, Q = G.T2;
+    $('inNum').textContent = '👮 SURVEILLANTS EN ÉQUIPE · ' + L.place.toUpperCase();
+    $('inTitle').textContent = L.title;
+    portrait($('inProf'), pr.cfg, pr.v, 1); $('inName').textContent = pr.name; $('inRole').textContent = 'C’est toi ! Ton collègue : ' + Q.prof.name;
+    $('inQuote').textContent = '« Personne ne sèche les cours quand on est de service. »';
+    $('inMission').innerHTML = '<b style="color:var(--yel)">Mission :</b> attrapez les élèves qui sèchent. Leur <b>photo</b> 📸 est en haut à droite. Au bout de 3 évasions, fin de service.';
+    $('inHints').innerHTML = ''; $('inHints').dataset.title = '🚪 Les sorties à surveiller'; (G.L.holdHints ? L.hints.filter(h => !/^(🪟|🚨|🛗)/u.test(h)).concat(G.L.holdHints) : L.hints).forEach(h => { const li = document.createElement('li'); li.textContent = h; $('inHints').appendChild(li); });
+    $('inTips').innerHTML = '✋ Attrape de près. Pas le bon ? La tête qui tourne 3 s.<br>🔍 Fouille les cachettes : ils adorent s’y planquer.<br>📋 L’élève fait 3 tâches, puis file par une sortie.';
+    $('bGo').textContent = 'En service ! 🚨'; $('bGo').disabled = false;
+    G.mode = 'intro'; UI.show('sIntro'); UI.hudSig = null; UI.invSig = null;
+    $('toast').classList.add('hidden'); $('banner').classList.add('hidden'); $('hint').classList.add('hidden');
+    AU.play('sneak');
+  },
+  resultCC(outcome) {
+    const p = $('resPanel'), P = G.P, Q = G.P2, out = (P.out ? 1 : 0) + (Q.out ? 1 : 0), L = LEVELS[Net.setup.lvl];
+    const t = G.time, mm = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+    let title, line, win = outcome === 'win';
+    if (win) { title = 'LIBRES<br>TOUS LES DEUX !'; line = 'Vous vous êtes échappés ensemble. Quelle équipe !'; AU.sfx('win'); }
+    else if (outcome === 'jail') { title = 'COLLÉS<br>TOUS LES DEUX !'; line = '« ' + PROFS[L.prof].lines.caught + ' »'; AU.sfx('fail'); }
+    else { title = 'DRIIING !'; line = out ? 'La sonnerie : ' + (P.out ? 'tu es sorti·e, mais pas ' + (Q.cfg.name || 'ton équipier') : (Q.cfg.name || 'Ton équipier') + ' est sorti·e, mais pas toi') + '…' : 'La sonnerie a sonné… vous êtes encore coincés !'; }
+    p.innerHTML = `<div class="bigtitle" style="color:${win ? 'var(--green)' : out ? 'var(--yel)' : 'var(--red)'}">${title}</div>
+      <div class="stars">${win ? '🏆🏆' : out ? '🏆' : '😵'}</div>
+      <div class="quote" style="text-align:center">${esc(line)}</div>
+      <div class="stats"><span>⏱️ ${mm}</span><span>🚪 ${out}/2 dehors</span><span>🔒 colle ×${G.cc ? G.cc.colles : 0}</span><span>📋 ${G.tasksDone}/${G.tasks.length}</span></div>
+      <div class="prof"><canvas id="rLook" width="20" height="34"></canvas><canvas id="rLook2" width="20" height="34"></canvas><div class="quote">${esc(P.cfg.name || 'Toi')} &amp; ${esc(Q.cfg.name || 'ton équipier')}</div></div>
+      <button class="btn big green" id="rAgain">🤝 Rejouer en équipe</button>
+      <button class="btn ghost" id="rQuit">🏠 Quitter la partie</button>
+      <div class="tiny" id="rStat" style="text-align:center"></div>`;
+    portrait($('rLook'), P.cfg, null, 1); portrait($('rLook2'), Q.cfg, null, 1);
+    $('rAgain').onclick = () => { AU.sfx('blip'); if (!Net.isHost) $('rStat').textContent = '⏳ Demande envoyée à ton équipier…'; Net.newRound(false); };
+    $('rQuit').onclick = () => { AU.sfx('blip'); Net.close(); G.net = null; UI.openTitle(); };
+    UI.show('sResult');
+  },
   resultCoop(outcome) {
     const I = G.inf, p = $('resPanel'), P = G.P, Q = G.P2, out = (P.out ? 1 : 0) + (Q.out ? 1 : 0);
     const t = G.time, mm = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
@@ -249,6 +314,7 @@ const Multi = {
     UI.show('sResult');
   },
   result(outcome) {
+    if (G.net && G.net.cc) { this.resultCC(outcome === 'escaped' ? 'win' : 'time'); return; }
     if (G.inf && G.inf.coop) { this.resultCoop(outcome === 'escaped' ? 'win' : 'time'); return; }
     if (G.inf) { this.resultInf(outcome); return; }
     const role = Net.role, p = $('resPanel'), st = G.P.cfg.name || 'l’élève', pr = G.T.prof;
@@ -259,7 +325,7 @@ const Multi = {
     else if (outcome === 'caught') { title = role === 'student' ? 'HEURE<br>DE COLLE !' : 'ATTRAPÉ !'; line = role === 'student' ? '« ' + pr.lines.caught + ' »' : 'Bravo, tu as attrapé ' + st + ' !'; }
     else { title = 'DRIIING !'; line = role === 'student' ? 'La sonnerie a sonné… le prof gagne !' : 'La sonnerie a sonné : tu gagnes !'; }
     // les cours d'anglais et d'histoire-géo sont pour le jeu en solo
-    let nextLvl = Net.level + 1; while (nextLvl < LEVELS.length && PROFS[LEVELS[nextLvl].prof].lesson) nextLvl++;
+    const nextLvl = Net.level + 1;
     const lastLvl = nextLvl >= LEVELS.length;
     p.innerHTML = `<div class="bigtitle" style="color:${win ? 'var(--green)' : 'var(--red)'}">${title}</div>
       <div class="stars">${win ? '🏆' : '😵'}</div>

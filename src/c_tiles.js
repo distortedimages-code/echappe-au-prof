@@ -98,13 +98,14 @@ function drawWallDecor(c, px, py, d, i) {
     case 'alarm': R(4, 4, 8, 9, '#1a1028'); R(5, 5, 6, 7, '#e43b44'); R(6, 6, 4, 3, '#ffffff'); R(7, 7, 2, 1, '#e43b44'); R(6, 10, 4, 1, '#ff9fa8'); R(5, 5, 6, 1, '#ff6b74'); break;
     case 'evac': R(1, 3, 14, 11, '#1a6b3a'); R(2, 4, 12, 9, '#f6f2e0'); R(3, 5, 4, 3, '#9ad0a0'); R(8, 5, 4, 3, '#9ad0a0'); R(3, 9, 9, 1, '#63c74d'); R(11, 9, 1, 3, '#e43b44'); R(10, 11, 3, 1, '#e43b44'); break;
     case 'stairsign': R(3, 4, 10, 8, '#2f9e5a'); R(4, 5, 8, 6, '#3fc070'); R(6, 6, 1, 4, '#ffffff'); R(6, 9, 4, 1, '#ffffff'); R(9, 6, 1, 3, '#ffffff'); break;
-    default: drawWallDecorX(c, px, py, d, i, R);
+    default: if (!drawWallDecor2(c, px, py, d, i, R)) drawWallDecorX(c, px, py, d, i, R);
   }
 }
 function drawFurniture(c, k, px, py, tx, ty, m, L) {
   const R = (a, b, w, h, col) => { c.fillStyle = col; c.fillRect(px + a, py + b, w, h); };
   const same = (dx, dy) => m.get(tx + dx, ty + dy) === k;
   const h = hash2(tx, ty);
+  if (k >= 40 && drawFurniture2(c, k, px, py, tx, ty, m, L, R, h)) return;
   switch (k) {
     case K.DESK: {
       const l = !same(-1, 0), r = !same(1, 0), x0 = l ? 1 : 0, w = 16 - x0 - (r ? 1 : 0);
@@ -263,6 +264,8 @@ function renderMapCanvas(L) {
     drawFurniture(c, k, px, py, x, y, m, L);
     const fk = FRONT_KINDS[k]; if (fk) L.fronts.push({ k, x: px + fk.x, y: py + fk.y, w: fk.w, h: fk.h, base: py + 15 });
   }
+  // le plongeoir : tour + planche par-dessus l'eau
+  if (m.board) { const B = m.board, cv2 = boardSprite(B.len, B.dir), x = B.dir > 0 ? B.lx * 16 - 4 : (B.lx + 1) * 16 + 4 - cv2.width; L.fronts.push({ cv: cv2, x, y: B.ly * 16 + 16 - cv2.height, w: cv2.width, h: cv2.height, base: B.ly * 16 + 15 }); }
   // 4) décor mural
   m.decor.forEach(d => {
     if (d.t === 'winb') { if (m.get(d.x, d.y) === K.WALL) drawWinTop(c, d.x * 16, d.y * 16, d.o); return; }
