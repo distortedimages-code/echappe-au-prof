@@ -363,6 +363,14 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
 #qzEnd{position:relative}.qzConf{position:absolute;top:-10px;width:8px;height:12px;border-radius:2px;pointer-events:none;animation:qzFall 2s linear forwards}
 @keyframes qzFall{to{transform:translateY(520px) rotate(540deg);opacity:0}}
 #sLesson .qzShot{margin-top:-2px}.lsRef{font-size:18px;color:#1f4e99;margin-top:4px}
+
+/* ---- sauvegarde ---- */
+.svPanel{margin:0 auto 12px;animation:none;font-size:19px}.svPanel p{margin:6px 0}
+.svStat{font-family:'Press Start 2P',monospace;font-size:11px;color:#1f4e99;margin-bottom:6px;line-height:1.5}
+.svCode{width:100%;box-sizing:border-box;font-family:ui-monospace,monospace;font-size:12px;padding:8px;border:3px solid var(--ink);border-radius:8px;background:#fff;color:var(--ink);user-select:text;-webkit-user-select:text;touch-action:manipulation;word-break:break-all;resize:none}
+.svRow{display:flex;gap:8px;flex-wrap:wrap}.svRow .btn{flex:1}
+.svHr{border:none;border-top:3px dashed #d8c8b0;margin:12px 0}
+.svMsg{font-size:19px;margin-top:6px}.svMsg.ok{color:#2e8a3a}.svMsg.ko{color:#d0283a}
 </style>
 </head>
 <body>
@@ -431,6 +439,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <button class="btn sqBtn" id="bSquish">🧸 Mes squishies</button>
       <button class="btn qzBtn" id="bQuiz">🦴 L’interro de M. Silex</button>
       <button class="btn qzBtnEn" id="bQuizEn">🇬🇧 Le quiz de Miss Teacup</button>
+      <button class="btn ghost svBtn" id="bSave">💾 Ma sauvegarde</button>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
       <div class="panel howto">
@@ -502,6 +511,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <div class="sqInfo" id="sqInfo"></div>
       <div class="sqGrid" id="sqGrid"></div>
       <div class="tiny" style="text-align:center">Un squishy t’attend dans chaque niveau (et à chaque étage en infiltration). Si un prof t’attrape, il explose à sa figure : c’est ta seconde chance !</div>
+      <button class="btn green" id="bSqSave">💾 Sauvegarder ma collection</button>
       <button class="btn ghost" id="bSqBack">◀ Retour</button>
     </div>
   </div>
@@ -557,6 +567,26 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     </div>
   </div>
   <div id="qzZoom" class="hidden"><div class="qzZoomBox"><div class="qzZoomHead"><span id="qzZoomT"></span><button id="qzZoomX" aria-label="Fermer la photo">✖</button></div><div id="qzZoomScroll"><div id="qzZoomPage"></div></div></div></div>
+
+  <!-- Sauvegarde -->
+  <div id="sSave" class="screen hidden">
+    <div class="wrap">
+      <h2 class="px" style="text-align:center;color:#7dff9a">💾 Ma sauvegarde</h2>
+      <div class="lsPanel svPanel">
+        <div class="svStat" id="svStat"></div>
+        <p>Ta collection est rangée dans ce téléphone. Les mises à jour du jeu ne l’effacent pas. Mais si tu changes de téléphone ou de navigateur, ou si on vide Safari, elle disparaît.</p>
+        <p><b>Garde ce code</b> (dans Notes, ou envoie-le à papa) : il te rend tout, n’importe où.</p>
+        <textarea id="svCode" class="svCode" readonly rows="3"></textarea>
+        <div class="svRow"><button class="btn green" id="svCopy">📋 Copier mon code</button><button class="btn cyan" id="svShare">📤 Envoyer</button></div>
+        <hr class="svHr">
+        <p><b>Récupérer une sauvegarde :</b> colle ton code ici. Rien n’est perdu : les squishies, records et personnages s’ajoutent à ceux que tu as déjà.</p>
+        <textarea id="svIn" class="svCode" rows="3" placeholder="NDS1-…"></textarea>
+        <button class="btn" id="svGo">♻️ Récupérer</button>
+        <div id="svMsg" class="svMsg"></div>
+      </div>
+      <button class="btn ghost" id="svBack">◀ Retour</button>
+    </div>
+  </div>
 
   <!-- Intro de niveau -->
   <div id="sIntro" class="overlay hidden">
