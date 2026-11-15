@@ -327,8 +327,8 @@ const Solo = {
   },
   // la photo de l'élève recherché, en haut à droite
   hud() {
-    const S = G.solo, el = $('hWanted'); if (!S) { el.classList.add('hidden'); return; }
-    el.classList.remove('hidden');
+    const S = G.solo, el = $('hWanted'); if (!S) { hideEl(el); return; }
+    hideEl(el, false);
     const P = G.P, sig = S.phase + '|' + (P.cfg && P.cfg.name) + '|' + S.caught + '|' + S.lives;
     if (sig === this.sig) return; this.sig = sig;
     const hunt = S.phase === 'hunt';

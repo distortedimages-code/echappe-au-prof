@@ -542,12 +542,12 @@ const UI = {
     }
     this.hudT -= dt; if (this.hudT > 0) return; this.hudT = 0.12;
     const VA = viewerA(), teach = G.net && G.net.role === 'teacher';
-    if (Solo.on()) Solo.hud(); else $('hWanted').classList.add('hidden');
+    if (Solo.on()) Solo.hud(); else hideEl($('hWanted'));
     const [tx, ty] = tileOf(VA); let rn = G.m.roomAt(tx, ty) || '…';
     if (G.inf && /^Escalier [AB]$/.test(rn)) { const k = stairKind(rn.slice(-1)), to = k === 'up' ? G.inf.cur + 1 : G.inf.cur - 1; rn += k === 'down' ? ' ⬇ descend ' + (to === 0 ? 'au RDC' : 'au ' + INF_FLOOR_META[to].short) : k === 'up' ? ' ⬆ monte au ' + INF_FLOOR_META[to].short : k === 'locked' ? ' 🔒 grille fermée' : ' 🚧 fermé'; }
     const rt = '📍 ' + (G.inf ? INF_FLOOR_META[G.inf.cur].short + ' · ' : '') + rn; if ($('hRoom').textContent !== rt) $('hRoom').textContent = rt;
-    if (G.inf) this.hudInf(); else { $('bDiv').classList.add('hidden'); $('bPing').classList.add('hidden'); }
-    $('inv').style.visibility = teach ? 'hidden' : '';
+    if (G.inf) this.hudInf(); else { hideEl($('bDiv')); hideEl($('bPing')); }
+    { const v = teach ? 'hidden' : ''; if ($('inv').style.visibility !== v) $('inv').style.visibility = v; }
     const st = $('hStatus'); let s = '😌 Calme', cls = '';
     if (G.net && !(G.inf && G.inf.coop)) {
       if (teach) {
@@ -574,10 +574,10 @@ const UI = {
       case 'caught': s = '😱 Oh non !'; cls = 'alarm'; break;
       case 'blind': s = '🙈 Aveuglé par le squishy !'; cls = 'cool'; break;
     }
-    st.textContent = s; st.className = 'chip ' + cls;
+    setTxt(st, s); if (st.className !== 'chip ' + cls) st.className = 'chip ' + cls;
     const t = G.net ? Math.max(0, Net.timeLeft) : G.time, ht = $('hTime');
-    ht.textContent = (G.net ? '⏰ ' : '⏱ ') + Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
-    ht.style.color = G.net && t < 30 ? '#ff8a96' : '';
+    setTxt(ht, (G.net ? '⏰ ' : '⏱ ') + Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0'));
+    { const c = G.net && t < 30 ? '#ff8a96' : ''; if (ht.__col !== c) { ht.__col = c; ht.style.color = c; } }
     const tOpen = !!this.tasksOpen || G.time < 6 || G.time < (this.taskPeekT || 0);
     if (G.inf) { /* objectifs gérés par hudInf */ } else if (G.tasks !== this.taskRef || (teach ? 'T' + (G.tasksRemote || 0) : G.tasks.map(t => t.done ? 1 : 0).join('') + tOpen) !== this.taskSig) {
       if (G.tasks === this.taskRef && !teach && G.tasksDone > (this.taskDoneN || 0)) { this.taskPeekT = G.time + 3.5; }
@@ -593,22 +593,26 @@ const UI = {
         el.classList.toggle('all', all);
       }
     }
-    if (G.mode === 'intro') $('hTasks').classList.add('hidden'); else if (G.tasks.length) $('hTasks').classList.remove('hidden');
-    $('hLocks').textContent = teach ? (T.hasKeys ? '🔑 ✔' : '🔑 ✘') : '🔑×' + locksLeft();
+    if (G.mode === 'intro') hideEl($('hTasks')); else if (G.tasks.length) hideEl($('hTasks'), false);
+    setTxt($('hLocks'), teach ? (T.hasKeys ? '🔑 ✔' : '🔑 ✘') : '🔑×' + locksLeft());
     { const pt = G.P && G.P.pet, txt = pt && pt.leaveT == null ? pt.e + ' ' + '❤'.repeat(Math.max(0, pt.charges)) : ''; const el = $('hPet'); el.classList.toggle('hidden', !txt); if (el.textContent !== txt) el.textContent = txt; }
-    const d = dist(T.x, T.y, P.x, P.y) / 16; $('hHeart').textContent = teach ? '🎯' : (T.state === 'chase' || G.alarmT > 0) ? '❤️‍🔥' : d < 4 ? '💓' : d < 8 ? '💗' : '🤍';
+    const d = dist(T.x, T.y, P.x, P.y) / 16; setTxt($('hHeart'), teach ? '🎯' : (T.state === 'chase' || G.alarmT > 0) ? '❤️‍🔥' : d < 4 ? '💓' : d < 8 ? '💗' : '🤍');
     const eff = [];
-    if (teach) { if (G.slowT > 0) eff.push('🐢 Ralenti ' + Math.ceil(G.slowT) + 's'); $('hEffects').innerHTML = eff.map(e => `<div>${e}</div>`).join(''); $('hHidden').classList.add('hidden'); return; }
+    if (teach) { if (G.slowT > 0) eff.push('🐢 Ralenti ' + Math.ceil(G.slowT) + 's'); setHTML($('hEffects'), eff.map(e => `<div>${e}</div>`).join('')); hideEl($('hHidden')); return; }
     if (P.small > 0) eff.push('🍰 Petit ' + Math.ceil(P.small) + 's');
     if (P.slip > 0) eff.push('👠 Silence ' + Math.ceil(P.slip) + 's');
     if (P.disguised && P.disguiseT > 0) eff.push('🥸 Déguisé ' + Math.ceil(P.disguiseT) + 's');
     if (G.reveal > 0) eff.push('🪞 Miroir ' + Math.ceil(G.reveal) + 's');
     if (G.slowT > 0) eff.push('⏱️ Ralenti ' + Math.ceil(G.slowT) + 's');
-    $('hEffects').innerHTML = eff.map(e => `<div>${e}</div>`).join('');
+    setHTML($('hEffects'), eff.map(e => `<div>${e}</div>`).join(''));
     const hh = $('hHidden');
-    if (P.hidden) { hh.classList.remove('hidden'); hh.textContent = '🤫 Chut… ' + P.hidden.n; } else hh.classList.add('hidden');
+    if (P.hidden) { hideEl(hh, false); setTxt(hh, '🤫 Chut… ' + P.hidden.n); } else hideEl(hh);
   }
 };
+// on n'écrit dans la page que si le texte change : réécrire le même texte force quand même le navigateur à tout remettre en page
+function setTxt(el, s) { if (el && el.textContent !== s) el.textContent = s; }
+function hideEl(el, on = true) { if (el && el.classList.contains('hidden') !== on) el.classList.toggle('hidden', on); }
+function setHTML(el, s) { if (el && el.__h !== s) { el.__h = s; el.innerHTML = s; } }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 // ================= ÉCRAN TITRE ANIMÉ =================
@@ -646,7 +650,11 @@ function loop(ts) {
     if (['play', 'escape', 'caught', 'timeup'].includes(G.mode) && !G.overlay) update(dt);
     TaskUI.tick(dt); UI.tickInf();
     if (G.P && ['play', 'intro', 'paused', 'escape', 'caught', 'timeup', 'result'].includes(G.mode)) renderGame(dt);
-    else { V.ctx.setTransform(1, 0, 0, 1, 0, 0); V.ctx.fillStyle = '#22163f'; V.ctx.fillRect(0, 0, V.W, V.H); }
+    else {
+      // hors partie : un fond uni, peint une seule fois (pas à chaque image), et pas de calques d'effets
+      postShow('postFx', 0); postShow('postChase', 0); postShow('postAlarm', 0);
+      if (!V.blank) { V.blank = true; V.ctx.setTransform(1, 0, 0, 1, 0, 0); V.ctx.fillStyle = '#22163f'; V.ctx.fillRect(0, 0, V.W, V.H); if (V.cv.style.filter) V.cv.style.filter = ''; }
+    }
     UI.hud(dt); UI.tickCreator(dt); Title.draw(dt);
   } catch (e) { console.error(e); window.__err = (window.__err || '') + e.stack + '\n'; }
   requestAnimationFrame(loop);

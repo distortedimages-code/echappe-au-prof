@@ -30,11 +30,14 @@ function roomVisUpdate(dt, P) {
 }
 // une personne est-elle visible ? (dans un couloir, ou dans une pièce qui n'est pas dans le noir)
 function regionVisible(x, y) { const m = G.m; if (!m || !m.vroomAt || easyOn()) return true; const i = vroomOf(m, x, y); return i < 0 || m.vrooms[i].a < 0.97; }
-function drawRoomShade(fx, ox, oy) {
+// (vx, vy, vw, vh) : la partie visible, en pixels du monde — on ne peint que ce qui est à l'écran
+function drawRoomShade(fx, ox, oy, vx, vy, vw, vh) {
   const m = G.m; if (!m || !m.vrooms) return;
   for (const r of m.vrooms) {
     if (r.a <= 0.01) continue;
+    let x0 = r.x * 16, y0 = r.y * 16, x1 = x0 + r.w * 16, y1 = y0 + r.h * 16 - (TALL_KINDS.has(m.get(r.x, r.y + r.h)) ? OVERHANG : 0);
+    if (vw != null) { x0 = Math.max(x0, vx - 2); y0 = Math.max(y0, vy - 2); x1 = Math.min(x1, vx + vw + 2); y1 = Math.min(y1, vy + vh + 2); if (x1 <= x0 || y1 <= y0) continue; }
     fx.fillStyle = 'rgba(14,8,34,' + (0.93 * r.a).toFixed(3) + ')';
-    fx.fillRect(r.x * 16 + ox, r.y * 16 + oy, r.w * 16, r.h * 16 - (TALL_KINDS.has(m.get(r.x, r.y + r.h)) ? OVERHANG : 0));
+    fx.fillRect(x0 + ox, y0 + oy, x1 - x0, y1 - y0);
   }
 }

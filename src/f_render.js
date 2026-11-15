@@ -9,14 +9,23 @@ const Perf = {
     this.acc += dt; this.n++;
     if (this.acc < 2) return;
     const avg = this.acc / this.n; this.acc = 0; this.n = 0;
-    this.slow = avg > 0.0215 ? (this.slow || 0) + 1 : 0;
-    if (this.slow >= 2 && this.q < Q_LEVELS.length - 1 && (window.devicePixelRatio || 1) > Q_LEVELS[this.q + 1]) { this.slow = 0; this.q++; this.lowered = true; this.good = 0; store.set('nds_q', this.q); resizeView(); }
+    // on vient de baisser la qualité : est-ce que ça a aidé ? Sinon (iPhone en mode économie d'énergie,
+    // limité à 30 images/s quoi qu'on fasse), on remet la belle image et on ne touche plus à rien
+    if (this.check) {
+      if (--this.check.n > 0) return;
+      const c = this.check; this.check = null;
+      if (avg > c.avg * 0.9) { this.stuck = true; this.slow = 0; if (this.q !== c.q) { this.q = c.q; store.set('nds_q', this.q); resizeView(); } }
+      return;
+    }
+    this.slow = avg > 0.0195 ? (this.slow || 0) + 1 : 0;   // moins de ~50 images/s pendant 4 s : on allège
+    if (this.slow >= 2 && !this.stuck && this.q < Q_LEVELS.length - 1 && (window.devicePixelRatio || 1) > Q_LEVELS[this.q + 1]) { this.slow = 0; this.check = { avg, q: this.q, n: 2 }; this.q++; this.lowered = true; this.good = 0; store.set('nds_q', this.q); resizeView(); }
     else if (avg < 0.0175 && this.q > 0 && !this.lowered) { if (++this.good >= 6) { this.good = 0; this.q--; store.set('nds_q', this.q); resizeView(); } }
   }
 };
 const V = { cv: null, ctx: null, lo: null, lx: null, fog: null, fx: null, S: 3, lw: 0, lh: 0, dpr: 1, camX: 0, camY: 0, W: 0, H: 0, a: 1, e: 0, f: 0, post: null };
 function setupView() {
-  V.cv = document.getElementById('game'); V.ctx = V.cv.getContext('2d');
+  // canvas opaque : le navigateur n'a pas à le mélanger avec la page derrière (plus rapide)
+  V.cv = document.getElementById('game'); V.ctx = V.cv.getContext('2d', { alpha: false }) || V.cv.getContext('2d');
   [V.lo, V.lx] = mkCanvas(10, 10); [V.fog, V.fx] = mkCanvas(10, 10);
   resizeView(); addEventListener('resize', () => { clearTimeout(V.rzT); V.rzT = setTimeout(resizeView, 120); });
 }
@@ -31,7 +40,7 @@ function resizeView() {
   V.lw = Math.ceil(V.W / V.S) + 2; V.lh = Math.ceil(V.H / V.S) + 2;
   V.lo.width = V.lw; V.lo.height = V.lh; V.fog.width = V.lw; V.fog.height = V.lh;
   V.lx.imageSmoothingEnabled = false; V.ctx.imageSmoothingEnabled = false;
-  bakePost();
+  V.blank = false; bakePost();
 }
 // halo de lumière chaude, dessiné une seule fois
 let GLOW = null;
@@ -39,15 +48,29 @@ function glowSprite() {
   if (GLOW) return GLOW; const [c, x] = mkCanvas(64, 64), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
   g.addColorStop(0, 'rgba(255,214,150,1)'); g.addColorStop(1, 'rgba(255,214,150,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return (GLOW = c);
 }
+// vignette, lignes TV, lueur rouge de poursuite : des calques CSS posés sur le canvas.
+// C'est la carte graphique qui les mélange : plus besoin de repeindre tout l'écran à chaque image.
+function postLayer(id) {
+  let el = document.getElementById(id); if (el) return el;
+  el = document.createElement('div'); el.id = id; el.style.cssText = 'position:absolute;inset:0;pointer-events:none;display:none';
+  V.cv.parentNode.insertBefore(el, V.cv.nextSibling); return el;
+}
 function bakePost() {
-  if (!V.postC) [V.postC, V.postX] = mkCanvas(V.W, V.H);
-  const c = V.postC; c.width = V.W; c.height = V.H; const x = V.postX; x.clearRect(0, 0, V.W, V.H);
-  const g = x.createRadialGradient(V.W / 2, V.H / 2, Math.min(V.W, V.H) * 0.42, V.W / 2, V.H / 2, Math.hypot(V.W, V.H) * 0.62);
-  g.addColorStop(0, 'rgba(10,4,24,0)'); g.addColorStop(1, 'rgba(10,4,24,0.55)'); x.fillStyle = g; x.fillRect(0, 0, V.W, V.H);
-  if (AU.set.crt) { const step = Math.max(3, Math.round(V.dpr * 2)); x.fillStyle = 'rgba(0,0,0,0.11)'; for (let y = 0; y < V.H; y += step) x.fillRect(0, y, V.W, Math.max(1, step / 3)); }
-  V.post = c;
+  const w = innerWidth, h = innerHeight, el = postLayer('postFx');
+  let bg = `radial-gradient(circle at 50% 50%, rgba(10,4,24,0) ${Math.round(Math.min(w, h) * 0.42)}px, rgba(10,4,24,0.55) ${Math.round(Math.hypot(w, h) * 0.62)}px)`;
+  if (AU.set.crt) { const step = Math.max(3, Math.round(V.dpr * 2)) / V.dpr, line = Math.max(1, Math.max(3, Math.round(V.dpr * 2)) / 3) / V.dpr; bg = `repeating-linear-gradient(to bottom, rgba(0,0,0,0.11) 0px, rgba(0,0,0,0.11) ${line.toFixed(2)}px, rgba(0,0,0,0) ${line.toFixed(2)}px, rgba(0,0,0,0) ${step.toFixed(2)}px), ` + bg; }
+  el.style.background = bg;
+  const ch = postLayer('postChase');
+  ch.style.background = `radial-gradient(circle at 50% 50%, rgba(255,0,40,0) ${Math.round(Math.min(w, h) * 0.35)}px, rgba(255,0,40,1) ${Math.round(Math.max(w, h) * 0.7)}px)`;
+  const al = postLayer('postAlarm'); al.style.background = 'rgb(255,40,40)';
   // trame BD (points)
   if (!V.halftone) { const [h, hx] = mkCanvas(12, 12); hx.fillStyle = 'rgba(20,8,40,0.5)'; hx.beginPath(); hx.arc(6, 6, 2.2, 0, 7); hx.fill(); V.halftone = V.ctx.createPattern(h, 'repeat'); }
+}
+// n'écrit le style que s'il change (écrire le même style à chaque image coûte quand même)
+function postShow(id, op) {
+  const el = postLayer(id), k = op > 0.004 ? op.toFixed(2) : '';
+  if (el.__op === k) return; el.__op = k;
+  if (!k) el.style.display = 'none'; else { el.style.display = 'block'; el.style.opacity = k; }
 }
 const rp = v => Math.round(v * V.a) / V.a;
 const TINTS = new WeakMap();
@@ -199,9 +222,10 @@ function drawEyes(c, s) {
   if (near) { c.fillStyle = '#7fd0ff'; c.fillRect(px + 5, py - 3 + ((G.time * 3) % 1) * 3, 1, 2); }
 }
 function drawParts(c) {
+  const x0 = V.camX - 20, y0 = V.camY - 20, x1 = V.camX + V.lw + 20, y1 = V.camY + V.lh + 20;
   for (const p of G.parts) {
+    const x = p.x, y = p.y; if (x < x0 || x > x1 || y < y0 || y > y1) continue;   // hors de l'écran
     const a = 1 - p.t / p.life; c.globalAlpha = Math.max(0, a); c.fillStyle = p.col;
-    const x = p.x, y = p.y;
     switch (p.type) {
       case 'puff': { const s = p.size * (1 + p.t / p.life * 1.8); c.beginPath(); c.arc(x, y, s * 0.7, 0, 7); c.fill(); break; }
       case 'spark': c.fillRect(x - 0.5, y - 0.5, 1, 1); if (a > 0.5) { c.fillRect(x - 1.5, y - 0.5, 3, 1); c.fillRect(x - 0.5, y - 1.5, 1, 3); } break;
@@ -352,35 +376,46 @@ function renderGame(dt) {
   const { lx, lw, lh, ctx, S } = V, P = G.P, T = G.T;
   updateCamera(dt || 0.016);
   const ci = Math.floor(G.camX), cj = Math.floor(G.camY); V.camX = ci; V.camY = cj;
-  // 1) carte en basse résolution
+  V.blank = false;
+  // 1) carte en basse résolution (avec, dessous les personnages : cônes de vision et halo chaud)
+  // tout ce qui est peint ici coûte ~7 fois moins cher qu'en pleine résolution
   lx.fillStyle = '#120c1e'; lx.fillRect(0, 0, lw, lh);
   lx.drawImage(G.mapCanvas, -ci, -cj); drawDynamic(lx, -ci, -cj);
-  drawFog();
+  const showT = G.tVis || G.mode === 'caught';
+  lx.save(); lx.translate(-ci, -cj);
+  if (showT && !T.gone && !['sleep', 'caught', 'count', 'evac'].includes(T.state) && !isBlind(T)) drawCone(lx);
+  G.kids.forEach(k => { if (k.vis && k.isWatcher && !k.gone && k.state !== 'evac' && !isDark()) { lx.globalAlpha = 0.75; drawCone(lx, k); lx.globalAlpha = 1; } });
+  { const [ex, ey] = G.eye, R = G.visR; if (R > 0 && R < 2000) { lx.globalAlpha = G.L.outdoor ? 0.07 : 0.09; lx.imageSmoothingEnabled = true; lx.drawImage(glowSprite(), ex - R, ey - R, R * 2, R * 2); lx.imageSmoothingEnabled = false; lx.globalAlpha = 1; } }
+  lx.restore();
+  // le brouillard : en jeu normal, de simples rectangles sombres posés sur les pièces où l'on n'est pas
+  // (bien moins cher qu'une image agrandie et lissée sur tout l'écran) ; le calque n'est gardé que pour le noir et le surveillant
+  const fogLayer = (G.net && G.net.role === 'teacher') || isDark();
+  if (fogLayer) drawFog();
   { const f = isDark() && G.mode === 'play' ? 'grayscale(1) brightness(0.78)' : ''; if (V.cv.style.filter !== f) V.cv.style.filter = f; }
   // 2) transformation monde -> écran (zoom + tremblement)
   const z = FX.zoom, cxs = V.W / 2, cys = V.H * 0.45;
   let shx = 0, shy = 0; if (G.shake > 0) { const a = Math.min(1, G.shake * 3) * S * 1.6; shx = rand(-a, a); shy = rand(-a, a); }
   V.a = S * z; V.e = cxs + (-G.camX * S - cxs) * z + shx; V.f = cys + (-G.camY * S - cys) * z + shy;
-  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#120c1e'; ctx.fillRect(0, 0, V.W, V.H);
+  // la carte couvre déjà tout l'écran : on n'efface que si un tremblement ou un dézoom peut laisser voir un bord
+  if (G.shake > 0 || z < 1) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#120c1e'; ctx.fillRect(0, 0, V.W, V.H); }
   ctx.setTransform(V.a, 0, 0, V.a, V.e, V.f); ctx.imageSmoothingEnabled = false;
   ctx.drawImage(V.lo, ci, cj);
   if (G.inf) drawStairsMarks(ctx);
-  // 3) cône de vision, poussières
-  const showT = G.tVis || G.mode === 'caught';
-  if (showT && !T.gone && !['sleep', 'caught', 'count', 'evac'].includes(T.state) && !isBlind(T)) drawCone(ctx);
-  G.kids.forEach(k => { if (k.vis && k.isWatcher && !k.gone && k.state !== 'evac' && !isDark()) { ctx.globalAlpha = 0.75; drawCone(ctx, k); ctx.globalAlpha = 1; } });
+  // 3) poussières
   if (!G.L.outdoor) { for (const mo of FX.motes) { const a = Math.sin(mo.t / mo.life * Math.PI) * (0.35 + 0.25 * Math.sin(G.time * 3 + mo.ph)); ctx.fillStyle = `rgba(255,240,200,${a})`; ctx.fillRect(mo.x, mo.y, 0.8, 0.8); } }
   // 4) entités triées par profondeur
   drawPuddles(ctx);
   const ents = [];
-  (G.m.npcGags || []).forEach(g => { if (g.vis) ents.push([g.y, () => occlude(ctx, g, () => drawGag(ctx, g))]); });
+  // on ne prépare que ce qui est à l'écran (les pieds en y : la tête dépasse d'environ 40 px au-dessus)
+  const inV = (x, y) => x > ci - 28 && x < ci + lw + 28 && y > cj - 12 && y < cj + lh + 60;
+  (G.m.npcGags || []).forEach(g => { if (g.vis && inV(g.x, g.y)) ents.push([g.y, () => occlude(ctx, g, () => drawGag(ctx, g))]); });
   if (G.foot && regionVisible(G.foot.x, G.foot.y)) ents.push([G.foot.y, () => drawFootBall(ctx)]);
   // un objet par terre juste derrière un arbre resterait caché : on le garde visible
   const behindFront = (x, y) => { const k = G.m.get(Math.floor(x / 16), Math.floor(y / 16) + 1); return FRONT_KINDS[k] ? y + 24 : y; };
-  G.items.forEach(it => ents.push([behindFront(it.x, it.y), () => drawItemW(ctx, it)]));
-  G.apples.forEach(a => ents.push([behindFront(a.x, a.y), () => { const w = Math.sin(G.time * 4) * 0.12; ctx.save(); ctx.translate(a.x, a.y - 6); ctx.rotate(w); ctx.drawImage(itemCanvas('apple'), -7, -7); ctx.restore(); }]));
+  G.items.forEach(it => { if (inV(it.x, it.y)) ents.push([behindFront(it.x, it.y), () => drawItemW(ctx, it)]); });
+  G.apples.forEach(a => inV(a.x, a.y) && ents.push([behindFront(a.x, a.y), () => { const w = Math.sin(G.time * 4) * 0.12; ctx.save(); ctx.translate(a.x, a.y - 6); ctx.rotate(w); ctx.drawImage(itemCanvas('apple'), -7, -7); ctx.restore(); }]));
   G.kids.forEach(k => {
-    if (!k.vis) return;
+    if (!k.vis || !inV(k.x, k.y)) return;
     ents.push([k.y, () => occlude(ctx, k, () => {
       const bob = k.beh === 'jump' ? -Math.abs(Math.sin(G.time * 6 + k.ph)) * 5 : 0;
       if (k.beh === 'jump') { const up = Math.sin(G.time * 6 + k.ph) > 0; ctx.strokeStyle = '#e43b44'; ctx.lineWidth = 0.9; ctx.beginPath(); if (up) ctx.ellipse(k.x, k.y - 2, 8, 3, 0, 0.1, Math.PI - 0.1); else ctx.ellipse(k.x, k.y - 22 + bob, 8, 4, 0, Math.PI + 0.1, -0.1); ctx.stroke(); }
@@ -390,7 +425,7 @@ function renderGame(dt) {
       if ((k.isWatcher || k.snitch) && k.markT > 0 && k.mark) txt(ctx, k.mark, k.x, k.y - 40, 9, k.mark === '!' ? '#e43b44' : '#ffd23f');
     })]);
   });
-  (G.pigeons || []).forEach(p => { if (p.st === 'gone') return; if (dist(G.eye[0], G.eye[1], p.x, p.y) > G.visR + 10 && p.z < 20) return; ents.push([p.y + (p.z > 4 ? 200 : 0), () => drawPigeon(ctx, p)]); });
+  (G.pigeons || []).forEach(p => { if (p.st === 'gone' || (!inV(p.x, p.y) && !inV(p.x, p.y - (p.z || 0)))) return; if (dist(G.eye[0], G.eye[1], p.x, p.y) > G.visR + 10 && p.z < 20) return; ents.push([p.y + (p.z > 4 ? 200 : 0), () => drawPigeon(ctx, p)]); });
   if (showT && !T.gone) ents.push([T.y, () => occlude(ctx, T, () => drawTeacher(ctx, T))]);
   FX.ghosts.forEach(g => ents.push([g.y - 0.1, () => drawSprite(ctx, P.cfg, null, { x: g.x, y: g.y, face: g.face, dist: g.dist, moving: true, running: true }, { tint: '#7ff0ff', alpha: 0.45 * (1 - g.t / 0.32), scale: g.small ? 0.5 : 1, noShadow: true, still: true, gait: 'run' })]));
   FX.zips.forEach(zp => ents.push([zp.y1, () => { const t = zp.t, e = t * t; drawSprite(ctx, P.cfg, null, { x: lerp(zp.x0, zp.x1, e), y: lerp(zp.y0, zp.y1, e), face: zp.face, moving: false }, { sx: 1 + t * 0.6, sy: 1 - t * 0.8, scale: zp.small ? 0.5 : 1, alpha: 1 - t * 0.5, still: true }); }]));
@@ -407,7 +442,7 @@ function renderGame(dt) {
   // surveillants en équipe : le coéquipier et les fugueurs que je vois
   if (G.inf && G.inf.guard) {
     const Q2 = G.T2; if (Q2 && Q2.fl === G.inf.cur && Q2.x > -9000) ents.push([Q2.y, () => occlude(ctx, Q2, () => drawTeacher(ctx, Q2))]);
-    G.inf.fugs.forEach(f => { if (!f.vis) return; ents.push([f.y, () => occlude(ctx, f, () => {
+    G.inf.fugs.forEach(f => { if (!f.vis || !inV(f.x, f.y)) return; ents.push([f.y, () => occlude(ctx, f, () => {
       if (f.st === 'seat') drawSprite(ctx, f.cfg, null, f, { sy: 0.86, bob: 2, noShadow: true }); else drawSprite(ctx, f.cfg, null, f, {});
       if (f.markT > 0) txt(ctx, '!', f.x, f.y - 38, 10, '#e43b44');
     })]); });
@@ -441,12 +476,9 @@ function renderGame(dt) {
   // feuilles qui tombent
   for (const l of FX.leaves) { ctx.globalAlpha = l.rest > 0 ? Math.max(0, 1 - l.rest / 3) : 1; ctx.fillStyle = l.col; ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.rest > 0 ? 0.4 : Math.sin(l.t * 4 + l.ph) * 0.9); ctx.fillRect(-1.5, -0.6, 3, 1.3); ctx.restore(); }
   ctx.globalAlpha = 1;
-  // 5) brouillard doux + lumière chaude
-  ctx.imageSmoothingEnabled = true; ctx.drawImage(V.fog, ci, cj); ctx.imageSmoothingEnabled = false;
-  {
-    const [ex, ey] = G.eye, R = G.visR;
-    if (R > 0 && R < 2000) { ctx.globalAlpha = G.L.outdoor ? 0.07 : 0.09; ctx.imageSmoothingEnabled = true; ctx.drawImage(glowSprite(), ex - R, ey - R, R * 2, R * 2); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; }
-  }
+  // 5) brouillard (la lumière chaude est déjà dans la carte)
+  if (fogLayer) { ctx.imageSmoothingEnabled = true; ctx.drawImage(V.fog, ci, cj); ctx.imageSmoothingEnabled = false; }
+  else if (!easyOn()) drawRoomShade(ctx, 0, 0, ci, cj, lw, lh);
   if (G.inf) drawStairsSigns(ctx);
   if (G.reveal > 0) {
     const blink = G.reveal > 2 || (G.time * 6 | 0) % 2;
@@ -534,6 +566,18 @@ function clampEdge(sx, sy) { const e = screenEdges(); const cx = clamp(sx, e.l, 
 function drawArrow(c, x, y, ang, col, size) {
   c.save(); c.translate(x, y); c.rotate(ang); const p = 1 + Math.sin(G.time * 10) * 0.12; c.scale(p, p); c.fillStyle = col; c.strokeStyle = '#1a1028'; c.lineWidth = size / 4;
   c.beginPath(); c.moveTo(size, 0); c.lineTo(-size * 0.6, -size * 0.7); c.lineTo(-size * 0.3, 0); c.lineTo(-size * 0.6, size * 0.7); c.closePath(); c.stroke(); c.fill(); c.restore();
+}
+// les émojis sont lents à dessiner sur iPhone : chacun est dessiné une fois dans une petite image, puis recopié
+const EMOJI_IMG = new Map();
+function drawEmoji(c, ch, px, x, y) {
+  const key = ch + '|' + px; let im = EMOJI_IMG.get(key);
+  if (!im) {
+    if (EMOJI_IMG.size > 120) EMOJI_IMG.clear();
+    const sz = Math.ceil(px * 1.5) + 2, [cv, x2] = mkCanvas(sz, sz);
+    x2.font = px + 'px ' + EMOJI_FONT; x2.textAlign = 'center'; x2.textBaseline = 'middle'; x2.fillStyle = '#1a1028'; x2.fillText(ch, sz / 2, sz / 2);
+    EMOJI_IMG.set(key, im = cv);
+  }
+  const sm = c.imageSmoothingEnabled; c.imageSmoothingEnabled = true; c.drawImage(im, x - im.width / 2, y - im.height / 2); c.imageSmoothingEnabled = sm;
 }
 const easeOutBack = t => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
 function popScale(age) { if (age < 0.09) return age / 0.09 * 1.45; return 1 + 0.45 * Math.exp(-(age - 0.09) * 11) * Math.cos((age - 0.09) * 28); }
@@ -624,12 +668,12 @@ function drawOverlay() {
         const an = Math.atan2(sy - cy, sx - cx), bx = cx - Math.cos(an) * 6 * d, by = cy - Math.sin(an) * 6 * d, r = 12 * d * pulse;
         drawArrow(c, bx + Math.cos(an) * (r + 4 * d), by + Math.sin(an) * (r + 4 * d), an, '#ffd23f', 6 * d);
         c.fillStyle = '#ffd23f'; c.strokeStyle = '#1a1028'; c.lineWidth = 2.5 * d; c.beginPath(); c.arc(bx, by, r, 0, 7); c.fill(); c.stroke();
-        c.font = Math.round(13 * d) + 'px ' + EMOJI_FONT; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#1a1028'; c.fillText(t.def.icon, bx, by + 1 * d);
+        drawEmoji(c, t.def.icon, Math.round(13 * d), bx, by + 1 * d);
       } else {
         c.save(); c.translate(sx, sy + bob); c.scale(pulse, pulse);
         c.fillStyle = 'rgba(255,210,63,0.3)'; c.beginPath(); c.arc(0, 0, 16 * d, 0, 7); c.fill();
         c.strokeStyle = '#ffd23f'; c.lineWidth = 2.5 * d; c.setLineDash([5 * d, 4 * d]); c.lineDashOffset = -G.time * 18 * d; c.beginPath(); c.arc(0, 0, 16 * d, 0, 7); c.stroke(); c.setLineDash([]);
-        c.font = Math.round(18 * d) + 'px ' + EMOJI_FONT; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#1a1028'; c.fillText(t.def.icon, 0, 1 * d); c.restore();
+        drawEmoji(c, t.def.icon, Math.round(18 * d), 0, 1 * d); c.restore();
         txt(c, '!', sx + 13 * d, sy - 13 * d + bob, Math.round(11 * d), '#ffd23f');
       }
     });
@@ -697,13 +741,9 @@ function drawOverlay() {
 // ---------- Post-traitement & effets plein écran ----------
 function drawPost() {
   const c = V.ctx, W = V.W, H = V.H, d = V.dpr, T = G.T;
-  if (G.inf && G.inf.alarm && (G.mode === 'play' || G.mode === 'paused')) { c.fillStyle = `rgba(255,40,40,${G.alarmFlash ? 0.16 : 0.05})`; c.fillRect(0, 0, W, H); }
-  // vignette rouge en poursuite
-  if (G.mode === 'play' && (G.net ? (G.net.role === 'student' && G.alarmT > 0) : T.state === 'chase')) {
-    const pulse = 0.2 + Math.sin(G.time * 8) * 0.08;
-    const g = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.7);
-    g.addColorStop(0, 'rgba(255,0,40,0)'); g.addColorStop(1, `rgba(255,0,40,${pulse})`); c.fillStyle = g; c.fillRect(0, 0, W, H);
-  }
+  postShow('postAlarm', G.inf && G.inf.alarm && (G.mode === 'play' || G.mode === 'paused') ? (G.alarmFlash ? 0.16 : 0.05) : 0);
+  // vignette rouge en poursuite (calque CSS : la pulsation ne coûte presque rien)
+  postShow('postChase', G.mode === 'play' && (G.net ? (G.net.role === 'student' && G.alarmT > 0) : T.state === 'chase') ? 0.2 + Math.sin(G.time * 8) * 0.08 : 0);
   // lignes de vitesse façon manga
   if (FX.lines > 0) {
     c.save(); c.globalAlpha = Math.min(1, FX.lines * 1.3); c.fillStyle = '#ffffff'; c.translate(W / 2, H * 0.45);
@@ -712,8 +752,8 @@ function drawPost() {
     c.restore();
   }
   if (G.mode === 'caught') { c.fillStyle = `rgba(30,0,20,${Math.min(0.35, G.caughtT * 0.3)})`; c.fillRect(0, 0, W, H); }
-  // vignette + lignes TV
-  c.drawImage(V.post, 0, 0);
+  // vignette + lignes TV : calque CSS (voir bakePost)
+  postShow('postFx', 1);
   // flash
   if (FX.flash > 0) { c.fillStyle = `rgba(${FX.flashCol},${FX.flash * 0.35})`; c.fillRect(0, 0, W, H); }
   // compte à rebours géant

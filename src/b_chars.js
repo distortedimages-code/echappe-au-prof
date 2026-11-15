@@ -102,13 +102,63 @@ function limb(R, x0, y0, x1, y1, col, col2, split) {
   const L = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)), n = Math.max(1, Math.ceil(L * 1.6));
   for (let i = 0; i <= n; i++) { const t = i / n; R(Math.round(x0 + (x1 - x0) * t - 1), Math.round(y0 + (y1 - y0) * t - 0.5), 2, 2, (col2 && t > split) ? col2 : col); }
 }
+// ---------- dessin des personnages directement dans un tableau de pixels ----------
+// relire un canvas (getImageData) est très lent sur iPhone : on dessine les rectangles nous-mêmes,
+// on fait l'ombre et le contour sur le tableau, et on ne pose l'image qu'une fois (même résultat, pixel pour pixel)
+const COL_RGB = new Map();
+let COL_X = null;
+function rgbOf(col) {
+  let v = COL_RGB.get(col); if (v !== undefined) return v;
+  let s = String(col);
+  if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(s)) { if (!COL_X) COL_X = mkCanvas(1, 1)[1]; COL_X.fillStyle = '#000'; COL_X.fillStyle = s; s = String(COL_X.fillStyle); }
+  if (/^#[0-9a-f]{3}$/i.test(s)) s = '#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3];
+  v = /^#[0-9a-f]{6}$/i.test(s) ? [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)] : null;   // null : couleur transparente, on repassera par le canvas
+  COL_RGB.set(col, v); return v;
+}
+class PixCtx {
+  constructor(w, h) { this.w = w; this.h = h; this.d = new Uint8ClampedArray(w * h * 4); this.c = null; this.ok = true; }
+  set fillStyle(v) { this.c = rgbOf(v); if (!this.c) this.ok = false; }
+  get fillStyle() { return ''; }
+  span(x, y, w, h) {
+    if (w < 0) { x += w; w = -w; } if (h < 0) { y += h; h = -h; }
+    if (x !== Math.round(x) || y !== Math.round(y) || w !== Math.round(w) || h !== Math.round(h)) { this.ok = false; return null; }
+    const x0 = Math.max(0, x), y0 = Math.max(0, y), x1 = Math.min(this.w, x + w), y1 = Math.min(this.h, y + h);
+    return x1 > x0 && y1 > y0 ? [x0, y0, x1, y1] : null;
+  }
+  fillRect(x, y, w, h) {
+    const c = this.c, r = this.span(x, y, w, h); if (!c || !r) return; const d = this.d, W = this.w;
+    for (let j = r[1]; j < r[3]; j++) for (let i = r[0], p = (j * W + i) * 4; i < r[2]; i++, p += 4) { d[p] = c[0]; d[p + 1] = c[1]; d[p + 2] = c[2]; d[p + 3] = 255; }
+  }
+  clearRect(x, y, w, h) {
+    const r = this.span(x, y, w, h); if (!r) return; const d = this.d, W = this.w;
+    for (let j = r[1]; j < r[3]; j++) d.fill(0, (j * W + r[0]) * 4, (j * W + r[2]) * 4);
+  }
+}
+// ombre + contour en une seule passe (mêmes règles que shadePass puis outlinePass)
+function pixPasses(d, w, h) {
+  const s = new Uint8ClampedArray(d);
+  const op = (i, y) => i >= 0 && i < w && y >= 0 && y < h && s[(y * w + i) * 4 + 3] > 0;
+  for (let y = 0; y < h; y++) for (let i = 0; i < w; i++) {
+    const p = (y * w + i) * 4;
+    if (s[p + 3]) {
+      let f = 1;
+      if (!op(i + 1, y)) f -= 0.16; if (!op(i, y + 1)) f -= 0.1;
+      if (!op(i - 1, y)) f += 0.08; if (!op(i, y - 1)) f += 0.1;
+      if (f !== 1) { d[p] = Math.min(255, s[p] * f); d[p + 1] = Math.min(255, s[p + 1] * f); d[p + 2] = Math.min(255, s[p + 2] * f); }
+    } else if ((i > 0 && s[p - 1]) || (i < w - 1 && s[p + 7]) || (y > 0 && s[p - w * 4 + 3]) || (y < h - 1 && s[p + w * 4 + 3])) {
+      d[p] = 28; d[p + 1] = 18; d[p + 2] = 40; d[p + 3] = 255;
+    }
+  }
+}
 // dir: 0 face, 1 dos, 2 profil (droite)
 function charCanvas(cfg, dir, frame, v, gait = 'basic') {
   const key = charKey(cfg, v) + '|' + dir + '|' + gait + frame;
   let c = CHAR_CACHE.get(key); if (c) return c;
   const [cv, x] = mkCanvas(20, 34);
-  drawCharInto(x, cfg, dir, frame, v || {}, gait);
-  shadePass(cv, x); outlinePass(cv, x);
+  const px = new PixCtx(20, 34);
+  try { drawCharInto(px, cfg, dir, frame, v || {}, gait); } catch (e) { px.ok = false; }
+  if (px.ok && x.createImageData) { pixPasses(px.d, 20, 34); const id = x.createImageData(20, 34); id.data.set(px.d); x.putImageData(id, 0, 0); }
+  else { x.clearRect(0, 0, 20, 34); drawCharInto(x, cfg, dir, frame, v || {}, gait); shadePass(cv, x); outlinePass(cv, x); }
   if (CHAR_CACHE.size > 1400) freeSpriteCache(700);
   CHAR_CACHE.set(key, cv); return cv;
 }
