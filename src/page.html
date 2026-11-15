@@ -324,7 +324,8 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
 @keyframes msgUp{from{transform:translateY(14px) scale(.85);opacity:0}to{transform:none;opacity:1}}
 
 /* ---- l'interro de M. Silex ---- */
-.qzBtn{background:#e8b07a}
+.qzBtn{background:#e8b07a}.qzBtnEn{background:#8fc4ff}
+#sQuiz.en .lsName{color:#1f4e99}#sQuiz.en .lsChoices .choice{background:#d8f4ff}#sQuiz.en .lsChoices .choice.good{background:#c8f5b8}#sQuiz.en .lsChoices .choice.bad{background:#ffc9cf}
 .qzPanel{margin:0 auto 12px;animation:none}
 #sQuiz .lsName{color:#8a4a1a}#sQuiz .lsChoices .choice{background:#f6e3c4}#sQuiz .lsChoices .choice:disabled{cursor:default}
 #sQuiz .lsChoices .choice.good{background:#c8f5b8}#sQuiz .lsChoices .choice.bad{background:#ffc9cf}
@@ -429,6 +430,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <button class="btn cyan" id="bChars">👕 Mes personnages</button>
       <button class="btn sqBtn" id="bSquish">🧸 Mes squishies</button>
       <button class="btn qzBtn" id="bQuiz">🦴 L’interro de M. Silex</button>
+      <button class="btn qzBtnEn" id="bQuizEn">🇬🇧 Le quiz de Miss Teacup</button>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
       <div class="panel howto">
@@ -509,7 +511,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     <div class="wrap">
       <div id="qzHome">
         <div class="lsPanel qzPanel">
-          <div class="lsHead"><canvas id="qzProf0" width="22" height="34"></canvas><div><div class="lsName">M. Silex</div><div class="lsSub">L’interro d’histoire</div></div><div class="lsFlag">🦴</div></div>
+          <div class="lsHead"><canvas id="qzProf0" width="22" height="34"></canvas><div><div class="lsName qzPname">M. Silex</div><div class="lsSub" id="qzTitle0">L’interro d’histoire</div></div><div class="lsFlag qzFlag">🦴</div></div>
           <div class="qzSay" id="qzHello"></div>
           <div class="qzHint">10 questions sur ton cahier. Chaque correction te dit sur quelle photo et à quel endroit revérifier. Toutes les 3 bonnes réponses : un squishy pour ta collection !</div>
         </div>
@@ -518,7 +520,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       </div>
       <div id="qzPlay" class="hidden">
         <div class="lsPanel qzPanel">
-          <div class="lsHead"><canvas id="qzProf1" width="22" height="34"></canvas><div style="min-width:0"><div class="lsName">M. Silex</div><div class="lsSub" id="qzSub"></div></div><button class="qzQuit" id="qzQuit" aria-label="Arrêter l’interro">✖</button></div>
+          <div class="lsHead"><canvas id="qzProf1" width="22" height="34"></canvas><div style="min-width:0"><div class="lsName qzPname">M. Silex</div><div class="lsSub" id="qzSub"></div></div><button class="qzQuit" id="qzQuit" aria-label="Arrêter l’interro">✖</button></div>
           <div class="qzChap" id="qzChap"></div>
           <div class="qzDots" id="qzDots"></div>
           <div class="qzSay" id="qzSay"></div>
@@ -539,7 +541,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       </div>
       <div id="qzEnd" class="hidden">
         <div class="lsPanel qzPanel">
-          <div class="lsHead"><canvas id="qzProf2" width="22" height="34"></canvas><div><div class="lsName">M. Silex</div><div class="lsSub">Ta note</div></div><div class="lsFlag">📝</div></div>
+          <div class="lsHead"><canvas id="qzProf2" width="22" height="34"></canvas><div><div class="lsName qzPname">M. Silex</div><div class="lsSub">Ta note</div></div><div class="lsFlag">📝</div></div>
           <div id="qzNote" class="qzNote"></div>
           <div id="qzBull" class="qzSay"></div>
           <div id="qzRec" class="qzRec"></div>

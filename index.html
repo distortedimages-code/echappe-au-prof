@@ -324,7 +324,8 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
 @keyframes msgUp{from{transform:translateY(14px) scale(.85);opacity:0}to{transform:none;opacity:1}}
 
 /* ---- l'interro de M. Silex ---- */
-.qzBtn{background:#e8b07a}
+.qzBtn{background:#e8b07a}.qzBtnEn{background:#8fc4ff}
+#sQuiz.en .lsName{color:#1f4e99}#sQuiz.en .lsChoices .choice{background:#d8f4ff}#sQuiz.en .lsChoices .choice.good{background:#c8f5b8}#sQuiz.en .lsChoices .choice.bad{background:#ffc9cf}
 .qzPanel{margin:0 auto 12px;animation:none}
 #sQuiz .lsName{color:#8a4a1a}#sQuiz .lsChoices .choice{background:#f6e3c4}#sQuiz .lsChoices .choice:disabled{cursor:default}
 #sQuiz .lsChoices .choice.good{background:#c8f5b8}#sQuiz .lsChoices .choice.bad{background:#ffc9cf}
@@ -429,6 +430,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <button class="btn cyan" id="bChars">👕 Mes personnages</button>
       <button class="btn sqBtn" id="bSquish">🧸 Mes squishies</button>
       <button class="btn qzBtn" id="bQuiz">🦴 L’interro de M. Silex</button>
+      <button class="btn qzBtnEn" id="bQuizEn">🇬🇧 Le quiz de Miss Teacup</button>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
       <div class="panel howto">
@@ -509,7 +511,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     <div class="wrap">
       <div id="qzHome">
         <div class="lsPanel qzPanel">
-          <div class="lsHead"><canvas id="qzProf0" width="22" height="34"></canvas><div><div class="lsName">M. Silex</div><div class="lsSub">L’interro d’histoire</div></div><div class="lsFlag">🦴</div></div>
+          <div class="lsHead"><canvas id="qzProf0" width="22" height="34"></canvas><div><div class="lsName qzPname">M. Silex</div><div class="lsSub" id="qzTitle0">L’interro d’histoire</div></div><div class="lsFlag qzFlag">🦴</div></div>
           <div class="qzSay" id="qzHello"></div>
           <div class="qzHint">10 questions sur ton cahier. Chaque correction te dit sur quelle photo et à quel endroit revérifier. Toutes les 3 bonnes réponses : un squishy pour ta collection !</div>
         </div>
@@ -518,7 +520,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       </div>
       <div id="qzPlay" class="hidden">
         <div class="lsPanel qzPanel">
-          <div class="lsHead"><canvas id="qzProf1" width="22" height="34"></canvas><div style="min-width:0"><div class="lsName">M. Silex</div><div class="lsSub" id="qzSub"></div></div><button class="qzQuit" id="qzQuit" aria-label="Arrêter l’interro">✖</button></div>
+          <div class="lsHead"><canvas id="qzProf1" width="22" height="34"></canvas><div style="min-width:0"><div class="lsName qzPname">M. Silex</div><div class="lsSub" id="qzSub"></div></div><button class="qzQuit" id="qzQuit" aria-label="Arrêter l’interro">✖</button></div>
           <div class="qzChap" id="qzChap"></div>
           <div class="qzDots" id="qzDots"></div>
           <div class="qzSay" id="qzSay"></div>
@@ -539,7 +541,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       </div>
       <div id="qzEnd" class="hidden">
         <div class="lsPanel qzPanel">
-          <div class="lsHead"><canvas id="qzProf2" width="22" height="34"></canvas><div><div class="lsName">M. Silex</div><div class="lsSub">Ta note</div></div><div class="lsFlag">📝</div></div>
+          <div class="lsHead"><canvas id="qzProf2" width="22" height="34"></canvas><div><div class="lsName qzPname">M. Silex</div><div class="lsSub">Ta note</div></div><div class="lsFlag">📝</div></div>
           <div id="qzNote" class="qzNote"></div>
           <div id="qzBull" class="qzSay"></div>
           <div id="qzRec" class="qzRec"></div>
@@ -4677,9 +4679,11 @@ const AGE_SENT = [
   n => ({ fr: 'Elle a ' + n + ' ans.', en: 'She is ' + NUM_W[n] + '.', p: 'she is ' + NUM_W[n] + '[ years old]', c: ['She has ' + NUM_W[n] + ' years.', 'She is ' + NUM_W[lsNumTwins(n)[0]] + '.'] }),
 ];
 const lsFmt = n => n.toLocaleString('en-US');
-function lsNumQ() {
+// le nombre interrogé est gardé pour dire où le revoir sur la fiche « Numbers »
+function lsNumQ() { const q = lsNumQ0(); if (q.num && lsNumQ0.n) q.r = enNumRef(lsNumQ0.n); return q; }
+function lsNumQ0() {
   const small = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], tens = [30, 40, 50, 60, 70, 80, 90], big = [100, 1000, 1000000];
-  const r = Math.random(), n = r < 0.55 ? pick(small) : r < 0.9 ? pick(tens) : pick(big);
+  const r = Math.random(), n = r < 0.55 ? pick(small) : r < 0.9 ? pick(tens) : pick(big); lsNumQ0.n = n;
   const tw = lsNumTwins(n).filter(x => NUM_W[x] && x !== n).slice(0, 2);
   const say = () => ({ num: 1, show: '« ' + lsFmt(n) + ' »', ask: 'Numbers! Comment dit-on ce nombre en anglais ?', en: NUM_W[n], p: n >= 100 ? '{one|a} ' + NUM_W[n].split(' ')[1] : NUM_W[n], c: tw.map(x => NUM_W[x]) });
   switch (Math.floor(Math.random() * 6)) {
@@ -4812,7 +4816,7 @@ const Lesson = {
     $('lsDone').textContent = hist ? (r.ok ? 'Merci, Monsieur ! 🏃' : 'Pardon, Monsieur… 😔') : r.ok ? 'Thank you, Miss! 🏃' : 'Sorry, Miss… 😔';
     $('lsAsk').classList.add('hidden'); $('lsType').classList.add('hidden'); $('lsRes').classList.remove('hidden');
     // où revérifier dans le cahier (histoire)
-    const ref = hist ? histRef(this.q.r) : null;
+    const ref = hist ? qzRef(this.q.r, 'hist') : qzRef(lsRefFor(this.q), 'en');
     if (ref) { const d = document.createElement('div'); d.className = 'lsRef'; d.textContent = '📸 Revérifie dans ton cahier — ' + ref.txt; $('lsTip').appendChild(d); }
     histShot($('lsShot'), ref);
     AU.sfx(r.ok ? 'found' : 'fail'); if (gift) AU.sfx('pickup'); if (r.ok) confetti(G.P.x, G.P.y - 10, 24);
@@ -5017,7 +5021,7 @@ function teacherScared(T, dt) {
   if (T.st <= 0) { T.state = 'patrol'; T.path = null; T.detect = 0; T.running = false; }
 }
 
-// ================= L'INTERRO DE M. SILEX (mini-jeu du menu) =================
+// ================= LES INTERROS DU MENU : M. SILEX (histoire) ET MISS TEACUP (anglais) =================
 // 10 questions sur un chapitre du cahier, 3 réponses au choix, une antisèche par interro.
 // Chaque correction dit où revérifier : la photo du cahier et l'endroit, avec la zone surlignée.
 // Toutes les 3 bonnes réponses : un squishy pour la collection. Les erreurs sont gardées pour les revoir.
@@ -5030,24 +5034,57 @@ const HIST_CH = [
   { k: 'neo', e: '🌾', n: 'La révolution néolithique', s: 'Agriculture, élevage, villages' },
 ];
 const QZ_N = 10, QZ_GIFT = 3;   // un squishy toutes les 3 bonnes réponses
-const LECON_RATIO = 2576 / 1450;   // les 16 photos ont le même format
-function lessonSrc(p) { return 'lecons/p' + String(p).padStart(2, '0') + '.jpg'; }
-function histRef(r) {
+const QZ_SUBJ = {
+  hist: {
+    bank: () => HIST_BANK, ch: () => HIST_CH, key: 'nds_quiz', cls: '', flag: '🦴', title: 'L’interro d’histoire',
+    prof: () => PROFS.find(p => p.lesson === 'hist') || PROFS[0],
+    src: p => 'lecons/p' + String(p).padStart(2, '0') + '.jpg', ratio: 2576 / 1450, label: p => 'Photo ' + p,
+    all: ['Tout le chapitre, mélangé', 'Les débuts de l’humanité'],
+    hello: ['Interro surprise ! Choisis ton chapitre… avant que je change d’avis.', 'Rangez vos affaires, sortez une feuille. Enfin, un doigt.', 'Pas de panique : c’est seulement noté. Sur 20.', 'Ton cahier, tu l’as relu ? On va vite le savoir.'],
+    first: 'Première question. Pas de copiage.',
+    good: ['Exact. Je suis presque fier.', 'Bonne réponse. Pas de quoi prendre la grosse tête.', 'Correct ! Tu as ouvert ton cahier, toi.', 'Juste. Même Lucy n’aurait pas trouvé.', 'Bravo, petit Homo sapiens.', 'Bien. Très bien. Bon, ça va.'],
+    streak: ['{n} de suite ! Tu as une antisèche dans la manche ?', '{n} d’affilée… Je surveille, hein.', 'Série de {n} ! Le mammouth est impressionné.', '{n} sans faute. Suspect. Très suspect.'],
+    bad: ['Raté. Ton cahier ne mord pas, tu sais.', 'Non ! Même un mammouth le savait.', 'Faux. Tu dormais au fond de la classe ?', 'Perdu. Le cahier, ce n’est pas décoratif.', 'Aïe. Retour à la pierre taillée.', 'Mauvaise réponse. Je note. Je note tout.'],
+    joker: ['Je n’ai RIEN vu. Cette fois.', 'Une antisèche ? Où ça ? Bon, d’accord…', 'Je regarde par la fenêtre… 3 secondes.'],
+    verdict: [['✅ Bravo !', '✅ Exact !', '✅ Parfait !'], '❌ Raté !'],
+    gift: 'M. Silex te donne un squishy (confisqué à un autre élève…)',
+    bulletin: n => n >= 20 ? 'Vingt sur vingt. Je vérifie ta trousse… Rien. Félicitations, sincèrement.' : n >= 16 ? 'Très bien. Je suis obligé de te féliciter. Ça me coûte.' : n >= 12 ? 'Bien. Peut mieux faire, comme tout le monde.' : n >= 8 ? 'Moyen. Ton cahier s’ennuie de toi.' : 'Catastrophe préhistorique. Même l’homme de Tautavel aurait fait mieux.'
+  },
+  en: {
+    bank: () => EN_BANK, ch: () => EN_CH, key: 'nds_quiz_en', cls: 'en', flag: '🇬🇧', title: 'Le quiz d’anglais',
+    prof: () => PROFS.find(p => p.lesson === 'en') || PROFS[5],
+    src: p => 'lecons/en' + String(p).padStart(2, '0') + '.jpg', ratio: 2016 / 1512, label: p => 'Photo ' + p + ' d’anglais',
+    all: ['Tout mélangé', 'Have, vocabulaire, matières, nombres'],
+    hello: ['Good morning! Choisis ton chapitre, please.', 'Sit down, please. Sortez une feuille… ou un doigt.', 'Ready? Steady? Quiz!', 'Hello, darling! Tu as révisé ? We’ll see…'],
+    first: 'First question. No cheating, please!',
+    good: ['Very good! Je suis presque impressed.', 'Correct. Don’t get a big head!', 'Lovely! Tu as ouvert ton cahier, toi.', 'Yes! My cup of tea est fière de toi.', 'Well done, darling.', 'Perfect. Bon, ça va, ça va.'],
+    streak: ['{n} in a row! Tu as une antisèche, darling ?', '{n} de suite… I’m watching you.', '{n} sans faute ! Brilliant… suspicious, but brilliant.', 'Série de {n} ! I need more tea.'],
+    bad: ['Oops! Ton cahier n’est pas décoratif, darling.', 'No, no, no. My cup of tea is shocked.', 'Wrong! Tu dormais pendant le cours ?', 'Oh dear… Relis ta fiche, please.', 'Nope. Je note. I write everything.', 'Hmm… not quite, sweetie.'],
+    joker: ['I saw nothing. This time.', 'An antisèche? Where? Oh well…', 'Je regarde par la fenêtre… three seconds.'],
+    verdict: [['✅ Very good!', '✅ Perfect!', '✅ Excellent!'], '❌ Oops!'],
+    gift: 'Miss Teacup te donne un squishy (confisqué pendant le cours…)',
+    bulletin: n => n >= 20 ? 'Twenty out of twenty! Je vérifie ta trousse… Nothing. Brilliant!' : n >= 16 ? 'Very good! Je suis obligée de te féliciter. Cheers!' : n >= 12 ? 'Good. Peut mieux faire, darling.' : n >= 8 ? 'Hmm… average. Ton cahier misses you.' : 'Oh dear. Even my teapot would do better.'
+  }
+};
+// où revérifier : le texte et la photo à montrer
+function qzRef(r, subj) {
   if (!r) return null;
+  const S = QZ_SUBJ[subj] || QZ_SUBJ.hist;
   const [p, y0, y1, what, x0 = 0.03, x1 = 0.97] = r, cy = (y0 + y1) / 2;
   const v = cy < 0.36 ? 'en haut' : cy < 0.64 ? 'au milieu' : 'en bas';
   const h = x1 - x0 < 0.62 ? ((x0 + x1) / 2 < 0.5 ? ', à gauche' : ', à droite') : '';
-  return { p, y0, y1, x0, x1, what, txt: 'Photo ' + p + ' · ' + v + h + ' : ' + what };
+  return { p, y0, y1, x0, x1, what, src: S.src(p), ratio: S.ratio, txt: S.label(p) + ' · ' + v + h + ' : ' + what };
 }
+function histRef(r) { return qzRef(r, 'hist'); }
 // l'encadré « photo du cahier » : la zone à revoir, surlignée. Sans les photos (version publique), il reste caché.
 function histShot(box, ref) {
   box.innerHTML = ''; box.classList.add('hidden'); box.onclick = null; if (!ref) return;
   const img = new Image(), hl = document.createElement('i'), tip = document.createElement('span');
-  img.alt = 'Photo ' + ref.p + ' du cahier'; img.draggable = false; tip.className = 'zoomTip'; tip.textContent = '🔍 agrandir';
+  img.alt = ref.txt; img.draggable = false; tip.className = 'zoomTip'; tip.textContent = '🔍 agrandir';
   img.onload = () => {
     if (!box.isConnected) return;
     box.append(img, hl, tip); box.classList.remove('hidden');
-    const W = box.clientWidth || 300, IH = W * LECON_RATIO, rh = (ref.y1 - ref.y0) * IH;
+    const W = box.clientWidth || 300, IH = W * ref.ratio, rh = (ref.y1 - ref.y0) * IH;
     const H = Math.round(Math.min(230, Math.max(120, rh + 40)));
     const top = Math.max(0, Math.min(IH - H, (ref.y0 + ref.y1) / 2 * IH - H / 2));
     box.style.height = H + 'px'; img.style.transform = 'translateY(' + (-top) + 'px)';
@@ -5056,37 +5093,27 @@ function histShot(box, ref) {
     box.onclick = () => histZoom(ref);
   };
   img.onerror = () => box.classList.add('hidden');
-  img.src = lessonSrc(ref.p);
+  img.src = ref.src;
 }
 // la photo en grand, défilée jusqu'à la zone
 function histZoom(ref) {
   AU.sfx('blip');
   const z = $('qzZoom'), w = $('qzZoomPage'); $('qzZoomT').textContent = '📸 ' + ref.txt;
-  w.innerHTML = `<img src="${lessonSrc(ref.p)}" alt="Photo ${ref.p} du cahier"><i style="top:${ref.y0 * 100}%;height:${(ref.y1 - ref.y0) * 100}%;left:${ref.x0 * 100}%;width:${(ref.x1 - ref.x0) * 100}%"></i>`;
+  w.innerHTML = `<img src="${ref.src}" alt="${esc(ref.txt)}"><i style="top:${ref.y0 * 100}%;height:${(ref.y1 - ref.y0) * 100}%;left:${ref.x0 * 100}%;width:${(ref.x1 - ref.x0) * 100}%"></i>`;
   z.classList.remove('hidden');
   const go = () => { const s = $('qzZoomScroll'); s.scrollTop = Math.max(0, ref.y0 * w.clientHeight - 90); };
   const im = w.querySelector('img'); if (im.complete) go(); else im.onload = go;
 }
 
-const QZ_GOOD = ['Exact. Je suis presque fier.', 'Bonne réponse. Pas de quoi prendre la grosse tête.', 'Correct ! Tu as ouvert ton cahier, toi.', 'Juste. Même Lucy n’aurait pas trouvé.', 'Bravo, petit Homo sapiens.', 'Bien. Très bien. Bon, ça va.'];
-const QZ_STREAK = ['{n} de suite ! Tu as une antisèche dans la manche ?', '{n} d’affilée… Je surveille, hein.', 'Série de {n} ! Le mammouth est impressionné.', '{n} sans faute. Suspect. Très suspect.'];
-const QZ_BAD = ['Raté. Ton cahier ne mord pas, tu sais.', 'Non ! Même un mammouth le savait.', 'Faux. Tu dormais au fond de la classe ?', 'Perdu. Le cahier, ce n’est pas décoratif.', 'Aïe. Retour à la pierre taillée.', 'Mauvaise réponse. Je note. Je note tout.'];
-const QZ_HELLO = ['Interro surprise ! Choisis ton chapitre… avant que je change d’avis.', 'Rangez vos affaires, sortez une feuille. Enfin, un doigt.', 'Pas de panique : c’est seulement noté. Sur 20.', 'Ton cahier, tu l’as relu ? On va vite le savoir.'];
-const QZ_JOKER = ['Je n’ai RIEN vu. Cette fois.', 'Une antisèche ? Où ça ? Bon, d’accord…', 'Je regarde par la fenêtre… 3 secondes.'];
-function qzBulletin(n) {
-  if (n >= 20) return 'Vingt sur vingt. Je vérifie ta trousse… Rien. Félicitations, sincèrement.';
-  if (n >= 16) return 'Très bien. Je suis obligé de te féliciter. Ça me coûte.';
-  if (n >= 12) return 'Bien. Peut mieux faire, comme tout le monde.';
-  if (n >= 8) return 'Moyen. Ton cahier s’ennuie de toi.';
-  return 'Catastrophe préhistorique. Même l’homme de Tautavel aurait fait mieux.';
-}
-
 const Quiz = {
-  bound: false, ch: null, qs: [], i: 0, ok: 0, streak: 0, joker: true, opts: [], answered: false, wrong: [], marks: [], gifts: [],
-  prof() { return PROFS.find(p => p.lesson === 'hist') || PROFS[0]; },
-  data() { const d = store.get('nds_quiz', {}); return d && typeof d === 'object' ? d : {}; },
-  save(d) { store.set('nds_quiz', d); },
-  missed() { const m = this.data().missed; return Array.isArray(m) ? m.filter(t => HIST_BANK.some(q => q.q === t)) : []; },
+  bound: false, subj: 'hist', ch: null, qs: [], i: 0, ok: 0, streak: 0, joker: true, opts: [], answered: false, wrong: [], marks: [], gifts: [],
+  S() { return QZ_SUBJ[this.subj]; },
+  bank() { return this.S().bank(); },
+  prof() { return this.S().prof(); },
+  data() { const d = store.get(this.S().key, {}); return d && typeof d === 'object' ? d : {}; },
+  save(d) { store.set(this.S().key, d); },
+  missed() { const m = this.data().missed, B = this.bank(); return Array.isArray(m) ? m.filter(t => B.some(q => q.q === t)) : []; },
+  say(t) { AU.say(t, this.prof(), 0.6); },
   bind() {
     if (this.bound) return; this.bound = true;
     $('qzList').addEventListener('click', e => { const b = e.target.closest('.qzCh'); if (!b) return; AU.init(); AU.sfx('blip'); this.start(b.dataset.k); });
@@ -5101,35 +5128,44 @@ const Quiz = {
     $('qzEndBack').addEventListener('click', () => { AU.sfx('blip'); UI.openTitle(); });
     $('qzZoom').addEventListener('click', e => { if (e.target.id === 'qzZoom' || e.target.closest('#qzZoomX')) { AU.sfx('blip'); $('qzZoom').classList.add('hidden'); } });
   },
-  open() { this.bind(); this.home(); UI.show('sQuiz'); },
+  open(subj) {
+    this.bind(); this.subj = QZ_SUBJ[subj] ? subj : 'hist'; const S = this.S(), P = this.prof();
+    $('sQuiz').classList.toggle('en', S.cls === 'en');
+    document.querySelectorAll('#sQuiz .qzPname').forEach(el => el.textContent = P.name);
+    document.querySelectorAll('#sQuiz .qzFlag').forEach(el => el.textContent = S.flag);
+    $('qzTitle0').textContent = S.title;
+    this.home(); UI.show('sQuiz');
+  },
   view(v) { ['qzHome', 'qzPlay', 'qzEnd'].forEach(id => $(id).classList.toggle('hidden', id !== v)); $('qzZoom').classList.add('hidden'); $('sQuiz').scrollTop = 0; },
   face(id) { const P = this.prof(); portrait($(id), P.cfg, P.v, 1); },
   home() {
+    const S = this.S(), B = this.bank();
     this.view('qzHome'); this.face('qzProf0');
-    const line = pick(QZ_HELLO); $('qzHello').textContent = line;
-    const best = this.data().best || {}, cnt = k => HIST_BANK.filter(q => k === 'all' || q.c === k).length;
+    const line = pick(S.hello); $('qzHello').textContent = line;
+    const best = this.data().best || {}, cnt = k => B.filter(q => k === 'all' || q.c === k).length;
     const rec = k => k === 'miss' ? '' : best[k] != null ? 'Record : ' + best[k] + '/20' : 'Jamais tenté';
     const row = (k, e, n, s) => `<button class="qzCh" data-k="${k}"><span class="em">${e}</span><span class="tx"><b>${esc(n)}</b><small>${esc(s)}</small></span><span class="rec${best[k] >= 16 ? ' top' : ''}">${rec(k)}</span></button>`;
-    let h = HIST_CH.map(c => row(c.k, c.e, c.n, c.s + ' · ' + cnt(c.k) + ' questions')).join('');
-    h += row('all', '🎲', 'Tout le chapitre, mélangé', 'Les débuts de l’humanité · ' + cnt('all') + ' questions');
+    let h = S.ch().map(c => row(c.k, c.e, c.n, c.s + ' · ' + cnt(c.k) + ' questions')).join('');
+    h += row('all', '🎲', S.all[0], S.all[1] + ' · ' + cnt('all') + ' questions');
     const m = this.missed(); if (m.length) h += row('miss', '🎯', 'Mes erreurs à revoir', m.length + ' question' + (m.length > 1 ? 's' : '') + ' ratée' + (m.length > 1 ? 's' : ''));
     $('qzList').innerHTML = h;
-    AU.say(line, this.prof(), 0.6);
+    this.say(line);
   },
   start(k, list) {
-    let pool;
-    if (k === 'miss') { const m = list || this.missed(); pool = HIST_BANK.filter(q => m.includes(q.q)); }
-    else pool = HIST_BANK.filter(q => k === 'all' || q.c === k);
+    const B = this.bank(); let pool;
+    if (k === 'miss') { const m = list || this.missed(); pool = B.filter(q => m.includes(q.q)); }
+    else pool = B.filter(q => k === 'all' || q.c === k);
     if (!pool.length) { this.home(); return; }
     this.ch = k; this.qs = shuffle(pool.slice()).slice(0, QZ_N); this.i = 0; this.ok = 0; this.streak = 0; this.joker = true; this.wrong = []; this.marks = []; this.gifts = [];
-    const c = HIST_CH.find(c => c.k === k);
-    $('qzChap').textContent = c ? c.e + ' ' + c.n : k === 'all' ? '🎲 Tout le chapitre' : '🎯 Mes erreurs';
-    this.view('qzPlay'); this.face('qzProf1'); $('qzSay').textContent = 'Première question. Pas de copiage.';
+    const c = this.S().ch().find(c => c.k === k);
+    $('qzChap').textContent = c ? c.e + ' ' + c.n : k === 'all' ? '🎲 ' + this.S().all[0] : '🎯 Mes erreurs';
+    this.view('qzPlay'); this.face('qzProf1'); $('qzSay').textContent = this.S().first;
     this.ask();
   },
+  sub() { return 'Question ' + (this.i + 1) + ' / ' + this.qs.length + ' · 🧸 ' + (this.ok % QZ_GIFT) + '/' + QZ_GIFT + (this.streak >= 2 ? ' · 🔥 ' + this.streak : ''); },
   ask() {
     const q = this.qs[this.i]; this.answered = false;
-    $('qzSub').textContent = 'Question ' + (this.i + 1) + ' / ' + this.qs.length + ' · 🧸 ' + (this.ok % QZ_GIFT) + '/' + QZ_GIFT + (this.streak >= 2 ? ' · 🔥 ' + this.streak : '');
+    $('qzSub').textContent = this.sub();
     $('qzDots').innerHTML = this.qs.map((_, k) => `<i class="${this.marks[k] || (k === this.i ? 'cur' : '')}"></i>`).join('');
     $('qzQ').textContent = q.q;
     const ch = [{ t: q.a, good: true }, { t: q.w[0] }, { t: q.w[1] }]; shuffle(ch); this.opts = ch;
@@ -5143,28 +5179,30 @@ const Quiz = {
     const bad = this.opts.map((o, k) => o.good ? -1 : k).filter(k => k >= 0), k = pick(bad);
     const b = $('qzChoices').children[k]; b.disabled = true; b.classList.add('off');
     $('qzJoker').disabled = true; $('qzJoker').textContent = '📝 Antisèche utilisée';
-    $('qzSay').textContent = pick(QZ_JOKER);
+    $('qzSay').textContent = pick(this.S().joker);
   },
   choose(i) {
     if (this.answered) return; this.answered = true;
-    const q = this.qs[this.i], o = this.opts[i], good = !!o.good;
+    const S = this.S(), q = this.qs[this.i], o = this.opts[i], good = !!o.good;
     [...$('qzChoices').children].forEach((b, k) => { b.disabled = true; b.classList.add(this.opts[k].good ? 'good' : k === i ? 'bad' : 'off'); });
     if (good) { this.ok++; this.streak++; } else { this.streak = 0; this.wrong.push(q); }
     this.marks[this.i] = good ? 'ok' : 'ko';
     $('qzDots').children[this.i].className = this.marks[this.i];
-    $('qzSay').textContent = good ? (this.streak >= 3 ? pick(QZ_STREAK).replace('{n}', this.streak) : pick(QZ_GOOD)) : pick(QZ_BAD);
-    $('qzVerdict').className = 'lsVerdict ' + (good ? 'ok' : 'ko'); $('qzVerdict').textContent = good ? pick(['✅ Bravo !', '✅ Exact !', '✅ Parfait !']) : '❌ Raté !';
+    $('qzSay').textContent = good ? (this.streak >= 3 ? pick(S.streak).replace('{n}', this.streak) : pick(S.good)) : pick(S.bad);
+    $('qzVerdict').className = 'lsVerdict ' + (good ? 'ok' : 'ko'); $('qzVerdict').textContent = good ? pick(S.verdict[0]) : S.verdict[1];
     $('qzYou').innerHTML = good ? '' : 'Ta réponse : <s>' + esc(o.t) + '</s>';
     $('qzAns').textContent = q.a; $('qzTip').textContent = (good ? '📚 ' : '💡 ') + q.e;
-    const ref = histRef(q.r); $('qzRef').textContent = ref ? '📸 Revérifie dans ton cahier — ' + ref.txt : '';
+    const ref = qzRef(q.r, this.subj); $('qzRef').textContent = ref ? '📸 Revérifie dans ton cahier — ' + ref.txt : '';
     $('qzNext').textContent = this.i + 1 < this.qs.length ? 'Question suivante ▶' : 'Voir ma note 📝';
     $('qzJoker').classList.add('hidden'); $('qzRes').classList.remove('hidden');
     histShot($('qzShot'), ref);
     AU.sfx(good ? 'found' : 'fail');
+    // en anglais, Miss Teacup prononce la bonne réponse (si c'est de l'anglais)
+    if (this.subj === 'en' && /^[A-Za-z][A-Za-z ,.?!’'-]*$/.test(q.a) && !/^(rien|une |des |un )/.test(q.a)) setTimeout(() => AU.sayEn(q.a, this.prof()), 350);
     // toutes les 3 bonnes réponses : un squishy !
     const gf = $('qzGift'); gf.innerHTML = ''; gf.classList.add('hidden');
     if (good && this.ok % QZ_GIFT === 0) { const g = this.gift(); gf.append(g.cv, g.t); gf.classList.remove('hidden'); setTimeout(() => AU.sfx('squish'), 300); }
-    $('qzSub').textContent = 'Question ' + (this.i + 1) + ' / ' + this.qs.length + ' · 🧸 ' + (this.ok % QZ_GIFT) + '/' + QZ_GIFT;
+    $('qzSub').textContent = this.sub();
     setTimeout(() => { const r = $('qzRes'); if (r.scrollIntoView) r.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120);
   },
   // un squishy tiré au sort (rareté pondérée), rangé tout de suite dans la collection
@@ -5172,11 +5210,12 @@ const Quiz = {
     const id = SqCol.roll(), isNew = SqCol.add(id), s = SQUISHIES[id]; this.gifts.push(id);
     const cv = document.createElement('canvas'); cv.width = 14; cv.height = 14; cv.getContext('2d').drawImage(squishyCanvas(id), 0, 0);
     const t = document.createElement('div');
-    t.innerHTML = `🎁 ${this.ok} bonnes réponses ! M. Silex te donne un squishy (confisqué à un autre élève…) :<br><b>${esc(s.n)}</b> <span class="qzRar" style="background:${SQ_RARITY[s.r].col}">${SQ_RARITY[s.r].n}</span>${isNew ? ' <b class="qzNew">nouveau !</b>' : ''}`;
+    t.innerHTML = `🎁 ${this.ok} bonnes réponses ! ${esc(this.S().gift)} :<br><b>${esc(s.n)}</b> <span class="qzRar" style="background:${SQ_RARITY[s.r].col}">${SQ_RARITY[s.r].n}</span>${isNew ? ' <b class="qzNew">nouveau !</b>' : ''}`;
     return { cv, t };
   },
   next() { if (!this.answered) return; this.i++; if (this.i < this.qs.length) this.ask(); else this.end(); },
   end() {
+    const S = this.S();
     this.view('qzEnd'); this.face('qzProf2');
     const n = Math.round(this.ok / this.qs.length * 20), d = this.data(); d.best = d.best || {};
     // erreurs à revoir : on ajoute les ratées, on retire celles qu'on vient de réussir
@@ -5186,7 +5225,7 @@ const Quiz = {
     this.save(d);
     $('qzNote').innerHTML = '<span>' + n + '</span>/20';
     $('qzNote').className = 'qzNote ' + (n >= 16 ? 'top' : n >= 10 ? 'mid' : 'low');
-    const line = qzBulletin(n); $('qzBull').textContent = '« ' + line + ' »';
+    const line = S.bulletin(n); $('qzBull').textContent = '« ' + line + ' »';
     $('qzRec').textContent = rec && this.ch !== 'miss' ? '🏆 Nouveau record pour ce chapitre !' : this.ch === 'miss' ? '🎯 Révision des erreurs' : '';
     // les squishies gagnés pendant l'interro
     const rw = $('qzReward'); rw.innerHTML = ''; rw.classList.toggle('hidden', !this.gifts.length);
@@ -5198,11 +5237,11 @@ const Quiz = {
     }
     // les erreurs, avec où revérifier
     $('qzMissT').classList.toggle('hidden', !this.wrong.length);
-    $('qzMiss').innerHTML = this.wrong.map(q => { const r = histRef(q.r); return `<div class="qzM"><b>${esc(q.q)}</b><span>✅ ${esc(q.a)}</span>${r ? `<small>📸 ${esc(r.txt)}</small>` : ''}</div>`; }).join('');
+    $('qzMiss').innerHTML = this.wrong.map(q => { const r = qzRef(q.r, this.subj); return `<div class="qzM"><b>${esc(q.q)}</b><span>✅ ${esc(q.a)}</span>${r ? `<small>📸 ${esc(r.txt)}</small>` : ''}</div>`; }).join('');
     $('qzRetry').classList.toggle('hidden', !this.wrong.length);
     $('qzAgain').classList.toggle('hidden', this.ch === 'miss');
     AU.sfx(n >= 10 ? 'found' : 'fail'); if (n >= 16 || this.gifts.length) confettiScreen();
-    AU.say(line, this.prof(), 0.6);
+    this.say(line);
   }
 };
 // petite pluie de confettis sur l'écran de note
@@ -5214,6 +5253,153 @@ function confettiScreen() {
     p.style.animationDelay = (Math.random() * 0.5) + 's'; p.style.animationDuration = (1.4 + Math.random()) + 's';
     box.appendChild(p); setTimeout(() => p.remove(), 3200);
   }
+}
+
+// ================= LE QUIZ D'ANGLAIS DE MISS TEACUP (questions tirées du cahier) =================
+// Toutes les questions viennent des 7 photos d'anglais du cahier de Faustine (dans l'ordre d'envoi).
+// r = [photo, haut, bas, ce qu'il faut regarder, gauche, droite] (fractions de la page)
+const EN_CH = [
+  { k: 'have', e: '✋', n: 'Le verbe have', s: 'have / has, don’t / doesn’t, Do / Does' },
+  { k: 'voc', e: '✏️', n: 'Les fournitures', s: 'notebook, ruler, eraser…' },
+  { k: 'art', e: '🔤', n: 'a, an… ou rien ?', s: 'Les articles' },
+  { k: 'subj', e: '🏫', n: 'Les matières', s: 'School subjects' },
+  { k: 'num', e: '🔢', n: 'Les nombres', s: 'Numbers' },
+];
+// où trouver un nombre sur la fiche « Numbers » (photo 7)
+const EN_ROWS = [[.25, .28], [.29, .33], [.34, .37], [.385, .42], [.43, .47], [.48, .52], [.54, .57], [.59, .62], [.645, .675], [.70, .73]];
+const EN_TENS = { 30: [.245, .28], 40: [.285, .32], 50: [.33, .365], 60: [.375, .41], 70: [.42, .455], 80: [.465, .50], 90: [.52, .55], 100: [.64, .67], 1000: [.69, .72], 1000000: [.73, .76] };
+function enNumRef(n) {
+  if (n >= 1 && n <= 10) return [7, ...EN_ROWS[n - 1], 'la colonne « 1 to 10 »', .05, .31];
+  if (n >= 11 && n <= 20) return [7, ...EN_ROWS[n - 11], 'la colonne « 11 to 20 »', .32, .59];
+  if (EN_TENS[n]) return [7, ...EN_TENS[n], n >= 100 ? '« Bigger numbers »' : 'la colonne « Tens »', .61, .90];
+  return [7, .10, .76, 'la fiche « Numbers »'];
+}
+// la liste de l'exercice 2.1 (photo 2) : une ligne par fourniture
+const EN_VOC = y => [2, y - .017, y + .017];
+const EN_BANK = [
+  // ===== ✋ Le verbe have =====
+  { c: 'have', r: [5, .33, .37, 'la ligne She / He / It has (surlignée)', .06, .46], q: 'Complète : She ___ a ruler.', a: 'has', w: ['have', 'is'], e: 'Avec he, she, it : HAS. Avec I, you, we, they : HAVE.' },
+  { c: 'have', r: [1, .43, .455, 'l’exercice 1.1, phrase 1'], q: 'Complète : I ___ a blue pen.', a: 'have', w: ['has', 'am'], e: 'I have · You have · He/She/It has · We have · They have.' },
+  { c: 'have', r: [1, .49, .51, 'l’exercice 1.1, phrase 4'], q: 'Complète : My friend Tom ___ a pair of scissors.', a: 'has', w: ['have', 'haves'], e: 'My friend Tom = he → has.' },
+  { c: 'have', r: [1, .47, .495, 'l’exercice 1.1, phrase 3'], q: 'Complète : We ___ two folders.', a: 'have', w: ['has', 'haves'], e: 'We → have. Seuls he, she, it prennent has.' },
+  { c: 'have', r: [1, .525, .55, 'l’exercice 1.1, phrase 6'], q: 'Complète : The school ___ a gym.', a: 'has', w: ['have', 'are'], e: 'The school = it → has.' },
+  { c: 'have', r: [1, .585, .61, 'l’exercice 1.2, phrase 1'], q: 'À la forme négative : « She has a binder. »', a: 'She doesn’t have a binder.', w: ['She don’t have a binder.', 'She doesn’t has a binder.'], e: 'Avec she : doesn’t + have (et plus jamais has après doesn’t !).' },
+  { c: 'have', r: [1, .605, .63, 'l’exercice 1.2, phrase 2'], q: 'À la forme négative : « We have a glue stick. »', a: 'We don’t have a glue stick.', w: ['We doesn’t have a glue stick.', 'We don’t has a glue stick.'], e: 'Avec we : don’t have.' },
+  { c: 'have', r: [1, .64, .665, 'l’exercice 1.2, phrase 4'], q: 'À la forme négative : « He has a ruler. »', a: 'He doesn’t have a ruler.', w: ['He don’t have a ruler.', 'He doesn’t has a ruler.'], e: 'He / She / It → doesn’t have.' },
+  { c: 'have', r: [1, .806, .826, 'l’exercice 1.4, phrase 1'], q: 'Corrige l’erreur : « She have a red pen. »', a: 'She has a red pen.', w: ['She haves a red pen.', 'She is have a red pen.'], e: 'She → has.' },
+  { c: 'have', r: [1, .824, .844, 'l’exercice 1.4, phrase 2'], q: 'Corrige l’erreur : « Do he have a notebook? »', a: 'Does he have a notebook?', w: ['Do he has a notebook?', 'Does he has a notebook?'], e: 'Question avec he, she, it : Does… have ?' },
+  { c: 'have', r: [1, .841, .861, 'l’exercice 1.4, phrase 3'], q: 'Corrige l’erreur : « I don’t has a ruler. »', a: 'I don’t have a ruler.', w: ['I doesn’t have a ruler.', 'I don’t haves a ruler.'], e: 'Après don’t ou doesn’t, toujours have.' },
+  { c: 'have', r: [5, .685, .715, '4 Attention ! (« seul l’auxiliaire suffit »)'], q: '« Do you have a pen? » — Oui :', a: 'Yes, I do.', w: ['Yes, I have.', 'Yes, I does.'], e: 'Pour répondre, seul l’auxiliaire suffit : Yes, I do. (C’était le piège de l’exercice 1.4 !)' },
+  { c: 'have', r: [5, .58, .605, 'la 2e ligne de la forme interrogative'], q: '« Does she have a pencil pouch? » — Non :', a: 'No, she doesn’t.', w: ['No, she don’t.', 'No, she hasn’t.'], e: 'Yes, she does. / No, she doesn’t.' },
+  { c: 'have', r: [5, .47, .61, '3 Forme interrogative'], q: 'Pour poser une question avec « she », on commence par…', a: 'Does', w: ['Do', 'Has'], e: 'Auxiliaire do / does + pronom sujet + have + complément + ?' },
+  { c: 'have', r: [5, .22, .44, 'le tableau de la forme négative', .47, .91], q: '« I don’t have », en forme pleine (à l’écrit), c’est…', a: 'I do not have', w: ['I does not have', 'I not have'], e: 'Forme pleine à l’écrit : I do not have. Forme contractée à l’oral : I don’t have.' },
+  { c: 'have', r: [1, .904, .924, 'l’exercice 1.5, phrase 1'], q: '« J’ai une trousse mais je n’ai pas de règle. »', a: 'I have a pencil pouch but I don’t have a ruler.', w: ['I have a pencil pouch too I don’t have a ruler.', 'I has a pencil pouch but I doesn’t have a ruler.'], e: 'Mais = but. On compare deux choses différentes.' },
+  { c: 'have', r: [1, .925, .945, 'l’exercice 1.5, phrase 2'], q: '« Elle a des ciseaux aussi. »', a: 'She has scissors too.', w: ['She has too scissors.', 'She have scissors too.'], e: 'Too (aussi) se met à la fin de la phrase.' },
+  { c: 'have', r: [5, .76, .85, 'la bulle « but et too »', .63, .92], q: 'Comment dit-on « aussi » en anglais ?', a: 'too', w: ['but', 'and'], e: 'But = mais (différence). Too = aussi (similitude).' },
+  { c: 'have', r: [4, .86, .93, 'le point bonus (la correction en vert)'], q: '« J’ai aussi une règle. »', a: 'I have a ruler too.', w: ['I have too a ruler.', 'I has a ruler too.'], e: 'Too va à la fin : I have a ruler too.' },
+  { c: 'have', r: [5, .655, .685, '4 Attention !'], q: 'En anglais, « tu » et « vous » se disent…', a: 'you, dans les deux cas', w: ['you et vous', 'thou et you'], e: 'Le tutoiement et le vouvoiement n’existent pas en anglais !' },
+  { c: 'have', r: [4, .375, .405, 'le test, phrase 4 (la correction en rouge)'], q: '« Nous avons un surligneur. »', a: 'We have a highlighter.', w: ['We has a highlighter.', 'We have an highlighter.'], e: 'We → have. Et « a highlighter », pas « an ».' },
+  { c: 'have', r: [4, .41, .44, 'le test, phrase 5'], q: '« Elles ont un stylo. »', a: 'They have a pen.', w: ['They has a pen.', 'She have a pen.'], e: 'Elles = they → have.' },
+  { c: 'have', r: [4, .34, .37, 'le test, phrase 3'], q: '« Il a une règle. »', a: 'He has a ruler.', w: ['He have a ruler.', 'He is a ruler.'], e: 'He → has.' },
+  { c: 'have', r: [4, .52, .555, 'le test, phrase 8'], q: '« Elle n’a pas de trousse. »', a: 'She doesn’t have a pencil pouch.', w: ['She don’t have a pencil pouch.', 'She doesn’t has a pencil pouch.'], e: 'She → doesn’t have.' },
+  { c: 'have', r: [4, .565, .595, 'le test, phrase 9'], q: '« Nous n’avons pas de tube de colle. »', a: 'We don’t have a glue stick.', w: ['We doesn’t have a glue stick.', 'We don’t has a glue stick.'], e: 'We → don’t have.' },
+  { c: 'have', r: [4, .60, .635, 'le test, phrase 10'], q: '« As-tu des crayons de couleur ? »', a: 'Do you have any colored pencils?', w: ['Does you have any colored pencils?', 'You have any colored pencils?'], e: 'Question avec you : Do you have… ?' },
+  { c: 'have', r: [1, .746, .766, 'l’exercice 1.3, phrase 3'], q: 'they / earbuds ✓ — la question et la réponse :', a: 'Do they have earbuds? Yes, they do.', w: ['Does they have earbuds? Yes, they do.', 'Do they have earbuds? Yes, they have.'], e: 'They → Do… ? Yes, they do.' },
+  { c: 'have', r: [1, .727, .747, 'l’exercice 1.3, phrase 2'], q: 'he / a ruler ✗ — la question et la réponse :', a: 'Does he have a ruler? No, he doesn’t.', w: ['Do he have a ruler? No, he doesn’t.', 'Does he have a ruler? No, he don’t.'], e: 'He → Does… ? No, he doesn’t.' },
+
+  // ===== ✏️ Les fournitures =====
+  { c: 'voc', r: [...EN_VOC(.35), 'l’exercice 2.1, ligne 1'], q: 'Comment dit-on « un cahier » ?', a: 'a notebook', w: ['a binder', 'a folder'], e: 'Un cahier = a notebook.' },
+  { c: 'voc', r: [...EN_VOC(.38), 'l’exercice 2.1, ligne 2'], q: 'Comment dit-on « une pochette cartonnée » ?', a: 'a folder', w: ['a pencil pouch', 'a binder'], e: 'Une pochette cartonnée = a folder.' },
+  { c: 'voc', r: [...EN_VOC(.415), 'l’exercice 2.1, ligne 3'], q: 'Comment dit-on « une trousse » ?', a: 'a pencil pouch', w: ['a pen', 'a binder'], e: 'Une trousse = a pencil pouch.' },
+  { c: 'voc', r: [...EN_VOC(.445), 'l’exercice 2.1, ligne 4'], q: 'Comment dit-on « un crayon de couleur » ?', a: 'a colored pencil', w: ['a highlighter', 'a dry erase marker'], e: 'Un crayon de couleur = a colored pencil.' },
+  { c: 'voc', r: [...EN_VOC(.48), 'l’exercice 2.1, ligne 5'], q: 'Comment dit-on « une paire de ciseaux » ?', a: 'a pair of scissors', w: ['a pair of rulers', 'a set of earbuds'], e: 'Une paire de ciseaux = a pair of scissors.' },
+  { c: 'voc', r: [...EN_VOC(.51), 'l’exercice 2.1, ligne 6'], q: 'Comment dit-on « un classeur » ?', a: 'a binder', w: ['a folder', 'a notebook'], e: 'Un classeur = a binder.' },
+  { c: 'voc', r: [...EN_VOC(.545), 'l’exercice 2.1, ligne 7'], q: 'Comment dit-on « un bâton de colle » ?', a: 'a glue stick', w: ['a stick glue', 'a highlighter'], e: 'Un bâton de colle = a glue stick (glue d’abord !).' },
+  { c: 'voc', r: [...EN_VOC(.578), 'l’exercice 2.1, ligne 8'], q: 'Comment dit-on « un stylo » ?', a: 'a pen', w: ['a pencil', 'a ruler'], e: 'Un stylo = a pen.' },
+  { c: 'voc', r: [...EN_VOC(.61), 'l’exercice 2.1, ligne 9'], q: 'Comment dit-on « des écouteurs » ?', a: 'a set of earbuds', w: ['a pair of scissors', 'a highlighter'], e: 'Des écouteurs = a set of earbuds.' },
+  { c: 'voc', r: [...EN_VOC(.645), 'l’exercice 2.1, ligne 10'], q: 'Comment dit-on « un marqueur effaçable » ?', a: 'a dry erase marker', w: ['a highlighter', 'an eraser'], e: 'Un marqueur effaçable = a dry erase marker.' },
+  { c: 'voc', r: [...EN_VOC(.677), 'l’exercice 2.1, ligne 11'], q: 'Comment dit-on « un surligneur » ?', a: 'a highlighter', w: ['a dry erase marker', 'a ruler'], e: 'Un surligneur = a highlighter.' },
+  { c: 'voc', r: [...EN_VOC(.71), 'l’exercice 2.1, ligne 12'], q: 'Comment dit-on « une règle » ?', a: 'a ruler', w: ['a rule', 'an eraser'], e: 'Une règle (pour tracer) = a ruler.' },
+  { c: 'voc', r: [...EN_VOC(.742), 'l’exercice 2.1, ligne 13'], q: 'Comment dit-on « une gomme » ?', a: 'an eraser', w: ['a eraser', 'a gum'], e: 'Une gomme = an eraser (an, car eraser commence par une voyelle).' },
+  { c: 'voc', r: [6, .14, .25, 'la carte Vocabulary : « a folder »', .27, .37], q: '« a folder », c’est…', a: 'une pochette cartonnée', w: ['un classeur', 'une trousse'], e: 'A folder = une pochette cartonnée.' },
+  { c: 'voc', r: [6, .14, .25, 'la carte Vocabulary : « a binder »', .72, .83], q: '« a binder », c’est…', a: 'un classeur', w: ['une pochette cartonnée', 'un cahier'], e: 'A binder = un classeur.' },
+  { c: 'voc', r: [6, .14, .25, 'la carte Vocabulary : « colored pencils »', .50, .59], q: '« colored pencils », ce sont…', a: 'des crayons de couleur', w: ['des stylos', 'des surligneurs'], e: 'Colored pencils = des crayons de couleur.' },
+  { c: 'voc', r: [6, .26, .365, 'la carte Vocabulary : « a highlighter »', .55, .65], q: '« a highlighter », c’est…', a: 'un surligneur', w: ['un marqueur effaçable', 'une lampe de poche'], e: 'A highlighter = un surligneur.' },
+  { c: 'voc', r: [6, .26, .365, 'la carte Vocabulary : « a set of earbuds »', .35, .44], q: '« a set of earbuds », ce sont…', a: 'des écouteurs', w: ['des ciseaux', 'des crayons'], e: 'A set of earbuds = des écouteurs.' },
+
+  // ===== 🔤 a, an… ou rien ? =====
+  { c: 'art', r: [6, .725, .79, '« an + mot qui commence par une voyelle »'], q: 'Complète : ___ eraser', a: 'an', w: ['a', 'rien (Ø)'], e: 'An + mot qui commence par une voyelle : an eraser.' },
+  { c: 'art', r: [6, .725, .79, 'l’exemple « an indigo pen »'], q: 'Complète : ___ indigo pen', a: 'an', w: ['a', 'rien (Ø)'], e: 'Indigo commence par une voyelle : an indigo pen.' },
+  { c: 'art', r: [6, .675, .72, 'l’exemple « a book »'], q: 'Complète : ___ book', a: 'a', w: ['an', 'rien (Ø)'], e: 'A + mot qui commence par une consonne : a book.' },
+  { c: 'art', r: [6, .675, .72, '« a + mot qui commence par une consonne »'], q: 'Complète : ___ ruler', a: 'a', w: ['an', 'rien (Ø)'], e: 'Ruler commence par une consonne : a ruler.' },
+  { c: 'art', r: [4, .375, .405, 'le test, phrase 4 (la correction en rouge)'], q: 'Complète : We have ___ highlighter.', a: 'a', w: ['an', 'e'], e: 'H est une consonne : a highlighter. (Corrigé en rouge sur ton test !)' },
+  { c: 'art', r: [6, .895, .925, '« Ø English is great »'], q: 'Complète : « ___ English is great! »', a: 'rien (Ø)', w: ['The', 'An'], e: 'Pas d’article pour une généralité : English is great!' },
+  { c: 'art', r: [6, .935, .975, '« I have Ø books in my backpack »'], q: 'Complète : I have ___ books in my backpack.', a: 'rien (Ø)', w: ['a', 'an'], e: 'Au pluriel, pas d’article : I have books.' },
+  { c: 'art', r: [6, .605, .655, 'le 1er point rose'], q: 'Pour présenter une chose pour la première fois, on utilise…', a: 'a ou an', w: ['the', 'rien (Ø)'], e: 'Pour présenter un élément la première fois : les articles indéfinis a et an (singulier).' },
+  { c: 'art', r: [6, .725, .79, '« an + mot qui commence par une voyelle »'], q: '« an » se met devant un mot qui commence par…', a: 'une voyelle', w: ['une consonne', 'une majuscule'], e: 'A + consonne, an + voyelle.' },
+
+  // ===== 🏫 Les matières =====
+  { c: 'subj', r: [3, .605, .645, 'Horizontal 1', .21, .47], q: '« It is the subject about books, poems and novels. »', a: 'literature', w: ['history', 'art'], e: 'Books, poems and novels → literature.' },
+  { c: 'subj', r: [3, .645, .68, 'Horizontal 3', .21, .47], q: '« It is the subject with images, video, music and computers. »', a: 'multimedia', w: ['technology', 'art'], e: 'Images, video, music, computers → multimedia.' },
+  { c: 'subj', r: [3, .675, .71, 'Horizontal 5', .21, .47], q: '« It is the subject about machines, robots and computers. »', a: 'technology', w: ['multimedia', 'science'], e: 'Machines, robots, computers → technology.' },
+  { c: 'subj', r: [3, .705, .755, 'Horizontal 10', .21, .47], q: '« It is the subject for sport and physical activity. »', a: 'PE', w: ['science', 'choir'], e: 'PE = Physical Education : le sport !' },
+  { c: 'subj', r: [3, .755, .80, 'Horizontal 11', .21, .47], q: '« A class with a teacher to talk about school, projects and problems. »', a: 'advisory', w: ['choir', 'French'], e: 'Advisory : un cours avec un prof pour parler de l’école, des projets et des problèmes.' },
+  { c: 'subj', r: [3, .805, .84, 'Horizontal 13', .21, .47], q: '« It is the subject with numbers, problems and geometry. »', a: 'math', w: ['science', 'geography'], e: 'Numbers, problems, geometry → math.' },
+  { c: 'subj', r: [3, .835, .875, 'Horizontal 14', .21, .47], q: '« It is the subject about nature, animals, plants and experiments. »', a: 'science', w: ['geography', 'history'], e: 'Nature, animals, plants, experiments → science.' },
+  { c: 'subj', r: [3, .87, .9, 'Horizontal 15', .21, .47], q: '« It is the language of France. »', a: 'French', w: ['English', 'German'], e: 'The language of France → French.' },
+  { c: 'subj', r: [3, .605, .65, 'Vertical 2', .49, .75], q: '« It is the subject about God, Christian, Muslim and Jewish traditions. »', a: 'religion', w: ['history', 'literature'], e: 'God and traditions → religion.' },
+  { c: 'subj', r: [3, .655, .69, 'Vertical 4', .49, .75], q: '« It is the subject about countries, maps, continents and nature. »', a: 'geography', w: ['history', 'science'], e: 'Countries, maps, continents → geography.' },
+  { c: 'subj', r: [3, .69, .725, 'Vertical 6', .49, .75], q: '« It is a group of people who sing together. »', a: 'choir', w: ['art', 'PE'], e: 'People who sing together → choir (la chorale).' },
+  { c: 'subj', r: [3, .72, .75, 'Vertical 7', .49, .75], q: '« It is the language of England and the United States. »', a: 'English', w: ['French', 'German'], e: 'England and the United States → English.' },
+  { c: 'subj', r: [3, .75, .78, 'Vertical 8', .49, .75], q: '« It is the language of Germany. »', a: 'German', w: ['English', 'French'], e: 'Germany → German (l’allemand, noté « almand » en haut de la page !).' },
+  { c: 'subj', r: [3, .775, .805, 'Vertical 9', .49, .75], q: '« It is the subject about the past, important events and people. »', a: 'history', w: ['geography', 'literature'], e: 'The past, important events → history.' },
+  { c: 'subj', r: [3, .805, .84, 'Vertical 11', .49, .75], q: '« It is the subject with colors, pictures and artists. »', a: 'art', w: ['multimedia', 'literature'], e: 'Colors, pictures, artists → art.' },
+  { c: 'subj', r: [3, .02, .07, 'la liste des matières, en haut (« almand »)'], q: 'Comment dit-on « l’allemand » ?', a: 'German', w: ['English', 'French'], e: 'L’allemand = German.' },
+  { c: 'subj', r: [2, .78, .88, 'l’exercice 2.2'], q: 'Remets les lettres dans l’ordre : GENSLIH', a: 'English', w: ['German', 'French'], e: 'GENSLIH → ENGLISH.' },
+  { c: 'subj', r: [2, .78, .88, 'l’exercice 2.2'], q: 'Remets les lettres dans l’ordre : SHATM', a: 'math', w: ['science', 'art'], e: 'SHATM → MATHS / MATH.' },
+  { c: 'subj', r: [2, .78, .88, 'l’exercice 2.2'], q: 'Remets les lettres dans l’ordre : RHOTSYI', a: 'history', w: ['geography', 'choir'], e: 'RHOTSYI → HISTORY.' },
+  { c: 'subj', r: [2, .78, .88, 'l’exercice 2.2'], q: 'Remets les lettres dans l’ordre : HGPOGRAYE', a: 'geography', w: ['history', 'technology'], e: 'HGPOGRAYE → GEOGRAPHY.' },
+  { c: 'subj', r: [2, .78, .88, 'l’exercice 2.2'], q: 'Remets les lettres dans l’ordre : ULTEIRTRAE', a: 'literature', w: ['multimedia', 'science'], e: 'ULTEIRTRAE → LITERATURE.' },
+
+  // ===== 🔢 Les nombres =====
+  { c: 'num', r: enNumRef(3), q: 'Comment dit-on 3 en anglais ?', a: 'three', w: ['thirteen', 'thirty'], e: '3 = three, 13 = thirteen, 30 = thirty.' },
+  { c: 'num', r: enNumRef(8), q: 'Comment dit-on 8 en anglais ?', a: 'eight', w: ['eighteen', 'eighty'], e: '8 = eight, 18 = eighteen, 80 = eighty.' },
+  { c: 'num', r: enNumRef(12), q: 'Comment dit-on 12 en anglais ?', a: 'twelve', w: ['twenty', 'two'], e: '12 = twelve, 20 = twenty, 2 = two.' },
+  { c: 'num', r: enNumRef(13), q: 'Comment dit-on 13 en anglais ?', a: 'thirteen', w: ['thirty', 'three'], e: 'De 13 à 19 : -teen. Les dizaines : -ty.' },
+  { c: 'num', r: enNumRef(15), q: 'Comment dit-on 15 en anglais ?', a: 'fifteen', w: ['fifty', 'five'], e: '15 = fifteen, 50 = fifty.' },
+  { c: 'num', r: enNumRef(18), q: 'Comment dit-on 18 en anglais ?', a: 'eighteen', w: ['eighty', 'eight'], e: '18 = eighteen, 80 = eighty.' },
+  { c: 'num', r: enNumRef(20), q: 'Comment dit-on 20 en anglais ?', a: 'twenty', w: ['twelve', 'two'], e: '20 = twenty (le -ty est surligné sur ta fiche !).' },
+  { c: 'num', r: enNumRef(40), q: 'Comment dit-on 40 en anglais ?', a: 'forty', w: ['fourteen', 'four'], e: '40 = forty. 14 = fourteen.' },
+  { c: 'num', r: enNumRef(50), q: 'Comment dit-on 50 en anglais ?', a: 'fifty', w: ['fifteen', 'five'], e: '50 = fifty, 15 = fifteen.' },
+  { c: 'num', r: enNumRef(90), q: 'Comment dit-on 90 en anglais ?', a: 'ninety', w: ['nineteen', 'nine'], e: '90 = ninety, 19 = nineteen.' },
+  { c: 'num', r: enNumRef(100), q: 'Sur ta fiche, comment dit-on 100 ?', a: 'hundred', w: ['thousand', 'million'], e: '100 = hundred, 1,000 = thousand, 1,000,000 = million.' },
+  { c: 'num', r: enNumRef(1000), q: 'Sur ta fiche, comment dit-on 1,000 ?', a: 'thousand', w: ['hundred', 'million'], e: '1,000 = thousand.' },
+  { c: 'num', r: enNumRef(1000000), q: 'Sur ta fiche, comment dit-on 1,000,000 ?', a: 'million', w: ['thousand', 'hundred'], e: '1,000,000 = million.' },
+  { c: 'num', r: enNumRef(11), q: '« eleven », c’est…', a: '11', w: ['7', '12'], e: 'Eleven = 11, seven = 7, twelve = 12.' },
+  { c: 'num', r: enNumRef(70), q: '« seventy », c’est…', a: '70', w: ['17', '7'], e: 'Seventy = 70, seventeen = 17.' },
+  { c: 'num', r: enNumRef(14), q: '« fourteen », c’est…', a: '14', w: ['40', '4'], e: 'Fourteen = 14, forty = 40.' },
+  { c: 'num', r: enNumRef(60), q: '« sixty », c’est…', a: '60', w: ['16', '6'], e: 'Sixty = 60, sixteen = 16.' },
+  { c: 'num', r: enNumRef(40), q: 'Comment s’écrit 40 ?', a: 'forty', w: ['fourty', 'fortey'], e: 'Forty, sans u ! (mais fourteen avec un u).' },
+  { c: 'num', r: [7, .19, .73, 'la colonne « 11 to 20 »', .32, .59], q: 'De 13 à 19, les nombres finissent par…', a: '-teen', w: ['-ty', '-ten'], e: 'Thirteen, fourteen… nineteen : -teen.' },
+  { c: 'num', r: [7, .19, .55, 'la colonne « Tens (30 to 90) »', .61, .90], q: 'Les dizaines (30, 40, 50…) finissent par…', a: '-ty', w: ['-teen', '-ten'], e: 'Thirty, forty, fifty… ninety : -ty.' },
+];
+// ---------- où revérifier, pour la leçon de Miss Teacup en jeu ----------
+function lsRefFor(q) {
+  if (!q || q.day) return null;
+  if (q.r) return q.r;
+  if (q.num) return [7, .10, .76, 'la fiche « Numbers »'];
+  const s = q.en || '';
+  if (/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\w+teen|\w+ty|hundred|thousand|million)\b/.test(s)) return [7, .10, .76, 'la fiche « Numbers »'];
+  if (/English is great/.test(s)) return [6, .895, .925, '« Ø English is great »'];
+  if (/books in my backpack/.test(s)) return [6, .935, .975, '« I have Ø books in my backpack »'];
+  if (/ too\.| but /.test(s)) return [5, .74, .93, '5 Je peux donner des exemples (but / too)'];
+  if (/^(Do|Does)\b/.test(s)) return [5, .47, .61, '3 Forme interrogative'];
+  if (/\b(don’t|doesn’t)\b/.test(s)) return [5, .22, .44, 'le tableau de la forme négative', .47, .91];
+  if (/\b(history|English|PE|math|geography|German|choir|science|French)\b/.test(s)) return [3, .02, .07, 'la liste des matières, en haut'];
+  if (/ is (blue|white|red|yellow|green)/.test(s)) return [2, .89, .99, 'l’exercice 2.3 (les couleurs)'];
+  if (/\bhas\b/.test(s)) return [5, .33, .37, 'la ligne She / He / It has', .06, .46];
+  if (/\bhave\b/.test(s)) return [5, .27, .44, 'le tableau de la forme affirmative', .06, .46];
+  return null;
 }
 
 // ================= SURVEILLANTS EN ÉQUIPE =================
@@ -8220,7 +8406,7 @@ const UI = {
     const tap = (id, f) => $(id).addEventListener('click', e => { AU.init(); AU.sfx('blip'); f(e); });
     tap('bPlay', () => { if (!this.chars.length) this.openCreator(-1, 'levels'); else this.openLevels(); });
     tap('bChars', () => this.openChars('title'));
-    tap('bSquish', () => SqAlbum.open('title')); tap('bQuiz', () => Quiz.open()); tap('bSqBack', () => this.openTitle());
+    tap('bSquish', () => SqAlbum.open('title')); tap('bQuiz', () => Quiz.open('hist')); tap('bQuizEn', () => Quiz.open('en')); tap('bSqBack', () => this.openTitle());
     tap('bMulti', () => Multi.open());
     tap('bInf', () => { AU.init(); if (!this.chars.length) this.openCreator(-1, 'inf'); else this.launchInf(); });
     tap('bPlan', () => this.openPlan());

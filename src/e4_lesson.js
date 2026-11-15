@@ -246,9 +246,11 @@ const AGE_SENT = [
   n => ({ fr: 'Elle a ' + n + ' ans.', en: 'She is ' + NUM_W[n] + '.', p: 'she is ' + NUM_W[n] + '[ years old]', c: ['She has ' + NUM_W[n] + ' years.', 'She is ' + NUM_W[lsNumTwins(n)[0]] + '.'] }),
 ];
 const lsFmt = n => n.toLocaleString('en-US');
-function lsNumQ() {
+// le nombre interrogé est gardé pour dire où le revoir sur la fiche « Numbers »
+function lsNumQ() { const q = lsNumQ0(); if (q.num && lsNumQ0.n) q.r = enNumRef(lsNumQ0.n); return q; }
+function lsNumQ0() {
   const small = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], tens = [30, 40, 50, 60, 70, 80, 90], big = [100, 1000, 1000000];
-  const r = Math.random(), n = r < 0.55 ? pick(small) : r < 0.9 ? pick(tens) : pick(big);
+  const r = Math.random(), n = r < 0.55 ? pick(small) : r < 0.9 ? pick(tens) : pick(big); lsNumQ0.n = n;
   const tw = lsNumTwins(n).filter(x => NUM_W[x] && x !== n).slice(0, 2);
   const say = () => ({ num: 1, show: '« ' + lsFmt(n) + ' »', ask: 'Numbers! Comment dit-on ce nombre en anglais ?', en: NUM_W[n], p: n >= 100 ? '{one|a} ' + NUM_W[n].split(' ')[1] : NUM_W[n], c: tw.map(x => NUM_W[x]) });
   switch (Math.floor(Math.random() * 6)) {
@@ -381,7 +383,7 @@ const Lesson = {
     $('lsDone').textContent = hist ? (r.ok ? 'Merci, Monsieur ! 🏃' : 'Pardon, Monsieur… 😔') : r.ok ? 'Thank you, Miss! 🏃' : 'Sorry, Miss… 😔';
     $('lsAsk').classList.add('hidden'); $('lsType').classList.add('hidden'); $('lsRes').classList.remove('hidden');
     // où revérifier dans le cahier (histoire)
-    const ref = hist ? histRef(this.q.r) : null;
+    const ref = hist ? qzRef(this.q.r, 'hist') : qzRef(lsRefFor(this.q), 'en');
     if (ref) { const d = document.createElement('div'); d.className = 'lsRef'; d.textContent = '📸 Revérifie dans ton cahier — ' + ref.txt; $('lsTip').appendChild(d); }
     histShot($('lsShot'), ref);
     AU.sfx(r.ok ? 'found' : 'fail'); if (gift) AU.sfx('pickup'); if (r.ok) confetti(G.P.x, G.P.y - 10, 24);
