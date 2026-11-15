@@ -322,6 +322,46 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
 #msgs>#toast,#msgs>#banner{width:min(100%,440px);font-size:17px;line-height:1.05;padding:5px 10px;animation:msgUp .3s cubic-bezier(.2,1.6,.4,1)}
 #msgs>#toast{background:rgba(20,11,38,.88)}
 @keyframes msgUp{from{transform:translateY(14px) scale(.85);opacity:0}to{transform:none;opacity:1}}
+
+/* ---- l'interro de M. Silex ---- */
+.qzBtn{background:#e8b07a}
+.qzPanel{margin:0 auto 12px;animation:none}
+#sQuiz .lsName{color:#8a4a1a}#sQuiz .lsChoices .choice{background:#f6e3c4}#sQuiz .lsChoices .choice:disabled{cursor:default}
+#sQuiz .lsChoices .choice.good{background:#c8f5b8}#sQuiz .lsChoices .choice.bad{background:#ffc9cf}
+.qzSay{position:relative;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:7px 10px;margin:4px 0 8px;font-size:20px;color:#5a3a8a}
+.qzHint{font-size:18px;color:#7a5a3a}
+.qzList{display:flex;flex-direction:column;gap:8px;max-width:440px;margin:0 auto 12px}
+.qzCh{display:flex;align-items:center;gap:10px;text-align:left;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:12px;box-shadow:0 4px 0 var(--ink);padding:9px 10px;font-family:'VT323',monospace;touch-action:manipulation}
+.qzCh:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.qzCh .em{font-size:30px;flex:0 0 auto}.qzCh .tx{flex:1;min-width:0;display:flex;flex-direction:column}.qzCh .tx b{font-size:21px;line-height:1.05}.qzCh .tx small{font-size:17px;color:#7a5a3a}
+.qzCh .rec{flex:0 0 auto;font-size:16px;color:#7a5a3a;text-align:right;max-width:74px;line-height:1}.qzCh .rec.top{color:#2e8a3a;font-weight:bold}
+.qzQuit{margin-left:auto;background:#fff;border:3px solid var(--ink);border-radius:8px;font-size:18px;padding:2px 9px;touch-action:manipulation}
+.qzChap{font-size:18px;color:#7a5a3a;margin-bottom:4px}
+.qzDots{display:flex;gap:4px;margin-bottom:6px}.qzDots i{flex:1;height:8px;border-radius:4px;background:#e2d3bd}.qzDots i.cur{background:#ffd23f}.qzDots i.ok{background:#3fae4f}.qzDots i.ko{background:#e0404f}
+.qzQ{font-size:24px}
+.qzRef{font-size:19px;color:#1f4e99;margin:2px 0 6px}
+.qzShot{position:relative;overflow:hidden;border:3px solid var(--ink);border-radius:10px;background:#fff;margin-bottom:10px;cursor:zoom-in;touch-action:manipulation}
+.qzShot img{position:absolute;left:0;top:0;width:100%;display:block;pointer-events:none}
+.qzShot i,#qzZoomPage i{position:absolute;border:3px solid #ff2d6f;border-radius:8px;background:rgba(255,230,0,.18);box-shadow:0 0 0 2000px rgba(20,10,40,.28);pointer-events:none;animation:qzBlink 1.2s ease-in-out 2}
+@keyframes qzBlink{50%{border-color:#ffd23f}}
+.qzShot .zoomTip{position:absolute;right:6px;bottom:6px;background:var(--ink);color:var(--yel);font-size:15px;border-radius:6px;padding:2px 6px;pointer-events:none}
+#qzZoom{position:fixed;inset:0;z-index:80;background:rgba(10,6,20,.85);display:flex;align-items:center;justify-content:center;padding:10px}
+.qzZoomBox{width:100%;max-width:560px;max-height:100%;display:flex;flex-direction:column;background:var(--paper);border:4px solid var(--ink);border-radius:12px;overflow:hidden}
+.qzZoomHead{display:flex;gap:8px;align-items:center;padding:6px 8px;font-size:18px;color:var(--ink)}.qzZoomHead span{flex:1}
+#qzZoomX{background:#fff;border:3px solid var(--ink);border-radius:8px;font-size:18px;padding:2px 9px}
+#qzZoomScroll{overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y pinch-zoom}
+#qzZoomPage{position:relative;overflow:hidden}#qzZoomPage img{width:100%;display:block}
+.qzNote{font-family:'Press Start 2P',monospace;font-size:16px;text-align:center;margin:6px 0 10px;color:#7a5a3a}.qzNote span{font-size:44px}
+.qzNote.top span{color:#2e8a3a}.qzNote.mid span{color:#d07a10}.qzNote.low span{color:#d0283a}
+.qzRec{font-size:20px;color:#2e8a3a;text-align:center;margin-bottom:6px}
+.qzReward{display:flex;align-items:center;gap:10px;background:#fff0f8;border:3px solid #ff6fb5;border-radius:10px;padding:8px;font-size:19px;margin-bottom:8px}
+.qzReward{flex-wrap:wrap}#qzGift{flex-wrap:nowrap}.qzRar{color:var(--ink);border:2px solid var(--ink);border-radius:6px;padding:0 5px;font-size:16px;white-space:nowrap}.qzNew{color:#d0283a}.qzGifts{display:flex;gap:6px;flex-wrap:wrap}.qzGifts canvas{width:44px!important;height:44px!important}
+.qzReward canvas{width:56px;height:56px;image-rendering:pixelated;flex:0 0 auto;animation:lsPop .6s .2s both}
+.qzMissT{font-size:19px;color:#a0303a;margin:4px 0}
+.qzM{background:#fff;border:2px solid #d8c8b0;border-radius:8px;padding:6px 8px;margin-bottom:6px;display:flex;flex-direction:column;font-size:18px;line-height:1.1}.qzM span{color:#2e8a3a}.qzM small{color:#1f4e99;font-size:17px}
+#qzEnd{position:relative}.qzConf{position:absolute;top:-10px;width:8px;height:12px;border-radius:2px;pointer-events:none;animation:qzFall 2s linear forwards}
+@keyframes qzFall{to{transform:translateY(520px) rotate(540deg);opacity:0}}
+#sLesson .qzShot{margin-top:-2px}.lsRef{font-size:18px;color:#1f4e99;margin-top:4px}
 </style>
 </head>
 <body>
@@ -355,6 +395,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
         <div id="lsYou" class="lsYou"></div>
         <div class="lsAnsBox"><span id="lsAns" class="lsAns"></span><button id="lsEar" class="lsEar" aria-label="Écouter la phrase">🔊</button></div>
         <div id="lsTip" class="lsTip"></div>
+        <div id="lsShot" class="qzShot hidden"></div>
         <div id="lsLost" class="lsLost"></div>
         <button class="btn big green" id="lsDone">OK</button>
       </div>
@@ -387,6 +428,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <button class="btn pink" id="bMulti">👥 À deux en ligne</button>
       <button class="btn cyan" id="bChars">👕 Mes personnages</button>
       <button class="btn sqBtn" id="bSquish">🧸 Mes squishies</button>
+      <button class="btn qzBtn" id="bQuiz">🦴 L’interro de M. Silex</button>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
       <div class="panel howto">
@@ -461,6 +503,58 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <button class="btn ghost" id="bSqBack">◀ Retour</button>
     </div>
   </div>
+
+  <!-- L'interro de M. Silex (mini-jeu) -->
+  <div id="sQuiz" class="screen hidden">
+    <div class="wrap">
+      <div id="qzHome">
+        <div class="lsPanel qzPanel">
+          <div class="lsHead"><canvas id="qzProf0" width="22" height="34"></canvas><div><div class="lsName">M. Silex</div><div class="lsSub">L’interro d’histoire</div></div><div class="lsFlag">🦴</div></div>
+          <div class="qzSay" id="qzHello"></div>
+          <div class="qzHint">10 questions sur ton cahier. Chaque correction te dit sur quelle photo et à quel endroit revérifier. Toutes les 3 bonnes réponses : un squishy pour ta collection !</div>
+        </div>
+        <div id="qzList" class="qzList"></div>
+        <button class="btn ghost" id="qzBack">◀ Retour</button>
+      </div>
+      <div id="qzPlay" class="hidden">
+        <div class="lsPanel qzPanel">
+          <div class="lsHead"><canvas id="qzProf1" width="22" height="34"></canvas><div style="min-width:0"><div class="lsName">M. Silex</div><div class="lsSub" id="qzSub"></div></div><button class="qzQuit" id="qzQuit" aria-label="Arrêter l’interro">✖</button></div>
+          <div class="qzChap" id="qzChap"></div>
+          <div class="qzDots" id="qzDots"></div>
+          <div class="qzSay" id="qzSay"></div>
+          <div class="lsFr qzQ" id="qzQ"></div>
+          <div class="lsChoices" id="qzChoices"></div>
+          <button class="lsType" id="qzJoker">📝 Antisèche (1)</button>
+          <div id="qzRes" class="hidden">
+            <div id="qzVerdict" class="lsVerdict"></div>
+            <div id="qzYou" class="lsYou"></div>
+            <div class="lsAnsBox"><span id="qzAns" class="lsAns"></span></div>
+            <div id="qzTip" class="lsTip"></div>
+            <div id="qzGift" class="qzReward hidden"></div>
+            <div id="qzRef" class="qzRef"></div>
+            <div id="qzShot" class="qzShot hidden"></div>
+            <button class="btn big green" id="qzNext">Question suivante ▶</button>
+          </div>
+        </div>
+      </div>
+      <div id="qzEnd" class="hidden">
+        <div class="lsPanel qzPanel">
+          <div class="lsHead"><canvas id="qzProf2" width="22" height="34"></canvas><div><div class="lsName">M. Silex</div><div class="lsSub">Ta note</div></div><div class="lsFlag">📝</div></div>
+          <div id="qzNote" class="qzNote"></div>
+          <div id="qzBull" class="qzSay"></div>
+          <div id="qzRec" class="qzRec"></div>
+          <div id="qzReward" class="qzReward hidden"></div>
+          <div id="qzMissT" class="qzMissT">À revoir dans ton cahier :</div>
+          <div id="qzMiss"></div>
+        </div>
+        <button class="btn green" id="qzRetry">🎯 Refaire mes erreurs</button>
+        <button class="btn" id="qzAgain">🔁 Rejouer ce chapitre</button>
+        <button class="btn cyan" id="qzOther">📚 Autre chapitre</button>
+        <button class="btn ghost" id="qzEndBack">🏠 Menu</button>
+      </div>
+    </div>
+  </div>
+  <div id="qzZoom" class="hidden"><div class="qzZoomBox"><div class="qzZoomHead"><span id="qzZoomT"></span><button id="qzZoomX" aria-label="Fermer la photo">✖</button></div><div id="qzZoomScroll"><div id="qzZoomPage"></div></div></div></div>
 
   <!-- Intro de niveau -->
   <div id="sIntro" class="overlay hidden">
@@ -4633,7 +4727,7 @@ const Lesson = {
     let idx = HIST_BANK.map((q, i) => i).filter(i => !this.usedH.has(i));
     if (!idx.length) { this.usedH.clear(); idx = HIST_BANK.map((q, i) => i); }
     const i = idx[Math.floor(Math.random() * idx.length)]; this.usedH.add(i); const h = HIST_BANK[i];
-    return { hist: 1, show: h.q, ask: pick(['Interro surprise ! Alors, petit Homo sapiens…', 'Voyons si tu as bien appris ta leçon…', 'Question d’histoire !', 'Sors ton cahier… dans ta tête !']), en: h.a, c: h.w.slice(), e: h.e, p: h.a };
+    return { hist: 1, show: h.q, ask: pick(['Interro surprise ! Alors, petit Homo sapiens…', 'Voyons si tu as bien appris ta leçon…', 'Question d’histoire !', 'Sors ton cahier… dans ta tête !']), en: h.a, c: h.w.slice(), e: h.e, p: h.a, r: h.r };
   },
   pick() {
     const r = Math.random();
@@ -4717,6 +4811,10 @@ const Lesson = {
     else line('lsGiftT', '🎁 Miss Teacup voulait t’offrir un objet magique… mais ton sac est plein !');
     $('lsDone').textContent = hist ? (r.ok ? 'Merci, Monsieur ! 🏃' : 'Pardon, Monsieur… 😔') : r.ok ? 'Thank you, Miss! 🏃' : 'Sorry, Miss… 😔';
     $('lsAsk').classList.add('hidden'); $('lsType').classList.add('hidden'); $('lsRes').classList.remove('hidden');
+    // où revérifier dans le cahier (histoire)
+    const ref = hist ? histRef(this.q.r) : null;
+    if (ref) { const d = document.createElement('div'); d.className = 'lsRef'; d.textContent = '📸 Revérifie dans ton cahier — ' + ref.txt; $('lsTip').appendChild(d); }
+    histShot($('lsShot'), ref);
     AU.sfx(r.ok ? 'found' : 'fail'); if (gift) AU.sfx('pickup'); if (r.ok) confetti(G.P.x, G.P.y - 10, 24);
     if (!hist && !this.q.toFr && !this.q.toNum) setTimeout(() => { if (this.res) AU.sayEn(this.q.en, PROFS[5]); }, 350);
   },
@@ -4734,75 +4832,129 @@ const Lesson = {
 // Attrapé·e par M. Silex (histoire-géo) : une question sur la Préhistoire, 3 réponses au choix.
 // Bonne réponse : il te confie un animal de compagnie au hasard, qui te suit
 // et fait fuir les profs qui t'attrapent (3 fois). Faute : il corrige… et confisque tes objets magiques.
+// Toutes les questions viennent des photos du cahier de Faustine (16 photos, dans l'ordre d'envoi).
+// c = chapitre, r = [photo, haut, bas, ce qu'il faut regarder, gauche, droite] (fractions de la page)
 // q = question, a = bonne réponse, w = 2 pièges, e = le rappel de la leçon
 const HIST_BANK = [
-  // --- la frise : Préhistoire et Histoire ---
-  { q: 'Quand commence la Préhistoire ?', a: 'Il y a environ 3 millions d’années', w: ['Il y a 3 000 ans', 'En 476'], e: 'La Préhistoire commence il y a environ 3 millions d’années, avec l’apparition des premiers humains.' },
-  { q: 'Quel événement marque la fin de la Préhistoire ?', a: 'L’apparition de l’écriture', w: ['La découverte du feu', 'La chute de l’Empire romain'], e: 'La Préhistoire se termine vers 3000 av. J.-C. avec l’apparition de l’écriture.' },
-  { q: 'Vers quelle date apparaît l’écriture ?', a: 'Vers 3000 av. J.-C.', w: ['Vers 8000 av. J.-C.', 'En 1492'], e: 'L’écriture apparaît vers 3000 avant J.-C. : c’est le début de l’Histoire (l’Antiquité).' },
-  { q: 'Quelle période vient juste après la Préhistoire ?', a: 'L’Antiquité', w: ['Le Moyen Âge', 'Le Néolithique'], e: 'Préhistoire → Antiquité → Moyen Âge → Temps modernes → XIXe → XXe siècle.' },
-  { q: 'La Préhistoire, c’est…', a: 'La période avant l’apparition de l’écriture', w: ['La période des châteaux forts', 'La période juste après l’écriture'], e: 'Préhistoire = période de l’histoire humaine qui a précédé l’apparition de l’écriture.' },
-  { q: 'Quelle est la plus longue période de la vie de l’humanité ?', a: 'La Préhistoire', w: ['L’Antiquité', 'Les Temps modernes'], e: 'La Préhistoire dure environ 3 millions d’années : c’est de loin la plus longue !' },
-  { q: 'Quel événement marque le début du Moyen Âge ?', a: 'La chute de l’Empire romain (476)', w: ['La découverte de l’Amérique (1492)', 'La Révolution française (1789)'], e: 'La frise : 476 chute de l’Empire romain, 1492 découverte de l’Amérique, 1789 Révolution française.' },
-  { q: 'Quel événement marque le début des Temps modernes ?', a: 'La découverte de l’Amérique (1492)', w: ['La Révolution française (1789)', 'L’apparition de l’écriture'], e: 'Les Temps modernes commencent en 1492 avec la découverte de l’Amérique.' },
-  { q: '« -3000 », sur une frise, ça veut dire…', a: '3000 ans avant la naissance de Jésus-Christ', w: ['L’an 3000, dans le futur', 'Il y a 3000 jours'], e: 'Le signe « - » veut dire « avant J.-C. » (avant notre ère).' },
-  { q: 'Le Paléolithique va de…', a: '-3 millions d’années à -8000', w: ['-8000 à -3000', '-3000 à 476'], e: 'Paléolithique : de -3 millions d’années à -8000. Puis Néolithique : de -8000 à -3000.' },
-  { q: 'Le Néolithique va de…', a: '-8000 à -3000', w: ['-3 millions d’années à -8000', '476 à 1492'], e: 'Néolithique : de -8000 à -3000, juste avant l’apparition de l’écriture.' },
-  { q: '« Paléolithique », ça veut dire…', a: 'La pierre ancienne (pierre taillée)', w: ['La pierre nouvelle', 'L’âge du fer'], e: 'Paléolithique = « pierre ancienne » : l’âge de la pierre taillée.' },
-  { q: '« Néolithique », ça veut dire…', a: 'La pierre nouvelle', w: ['La pierre ancienne', 'La pierre précieuse'], e: 'Néolithique = « pierre nouvelle » en grec. Il succède au Paléolithique.' },
-  // --- les sources : archéologie ---
-  { q: 'Un archéologue, c’est…', a: 'Un scientifique qui étudie les traces laissées par les humains du passé', w: ['Un scientifique qui étudie les volcans', 'Le chef d’une tribu préhistorique'], e: 'Archéologue : scientifique qui étudie les traces laissées par les hommes et les femmes du passé.' },
-  { q: 'Des vestiges, ce sont…', a: 'Ce qui reste du passé : objets, outils, traces…', w: ['Des vêtements de la Préhistoire', 'Des animaux disparus'], e: 'Vestiges : ce qui reste du passé (objets, traces dans le sol, outils, monuments…).' },
-  { q: 'Un fossile, c’est…', a: 'Un débris de plante ou d’animal conservé dans le sol', w: ['Une pierre taillée en forme de couteau', 'Une peinture dans une grotte'], e: 'Fossile : débris de plante ou d’animal conservé dans des couches anciennes du sol.' },
-  { q: 'Comment les archéologues trouvent-ils les vestiges ?', a: 'En faisant des fouilles dans le sol', w: ['En lisant des livres écrits à la Préhistoire', 'En regardant des films'], e: 'Les archéologues mettent les vestiges au jour en faisant des fouilles dans le sol.' },
-  { q: 'Quels outils utilisent les archéologues ?', a: 'Truelle, pinceau, balayette', w: ['Marteau-piqueur et pelleteuse', 'Ciseaux, colle et surligneur'], e: 'La truelle dégage le sédiment, le pinceau nettoie autour des objets, la balayette retire la terre.' },
-  { q: 'Pourquoi l’archéologie est-elle notre seule source sur la Préhistoire ?', a: 'Parce que l’écriture n’existait pas', w: ['Parce que les livres ont brûlé', 'Parce que les humains ne parlaient pas'], e: 'Sans écriture, il ne reste que les vestiges : outils, campements, peintures, restes de repas…' },
-  { q: 'Où a-t-on trouvé le plus ancien crâne humain de France ?', a: 'Dans la grotte de Tautavel', w: ['Dans la grotte de Lascaux', 'À Paris'], e: 'Le crâne de l’homme de Tautavel (Pyrénées-Orientales) a environ 450 000 ans.' },
-  { q: 'Quel âge a le crâne de l’homme de Tautavel ?', a: 'Environ 450 000 ans', w: ['Environ 4 500 ans', 'Environ 45 millions d’années'], e: 'Environ 450 000 ans : c’est le plus ancien crâne humain trouvé en France.' },
-  { q: 'Pourquoi les fouilles autour d’un foyer sont-elles intéressantes ?', a: 'Les humains vivaient et travaillaient autour du feu', w: ['C’est là qu’ils écrivaient leurs livres', 'C’est là qu’ils rangeaient leurs trésors en or'], e: 'Le foyer donnait lumière et chaleur : on y taillait le silex, on préparait la viande…' },
-  // --- les premiers humains ---
-  { q: 'Où sont apparus les premiers humains ?', a: 'En Afrique', w: ['En Europe', 'En Amérique'], e: 'Les premiers humains apparaissent en Afrique, il y a environ 2,4 millions d’années.' },
-  { q: 'Les premiers humains apparaissent il y a…', a: '2,4 millions d’années', w: ['24 000 ans', '240 millions d’années'], e: 'Homo habilis, le premier humain, apparaît il y a 2,4 millions d’années en Afrique.' },
-  { q: 'Quelle est la première espèce humaine ?', a: 'Homo habilis', w: ['Homo sapiens', 'Lucy, l’australopithèque'], e: 'Homo habilis (« l’homme habile ») est le premier humain à fabriquer des outils. Lucy n’était pas une humaine !' },
-  { q: '« Homo habilis », ça veut dire…', a: 'L’homme habile', w: ['L’homme debout', 'L’homme savant'], e: 'Habilis = habile (il fabrique des outils), erectus = debout, sapiens = savant.' },
-  { q: '« Homo erectus », ça veut dire…', a: 'L’homme debout (dressé)', w: ['L’homme habile', 'L’homme savant'], e: 'Homo erectus = « l’homme debout ». Il apparaît il y a 1,9 million d’années.' },
-  { q: '« Homo sapiens », ça veut dire…', a: 'L’homme savant', w: ['L’homme debout', 'L’homme habile'], e: 'Homo sapiens = « l’homme savant » : c’est notre espèce !' },
-  { q: 'Quelle espèce a maîtrisé le feu ?', a: 'Homo erectus', w: ['Homo habilis', 'L’australopithèque'], e: 'Homo erectus domestique le feu (vers 500 000 ans) et sort d’Afrique.' },
-  { q: 'Quelle est notre espèce, la seule humaine qui a survécu ?', a: 'Homo sapiens', w: ['Homo erectus', 'L’homme de Néandertal'], e: 'Tous les humains d’aujourd’hui sont des Homo sapiens, apparus en Afrique.' },
-  { q: 'La bipédie, c’est…', a: 'Marcher sur ses deux pieds', w: ['Marcher à quatre pattes', 'Savoir nager'], e: 'Bi = 2, pédie = pied : l’humain marche debout sur ses deux jambes.' },
-  { q: 'Qu’est-ce qui sépare les humains des autres primates ?', a: 'Position debout, mains libérées, gros cerveau', w: ['Des poils et une longue queue', 'Savoir grimper aux arbres'], e: 'Position debout → les mains se libèrent → le cerveau se développe → fabrication d’outils.' },
-  { q: 'Lucy, c’était…', a: 'Une australopithèque (pas encore une humaine)', w: ['La première Homo sapiens', 'Une archéologue célèbre'], e: 'Toumaï et Lucy ne sont pas des humains : ce sont des ancêtres plus anciens.' },
-  { q: 'Qui enterre ses morts et invente l’art ?', a: 'Homo sapiens', w: ['Homo habilis', 'L’australopithèque'], e: 'Vers 35 000 av. J.-C., les humains peignent, sculptent et enterrent leurs morts.' },
-  { q: 'Où vivait l’homme de Néandertal ?', a: 'En Europe et en Asie', w: ['En Amérique', 'En Océanie'], e: 'L’homme de Néandertal vivait en Europe et en Asie, de -350 000 à -30 000 ans.' },
-  // --- les migrations ---
-  { q: 'Où se trouve le berceau de l’humanité ?', a: 'En Afrique (vallée du Grand Rift)', w: ['En Asie', 'En Europe, à Tautavel'], e: 'Les plus anciens restes d’hominidés ont été trouvés dans la vallée du Grand Rift, en Afrique.' },
-  { q: 'Quelles sont les plus anciennes migrations ?', a: 'Celles d’Homo erectus', w: ['Celles d’Homo sapiens', 'Celles des Vikings'], e: 'Homo erectus, bon marcheur, sort d’Afrique il y a environ 2 millions d’années.' },
-  { q: 'Quand Homo sapiens commence-t-il ses migrations ?', a: 'À partir de -300 000 ans', w: ['À partir de -3000 ans', 'Il y a 30 millions d’années'], e: 'Homo sapiens quitte l’Afrique à partir de -300 000 ans et peuple toute la planète.' },
-  { q: 'Quel continent Homo sapiens atteint-il en dernier ?', a: 'L’Amérique', w: ['L’Europe', 'L’Asie'], e: 'Homo sapiens peuple l’Europe, l’Asie, l’Océanie… et en dernier l’Amérique.' },
-  // --- la vie au Paléolithique ---
-  { q: '« Nomade », ça veut dire…', a: 'Qui n’a pas d’habitat fixe', w: ['Qui habite toujours au même endroit', 'Qui cultive des champs'], e: 'Nomade : personne dont l’habitat n’est pas fixe. Au Paléolithique, les humains sont nomades.' },
-  { q: '« Sédentaire », ça veut dire…', a: 'Qui habite un lieu fixe', w: ['Qui se déplace tout le temps', 'Qui chasse le mammouth'], e: 'Être sédentaire, c’est habiter un lieu fixe : le contraire d’être nomade.' },
-  { q: 'Au Paléolithique, les humains vivent de…', a: 'La chasse, la pêche et la cueillette', w: ['L’agriculture et l’élevage', 'Leur boutique au village'], e: 'Peu nombreux, ils vivent de la chasse, de la pêche et de la cueillette.' },
-  { q: 'Pourquoi les nomades se déplacent-ils ?', a: 'Pour suivre les troupeaux', w: ['Pour aller à l’école', 'Pour visiter les grandes villes'], e: 'Ils poursuivent le gibier : ils se déplacent pour suivre les troupeaux.' },
-  { q: 'Avec quoi fabrique-t-on les outils au Paléolithique ?', a: 'Silex taillé, bois, os et ivoire', w: ['Plastique et métal', 'Or et argent'], e: 'Paléolithique = âge de la pierre taillée : silex, mais aussi bois, os et ivoire.' },
-  { q: 'À quoi sert une aiguille en os ?', a: 'À coudre du cuir pour faire des vêtements', w: ['À pêcher des poissons', 'À allumer le feu'], e: 'L’aiguille en os permet de coudre des morceaux de cuir pour faire des vêtements.' },
-  { q: 'À quoi sert un harpon en os ?', a: 'À pêcher', w: ['À coudre', 'À peindre les grottes'], e: 'Le harpon en os permet le développement de la pêche.' },
-  { q: 'À quoi sert le propulseur ?', a: 'À lancer la sagaie plus vite', w: ['À allumer le feu', 'À couper la viande'], e: 'Une sagaie lancée avec un propulseur va trois fois plus vite qu’à la main !' },
-  { q: 'Une sagaie, c’est…', a: 'Une sorte de lance', w: ['Une tente en peaux', 'Un petit bateau'], e: 'Sagaie = lance, qu’on lance avec un propulseur.' },
-  { q: 'À quoi servaient les bêtes tuées à la chasse ?', a: 'À tout : viande, peaux, os et nerfs', w: ['Seulement à la viande', 'À rien : c’était un sport'], e: 'Viande à manger, peau pour vêtements et tentes, os pour outils, nerfs pour faire du fil.' },
-  { q: 'À quoi voit-on que les gens de Pincevent sont nomades ?', a: 'Ils vivent dans des tentes en peaux', w: ['Ils ont des maisons en pierre', 'Ils ont des champs de blé'], e: 'Des tentes qu’on démonte et emporte : ils sont nomades.' },
-  { q: 'Que montre la peinture de la grotte de Niaux ?', a: 'Une chasse au bison', w: ['Une fête de village', 'Un champ de blé'], e: 'Un bison touché par une sagaie : c’est une scène de chasse (vers 12 000 av. J.-C.).' },
-  { q: 'Vers quand les humains développent-ils l’art (peinture, sculpture) ?', a: 'Vers 35 000 av. J.-C.', w: ['Vers 1789', 'Il y a 3 millions d’années'], e: 'Vers 35 000 av. J.-C., ils peignent, sculptent et commencent à enterrer leurs morts.' },
-  // --- le Néolithique ---
-  { q: 'Qu’est-ce que la « révolution néolithique » ?', a: 'L’invention de l’agriculture et de l’élevage', w: ['L’invention de l’écriture', 'La découverte du feu'], e: 'Néolithique : agriculture, domestication des animaux, élevage… et les humains se fixent.' },
-  { q: 'Où apparaît le plus ancien foyer de la révolution néolithique ?', a: 'Au Proche-Orient', w: ['En Chine', 'Au Mexique'], e: 'Au Proche-Orient, vers 10 000 - 9 000 av. J.-C. (blé, orge, mouton, chèvre…).' },
-  { q: 'Que cultive-t-on d’abord au Proche-Orient ?', a: 'Le blé et l’orge', w: ['Le maïs et l’avocat', 'La pomme de terre et le piment'], e: 'Proche-Orient : blé, orge. Mexique : maïs, avocat. Andes : pomme de terre, piment.' },
-  { q: 'Au Néolithique, les humains deviennent…', a: 'Sédentaires : ils fondent des villages', w: ['Nomades', 'Des chasseurs de mammouths'], e: 'Vers 10 000 - 8000 av. J.-C., ils cultivent la terre, deviennent sédentaires et fondent des villages.' },
-  { q: 'Qu’est-ce qui change au Néolithique ?', a: 'Maisons en dur, villages, outils en métal', w: ['Les humains apprennent à marcher debout', 'Les humains inventent l’ordinateur'], e: 'Maisons en dur, sédentarisation, urbanisation, plus de population, outils en métal…' },
-  { q: 'Un « boom démographique », c’est…', a: 'Une forte augmentation de la population', w: ['Une éruption de volcan', 'Un très gros orage'], e: 'La sédentarité permet un boom démographique : la population augmente fortement.' },
-  // --- méthode ---
-  { q: 'Un document avec une légende et des flèches sur le monde, c’est…', a: 'Une carte', w: ['Un article de presse', 'Un tableau'], e: 'Nature d’un document : carte, article de presse, tableau, interview, article de dictionnaire, extrait d’un site.' },
-  { q: 'Un entretien publié sur LePoint.fr, c’est…', a: 'Une interview dans un article de presse', w: ['Une carte', 'Un tableau'], e: 'Interview (entretien) publiée dans un article de journal : c’est sa nature.' },
+  // ===== ⏳ Qu’est-ce que la Préhistoire ? (la frise) =====
+  { c: 'intro', r: [11, .08, .16, 'la réponse 1)'], q: 'Quand commence la Préhistoire ?', a: 'Il y a environ 3 millions d’années', w: ['Il y a 3 000 ans', 'En 476'], e: 'La Préhistoire commence il y a environ 3 millions d’années, avec l’apparition des premiers humains.' },
+  { c: 'intro', r: [11, .08, .16, 'la réponse 1)'], q: 'Quel événement marque la fin de la Préhistoire ?', a: 'L’apparition de l’écriture', w: ['La découverte du feu', 'La chute de l’Empire romain'], e: 'La Préhistoire se termine vers 3000 av. J.-C. avec l’apparition de l’écriture.' },
+  { c: 'intro', r: [8, .55, .77, 'la frise : « -3000 : apparition de l’écriture »'], q: 'Vers quelle date apparaît l’écriture ?', a: 'Vers 3000 av. J.-C.', w: ['Vers 8000 av. J.-C.', 'En 1492'], e: 'L’écriture apparaît vers 3000 avant J.-C. : c’est le début de l’Histoire (l’Antiquité).' },
+  { c: 'intro', r: [11, .08, .16, 'la fin de la réponse 1)'], q: 'Quelle période vient juste après la Préhistoire ?', a: 'L’Antiquité', w: ['Le Moyen Âge', 'Le Néolithique'], e: 'Préhistoire → Antiquité → Moyen Âge → Temps modernes → XIXe → XXe siècle.' },
+  { c: 'intro', r: [11, .16, .22, 'la définition en rouge'], q: 'La Préhistoire, c’est…', a: 'La période avant l’apparition de l’écriture', w: ['La période des châteaux forts', 'La période juste après l’écriture'], e: 'Préhistoire = période de l’histoire humaine qui a précédé l’apparition de l’écriture.' },
+  { c: 'intro', r: [11, .22, .27, 'la réponse 2)'], q: 'Quelle est la plus longue période de la vie de l’humanité ?', a: 'La Préhistoire', w: ['L’Antiquité', 'Les Temps modernes'], e: 'La Préhistoire dure environ 3 millions d’années : c’est de loin la plus longue !' },
+  { c: 'intro', r: [8, .55, .77, 'les dates sous la frise B'], q: 'Quel événement marque le début du Moyen Âge ?', a: 'La chute de l’Empire romain (476)', w: ['La découverte de l’Amérique (1492)', 'La Révolution française (1789)'], e: 'La frise : 476 chute de l’Empire romain, 1492 découverte de l’Amérique, 1789 Révolution française.' },
+  { c: 'intro', r: [8, .55, .77, 'les dates sous la frise B'], q: 'Quel événement marque le début des Temps modernes ?', a: 'La découverte de l’Amérique (1492)', w: ['La Révolution française (1789)', 'L’apparition de l’écriture'], e: 'Les Temps modernes commencent en 1492 avec la découverte de l’Amérique.' },
+  { c: 'intro', r: [11, .28, .35, '« en 3000 avant notre ère »'], q: '« -3000 », sur une frise, ça veut dire…', a: '3000 ans avant la naissance de Jésus-Christ', w: ['L’an 3000, dans le futur', 'Il y a 3000 jours'], e: 'Le signe « - » veut dire « avant J.-C. » (avant notre ère).' },
+  { c: 'intro', r: [11, .35, .41, 'Paléolithique puis Néolithique'], q: 'Le Paléolithique va de…', a: '-3 millions d’années à -8000', w: ['-8000 à -3000', '-3000 à 476'], e: 'Paléolithique : de -3 millions d’années à -8000. Puis Néolithique : de -8000 à -3000.' },
+  { c: 'intro', r: [11, .35, .41, 'Paléolithique puis Néolithique'], q: 'Le Néolithique va de…', a: '-8000 à -3000', w: ['-3 millions d’années à -8000', '476 à 1492'], e: 'Néolithique : de -8000 à -3000, juste avant l’apparition de l’écriture.' },
+  { c: 'intro', r: [15, .14, .21, 'la définition en rouge'], q: '« Paléolithique », ça veut dire…', a: 'La pierre ancienne (pierre taillée)', w: ['La pierre nouvelle', 'L’âge du fer'], e: 'Paléolithique = « pierre ancienne » : l’âge de la pierre taillée.' },
+  { c: 'intro', r: [15, .14, .21, 'la définition en rouge'], q: '« Néolithique », ça veut dire…', a: 'La pierre nouvelle', w: ['La pierre ancienne', 'La pierre précieuse'], e: 'Néolithique = « pierre nouvelle » en grec. Il succède au Paléolithique.' },
+  { c: 'intro', r: [15, .14, .21, 'la définition en rouge'], q: 'Le Néolithique vient…', a: 'Juste après le Paléolithique', w: ['Juste avant le Paléolithique', 'Juste après l’Antiquité'], e: 'Le Néolithique succède à la « pierre ancienne », le Paléolithique.' },
+  { c: 'intro', r: [8, .55, .77, 'la légende des couleurs de la frise'], q: 'Sur la frise, quelles périodes étudie-t-on en 6e ?', a: 'La Préhistoire et l’Antiquité', w: ['Le Moyen Âge et les Temps modernes', 'Le XIXe et le XXe siècle'], e: 'En vert : Préhistoire et Antiquité (6e). Moyen Âge et Temps modernes : 5e. XIXe : 4e. XXe : 3e.' },
+  { c: 'intro', r: [8, .55, .77, 'les dates sous la frise B'], q: 'Qu’est-ce qui se passe en 1789, sur la frise ?', a: 'La Révolution française', w: ['La révolution néolithique', 'La chute de l’Empire romain'], e: '1789 : Révolution française. Elle ouvre le XIXe siècle sur la frise.' },
+  { c: 'intro', r: [8, .12, .26, 'le titre du thème 1'], q: 'Comment s’appelle le thème 1 de ton cahier ?', a: 'La longue histoire de l’humanité et des migrations', w: ['Les châteaux forts et les chevaliers', 'La Révolution française'], e: 'Thème 1 : la longue histoire de l’humanité et des migrations. Chapitre 1 : les débuts de l’humanité.' },
+
+  // ===== 🔎 Comment connaît-on les débuts de l’humanité ? (archéologie) =====
+  { c: 'arch', r: [11, .44, .50, 'Archéologue (en rouge)'], q: 'Un archéologue, c’est…', a: 'Un scientifique qui étudie les traces laissées par les humains du passé', w: ['Un scientifique qui étudie les volcans', 'Le chef d’une tribu préhistorique'], e: 'Archéologue : scientifique qui étudie les traces laissées par les hommes et les femmes du passé.' },
+  { c: 'arch', r: [11, .52, .58, 'Vestiges (en rouge)'], q: 'Des vestiges, ce sont…', a: 'Ce qui reste du passé : objets, outils, traces…', w: ['Des vêtements de la Préhistoire', 'Des animaux disparus'], e: 'Vestiges : ce qui reste du passé (objets, traces dans le sol, outils, monuments…).' },
+  { c: 'arch', r: [11, .57, .64, 'Fossiles (en rouge)'], q: 'Un fossile, c’est…', a: 'Un débris de plante ou d’animal conservé dans le sol', w: ['Une pierre taillée en forme de couteau', 'Une peinture dans une grotte'], e: 'Fossile : débris de plante ou d’animal conservé dans des couches anciennes du sol.' },
+  { c: 'arch', r: [4, .48, .53, 'la phrase sous le texte écrit'], q: 'Comment les archéologues trouvent-ils les vestiges ?', a: 'En faisant des fouilles dans le sol', w: ['En lisant des livres écrits à la Préhistoire', 'En regardant des films'], e: 'Les archéologues mettent les vestiges au jour en faisant des fouilles dans le sol.' },
+  { c: 'arch', r: [6, .57, .65, 'la réponse 1)'], q: 'Quels outils utilisent les archéologues ?', a: 'Truelle, pinceau, balayette', w: ['Marteau-piqueur et pelleteuse', 'Ciseaux, colle et surligneur'], e: 'La truelle dégage le sédiment, le pinceau nettoie autour des objets, la balayette retire la terre.' },
+  { c: 'arch', r: [6, .71, .79, 'la réponse 2)'], q: 'Pourquoi l’archéologie est-elle notre seule source sur la Préhistoire ?', a: 'Parce que l’écriture n’existait pas', w: ['Parce que les livres ont brûlé', 'Parce que les humains ne parlaient pas'], e: 'Sans écriture, il ne reste que les vestiges : outils, campements, peintures, restes de repas…' },
+  { c: 'arch', r: [4, .15, .34, 'la légende du crâne', .53, .95], q: 'Où a-t-on trouvé le plus ancien crâne humain de France ?', a: 'Dans la grotte de Tautavel', w: ['Dans la grotte de Lascaux', 'À Paris'], e: 'Le crâne de l’homme de Tautavel (Pyrénées-Orientales) a environ 450 000 ans.' },
+  { c: 'arch', r: [4, .15, .34, 'la légende du crâne', .53, .95], q: 'Quel âge a le crâne de l’homme de Tautavel ?', a: 'Environ 450 000 ans', w: ['Environ 4 500 ans', 'Environ 45 millions d’années'], e: 'Environ 450 000 ans : c’est le plus ancien crâne humain trouvé en France.' },
+  { c: 'arch', r: [9, .43, .67, 'les réponses 2) (en bleu et en vert)'], q: 'Pourquoi les fouilles autour d’un foyer sont-elles intéressantes ?', a: 'Les humains vivaient et travaillaient autour du feu', w: ['C’est là qu’ils écrivaient leurs livres', 'C’est là qu’ils rangeaient leurs trésors en or'], e: 'Le foyer donnait lumière et chaleur : on y taillait le silex, on préparait la viande…' },
+  { c: 'arch', r: [6, .15, .40, 'la carte de France', .52, .92], q: 'Dans quel département se trouve la grotte de Tautavel ?', a: 'Les Pyrénées-Orientales', w: ['La Corse', 'Paris'], e: 'La grotte de Tautavel se trouve dans les Pyrénées-Orientales.' },
+  { c: 'arch', r: [6, .25, .40, 'la légende « L’entrée de la grotte de Tautavel »', .52, .92], q: 'Pourquoi la grotte de Tautavel était-elle pratique pour les chasseurs ?', a: 'En hauteur, on surveillait le gibier', w: ['Elle avait le chauffage central', 'Il y avait un supermarché à côté'], e: 'Située en hauteur, la grotte permettait d’observer le gibier, qui venait boire à la rivière en contrebas.' },
+  { c: 'arch', r: [6, .33, .45, '« Les outils de la fouille »', .15, .52], q: 'À quoi sert la truelle, sur un chantier de fouilles ?', a: 'À dégager le sédiment plus précisément qu’une pelle', w: ['À peindre les murs de la grotte', 'À allumer le feu'], e: 'La truelle dégage le sédiment de façon plus précise qu’une pelle. Le pinceau, lui, nettoie autour des objets.' },
+  { c: 'arch', r: [6, .25, .45, 'la légende du chantier', .03, .5], q: 'Comment prépare-t-on le chantier de fouilles ?', a: 'On le découpe en carrés numérotés, avec des cordes', w: ['On le découpe en triangles, à la tronçonneuse', 'On creuse partout au hasard'], e: 'Le site est quadrillé avec des cordes : chaque carré est numéroté pour noter où l’on trouve chaque vestige.' },
+  { c: 'arch', r: [4, .14, .27, 'la photo des deux archéologues', .1, .55], q: 'Qu’ont dégagé les archéologues à Sollacaro, en Corse ?', a: 'Des ossements humains d’environ 9 000 ans', w: ['Le crâne de l’homme de Tautavel', 'Une peinture de bison'], e: 'Deux archéologues dégagent des ossements humains vieux d’environ 9 000 ans, à Sollacaro, en Corse.' },
+  { c: 'arch', r: [4, .34, .49, 'le texte écrit sous les images'], q: 'Sans traces écrites, quels vestiges nous renseignent ?', a: 'Outils, campements, peintures, restes alimentaires', w: ['Journaux, lettres et cartes postales', 'Photos et vidéos'], e: 'Les sources viennent des vestiges des premières sociétés humaines : outils, campements, peintures, restes alimentaires…' },
+  { c: 'arch', r: [14, .71, .82, 'la réponse 1)', .42, .97], q: 'Comment les archéologues repèrent-ils un ancien campement ?', a: 'Aux pierres des foyers et aux trous des tentes', w: ['Aux panneaux indicateurs', 'Aux traces de pneus'], e: 'Ils fouillent les anciens campements, repérables aux pierres des foyers et aux trous des poteaux des tentes.' },
+  { c: 'arch', r: [14, .60, .84, 'la photo du document 1', .02, .44], q: 'Où a-t-on découvert un foyer du Paléolithique en 2004-2005 ?', a: 'À Mareuil-sur-Cher', w: ['À Tautavel', 'Dans la grotte de Niaux'], e: 'Document 1 « Sur les traces de Cro-Magnon » : un foyer du Paléolithique découvert à Mareuil-sur-Cher.' },
+  { c: 'arch', r: [9, .15, .31, 'le texte du document 2', .1, .6], q: 'D’après le document 2, qu’est-ce qui « fait le bonheur des archéologues » ?', a: 'Les tas de déchets près des foyers', w: ['Les trésors en or', 'Les squelettes de dinosaures'], e: 'Les amas de déchets formés près des structures de chauffe font le bonheur des archéologues.' },
+
+  // ===== 🦴 Qui étaient les premiers humains ? =====
+  { c: 'hum', r: [5, .35, .47, 'le texte sous l’arbre'], q: 'Où sont apparus les premiers humains ?', a: 'En Afrique', w: ['En Europe', 'En Amérique'], e: 'Les premiers humains apparaissent en Afrique, il y a environ 2,4 millions d’années.' },
+  { c: 'hum', r: [5, .35, .47, 'le texte sous l’arbre'], q: 'Les premiers humains apparaissent il y a…', a: '2,4 millions d’années', w: ['24 000 ans', '240 millions d’années'], e: 'Homo habilis, le premier humain, apparaît il y a 2,4 millions d’années en Afrique.' },
+  { c: 'hum', r: [16, .19, .28, 'la réponse 1.', .57, .97], q: 'Quelle est la première espèce humaine ?', a: 'Homo habilis', w: ['Homo sapiens', 'Lucy, l’australopithèque'], e: 'Homo habilis (« l’homme habile ») est le premier humain à fabriquer des outils. Lucy n’était pas une humaine !' },
+  { c: 'hum', r: [16, .59, .66, 'Homo habilis (souligné)'], q: '« Homo habilis », ça veut dire…', a: 'L’homme habile', w: ['L’homme debout', 'L’homme savant'], e: 'Habilis = habile (il fabrique des outils), erectus = debout, sapiens = savant.' },
+  { c: 'hum', r: [16, .66, .75, 'Homo erectus, en bas'], q: '« Homo erectus », ça veut dire…', a: 'L’homme debout (dressé)', w: ['L’homme habile', 'L’homme savant'], e: 'Homo erectus = « l’homme debout ». Il apparaît il y a 1,9 million d’années.' },
+  { c: 'hum', r: [7, .09, .16, 'la première phrase'], q: '« Homo sapiens », ça veut dire…', a: 'L’homme savant', w: ['L’homme debout', 'L’homme habile'], e: 'Homo sapiens = « l’homme savant » : c’est notre espèce !' },
+  { c: 'hum', r: [16, .66, .75, 'Homo erectus, en bas'], q: 'Quelle espèce a maîtrisé le feu ?', a: 'Homo erectus', w: ['Homo habilis', 'L’australopithèque'], e: 'Homo erectus domestique le feu (vers 500 000 ans) et sort d’Afrique.' },
+  { c: 'hum', r: [7, .09, .16, 'la première phrase'], q: 'Quelle est notre espèce, la seule humaine qui a survécu ?', a: 'Homo sapiens', w: ['Homo erectus', 'L’homme de Néandertal'], e: 'Notre espèce, Homo sapiens, est la seule espèce humaine survivante.' },
+  { c: 'hum', r: [5, .68, .72, 'Bipédie (en rouge)'], q: 'La bipédie, c’est…', a: 'Marcher sur ses deux pieds', w: ['Marcher à quatre pattes', 'Savoir nager'], e: 'Bi = 2, pédie = pied : l’humain marche debout sur ses deux jambes.' },
+  { c: 'hum', r: [10, .24, .41, 'le schéma', .42, .94], q: 'Qu’est-ce qui sépare les humains des autres primates ?', a: 'Position debout, mains libérées, gros cerveau', w: ['Des poils et une longue queue', 'Savoir grimper aux arbres'], e: 'Position debout → les mains se libèrent → le cerveau se développe → fabrication d’outils.' },
+  { c: 'hum', r: [4, .55, .79, 'le texte de « La galerie de l’humanité »', .46, .84], q: 'Dans « La galerie de l’humanité », Lucy et Toumaï…', a: 'N’étaient pas encore des humains', w: ['Étaient les premiers Homo sapiens', 'Étaient des archéologues célèbres'], e: 'Toumaï et Lucy sont dans la galerie avec la lignée humaine… mais ce n’étaient pas des hommes.' },
+  { c: 'hum', r: [16, .46, .59, 'la 3e réponse', .57, .97], q: 'Qui enterre ses morts et invente l’art ?', a: 'Homo sapiens', w: ['Homo habilis', 'L’australopithèque'], e: 'Homo sapiens perfectionne les outils, enterre ses morts et invente l’art (vers 35 000 av. J.-C.).' },
+  { c: 'hum', r: [16, .33, .43, 'l’homme de Néandertal, en bas du tableau', .03, .55], q: 'Où vivait l’homme de Néandertal ?', a: 'En Europe et en Asie', w: ['En Amérique', 'En Océanie'], e: 'L’homme de Néandertal vivait en Europe et en Asie, de -350 000 à -30 000 ans.' },
+  { c: 'hum', r: [4, .15, .34, 'la légende du crâne', .53, .95], q: 'À quoi reconnaît-on le crâne de l’homme de Tautavel ?', a: 'Grosses arcades sourcilières, front bas et fuyant', w: ['Front haut et menton pointu', 'Il a de petites cornes'], e: 'Grosses arcades sourcilières, front bas et fuyant, et un cerveau bien plus petit que le nôtre.' },
+  { c: 'hum', r: [10, .24, .41, 'le texte et le schéma'], q: 'Dans quel ordre les humains se sont-ils séparés des primates ?', a: 'Debout, puis mains libérées, puis gros cerveau', w: ['Gros cerveau, puis debout', 'Outils, puis debout'], e: 'Ils marchent sur leurs pieds, leurs mains se libèrent, leur cerveau se développe… puis ils fabriquent des outils.' },
+  { c: 'hum', r: [10, .49, .79, 'l’image de 1965'], q: 'Pourquoi l’image de 1965 (du singe à l’homme) est-elle fausse ?', a: 'Elle ne correspond plus à ce qu’on sait aujourd’hui', w: ['Elle est en noir et blanc', 'Les personnages sont tout nus'], e: 'Une représentation erronée : elle n’est pas conforme à ce que nous savons aujourd’hui de l’évolution des humains.' },
+  { c: 'hum', r: [16, .17, .26, 'Homo habilis dans le tableau', .14, .52], q: 'D’après le tableau, où vivait Homo habilis ?', a: 'En Afrique de l’Est et du Sud', w: ['En Europe', 'Dans le monde entier'], e: 'Homo habilis : Afrique de l’Est et du Sud, de -2,4 à -1,6 millions d’années.' },
+  { c: 'hum', r: [16, .26, .36, 'Homo sapiens dans le tableau', .28, .56], q: 'Quelle espèce vit dans le monde entier ?', a: 'Homo sapiens', w: ['Homo habilis', 'L’homme de Néandertal'], e: 'Homo sapiens : lieu = monde entier, de -200 000 ans à aujourd’hui.' },
+  { c: 'hum', r: [16, .10, .18, 'l’australopithèque, en haut du tableau', .06, .34], q: 'Qui avait une bipédie « imparfaite » ?', a: 'L’australopithèque', w: ['Homo sapiens', 'Homo erectus'], e: 'L’australopithèque marchait debout, mais pas encore parfaitement. Homo habilis : bipédie permanente.' },
+  { c: 'hum', r: [16, .32, .42, 'la 2e réponse', .57, .97], q: 'Qu’est-ce qui différencie Homo erectus d’Homo habilis ?', a: 'Il est plus grand, a un plus gros cerveau et domestique le feu', w: ['Il invente l’écriture', 'Il marche à quatre pattes'], e: 'Homo erectus : cerveau plus grand, plus grand, domestique le feu, change de lieu de vie, se redresse.' },
+  { c: 'hum', r: [4, .55, .79, 'le texte de « La galerie de l’humanité »', .46, .84], q: 'Qui a reconstitué l’apparence des premiers hommes de la galerie ?', a: 'Des sculpteurs aidés de paléontologues', w: ['Les peintres de la grotte de Niaux', 'Des robots'], e: 'Aidés par des paléontologues, des sculpteurs reconstituent l’apparence des premiers hommes à partir de leurs fossiles.' },
+  { c: 'hum', r: [5, .55, .69, 'le 2e tiret'], q: 'À quoi sert le développement du cerveau des premiers humains ?', a: 'Fabriquer des outils, maîtriser le feu, peindre…', w: ['Voler comme les oiseaux', 'Respirer sous l’eau'], e: 'Mains libres + cerveau plus gros = fabriquer des outils et maîtriser des environnements différents (feu, peinture…).' },
+
+  // ===== 🌍 Comment ont-ils peuplé la planète ? =====
+  { c: 'migr', r: [7, .28, .55, 'la légende de la carte', .68, .92], q: 'Où se trouve le berceau de l’humanité ?', a: 'En Afrique (vallée du Grand Rift)', w: ['En Asie', 'En Europe, à Tautavel'], e: 'Les plus anciens restes d’hominidés ont été trouvés dans la vallée du Grand Rift, en Afrique.' },
+  { c: 'migr', r: [13, .46, .53, 'la réponse 5)'], q: 'Quelles sont les plus anciennes migrations ?', a: 'Celles d’Homo erectus', w: ['Celles d’Homo sapiens', 'Celles des Vikings'], e: 'Les plus anciennes migrations sont celles d’Homo erectus : environ 2 millions d’années.' },
+  { c: 'migr', r: [13, .53, .59, 'la réponse 6)'], q: 'Quand Homo sapiens commence-t-il ses migrations ?', a: 'À partir de -300 000 ans', w: ['À partir de -3000 ans', 'Il y a 30 millions d’années'], e: 'Homo sapiens quitte l’Afrique à partir de -300 000 ans et peuple toute la planète.' },
+  { c: 'migr', r: [13, .73, .79, 'l’avant-dernier paragraphe'], q: 'Quel continent Homo sapiens atteint-il en dernier ?', a: 'L’Amérique', w: ['L’Europe', 'L’Asie'], e: 'Homo sapiens peuple l’Europe, l’Asie, l’Océanie… et parvient enfin en Amérique.' },
+  { c: 'migr', r: [7, .28, .55, 'les dates en rouge sur la carte'], q: 'Homo sapiens arrive en Europe vers…', a: '-40 000 ans', w: ['-3000 ans', '-3 millions d’années'], e: 'Sur la carte, les dates en rouge : Europe -40 000, Océanie -50 000.' },
+  { c: 'migr', r: [7, .28, .55, 'les dates en rouge sur la carte'], q: 'Homo sapiens arrive en Océanie (Australie) vers…', a: '-50 000 ans', w: ['-500 ans', '-5 millions d’années'], e: 'Sur la carte, les dates en rouge : Océanie -50 000, Europe -40 000.' },
+  { c: 'migr', r: [13, .80, .87, 'la dernière phrase'], q: 'De qui descendent tous les humains d’aujourd’hui ?', a: 'Des Homo sapiens apparus en Afrique', w: ['Des hommes de Néandertal d’Europe', 'De l’homme de Tautavel'], e: 'Tous les humains aujourd’hui descendent des Homo sapiens apparus en Afrique.' },
+  { c: 'migr', r: [13, .59, .66, 'la réponse 7)'], q: 'Sur la carte des migrations, que montrent les points rouges ?', a: 'Les sites archéologiques de l’Homo sapiens', w: ['Les grandes villes', 'Les volcans'], e: 'Points rouges = sites archéologiques, flèches rouges = migrations de l’Homo sapiens.' },
+  { c: 'migr', r: [7, .46, .54, 'l’encadré Homo sapiens, sous la carte', .42, .64], q: 'D’après la carte, quels talents a Homo sapiens ?', a: 'Très habile de ses mains, il sait parler', w: ['Il sait lire et écrire', 'Il sait voler'], e: 'Homo sapiens : fort semblable à l’homme moderne, très habile de ses mains, il sait parler.' },
+  { c: 'migr', r: [7, .46, .54, 'l’encadré Homo erectus, sous la carte', .08, .29], q: 'Comment Homo erectus a-t-il pu migrer si loin ?', a: 'Mieux équilibré, il marche sur de longues distances', w: ['Il avait apprivoisé des chevaux', 'Il prenait le bateau à moteur'], e: 'Homo erectus utilise le feu, fabrique des outils, et, mieux équilibré, peut marcher sur de longues distances.' },
+  { c: 'migr', r: [13, .25, .31, 'la réponse en vert'], q: 'Le thème de la carte des migrations, c’est…', a: 'Les premières grandes migrations de l’humanité', w: ['Les foyers de la révolution néolithique', 'Les châteaux forts'], e: 'Le thème : les premières grandes migrations de l’humanité au cours de la Préhistoire.' },
+
+  // ===== 🏹 Comment vivaient-ils ? (Paléolithique) =====
+  { c: 'vie', r: [7, .205, .245, 'la définition en rose'], q: '« Nomade », ça veut dire…', a: 'Qui n’a pas d’habitat fixe', w: ['Qui habite toujours au même endroit', 'Qui cultive des champs'], e: 'Nomade : personne dont l’habitat n’est pas fixe. Au Paléolithique, les humains sont nomades.' },
+  { c: 'vie', r: [15, .20, .26, 'la définition en rouge'], q: '« Sédentaire », ça veut dire…', a: 'Qui habite un lieu fixe', w: ['Qui se déplace tout le temps', 'Qui chasse le mammouth'], e: 'Être sédentaire, c’est habiter un lieu fixe : le contraire d’être nomade.' },
+  { c: 'vie', r: [15, .25, .33, '« Peu nombreux, les Hommes… »'], q: 'Au Paléolithique, les humains vivent de…', a: 'La chasse, la pêche et la cueillette', w: ['L’agriculture et l’élevage', 'Leur boutique au village'], e: 'Peu nombreux, ils vivent de la chasse, de la pêche et de la cueillette.' },
+  { c: 'vie', r: [12, .56, .61, 'la réponse 7)'], q: 'Pourquoi les nomades se déplacent-ils ?', a: 'Pour suivre les troupeaux', w: ['Pour aller à l’école', 'Pour visiter les grandes villes'], e: 'Ils poursuivent le gibier : ils se déplacent pour suivre les troupeaux.' },
+  { c: 'vie', r: [14, .45, .54, 'le paragraphe « A) Les premiers humains »'], q: 'Avec quoi fabrique-t-on les outils au Paléolithique ?', a: 'Silex taillé, bois, os et ivoire', w: ['Plastique et métal', 'Or et argent'], e: 'Paléolithique = âge de la pierre taillée : silex, mais aussi bois, os et ivoire.' },
+  { c: 'vie', r: [14, .30, .40, 'l’aiguille en os', .44, .61], q: 'À quoi sert une aiguille en os ?', a: 'À coudre du cuir pour faire des vêtements', w: ['À pêcher des poissons', 'À allumer le feu'], e: 'L’aiguille en os permet de coudre des morceaux de cuir pour faire des vêtements.' },
+  { c: 'vie', r: [14, .33, .40, 'le harpon en os', .12, .45], q: 'À quoi sert un harpon en os ?', a: 'À pêcher', w: ['À coudre', 'À peindre les grottes'], e: 'Le harpon en os permet le développement de la pêche.' },
+  { c: 'vie', r: [14, .18, .31, 'le propulseur', .36, .61], q: 'À quoi sert le propulseur ?', a: 'À lancer la sagaie plus vite', w: ['À allumer le feu', 'À couper la viande'], e: 'Une sagaie lancée avec un propulseur va trois fois plus vite qu’à la main !' },
+  { c: 'vie', r: [1, .67, .72, 'la réponse 4)'], q: 'Une sagaie, c’est…', a: 'Une sorte de lance', w: ['Une tente en peaux', 'Un petit bateau'], e: 'Sagaie = lance, qu’on lance avec un propulseur.' },
+  { c: 'vie', r: [12, .44, .505, 'la réponse 5)'], q: 'À quoi servaient les bêtes tuées à la chasse ?', a: 'À tout : viande, peaux, os et nerfs', w: ['Seulement à la viande', 'À rien : c’était un sport'], e: 'Viande à manger, peau pour vêtements et tentes, os pour outils, nerfs pour faire du fil.' },
+  { c: 'vie', r: [12, .52, .56, 'la réponse 6)'], q: 'À quoi voit-on que les gens de Pincevent sont nomades ?', a: 'Ils vivent dans des tentes en peaux', w: ['Ils ont des maisons en pierre', 'Ils ont des champs de blé'], e: 'Ils vivent dans des tentes en peaux d’animaux : ils sont nomades.' },
+  { c: 'vie', r: [1, .32, .38, 'le titre du document 3'], q: 'Que montre la peinture de la grotte de Niaux ?', a: 'Une chasse au bison', w: ['Une fête de village', 'Un champ de blé'], e: 'Un bison touché par une sagaie : c’est une scène de chasse (vers 12 000 av. J.-C.).' },
+  { c: 'vie', r: [15, .33, .41, '« Vers 35 000 av. J.-C. »'], q: 'Vers quand les humains développent-ils l’art (peinture, sculpture) ?', a: 'Vers 35 000 av. J.-C.', w: ['Vers 1789', 'Il y a 3 millions d’années'], e: 'Vers 35 000 av. J.-C., ils peignent, sculptent et commencent à enterrer leurs morts.' },
+  { c: 'vie', r: [1, .09, .31, 'la légende de l’image de Pincevent'], q: 'Au bord de quel fleuve se trouve le campement de Pincevent ?', a: 'La Seine', w: ['Le Nil', 'L’Amazone'], e: 'Sur l’image de Pincevent, le n°6 est un gué de la Seine.' },
+  { c: 'vie', r: [12, .12, .31, 'la légende « Des nomades »', .56, .76], q: 'De quand date le campement de Pincevent ?', a: 'Vers 14 000 ans av. J.-C.', w: ['De 1492', 'D’il y a 3 millions d’années'], e: 'Campement d’hommes de Cro-Magnon, reconstitué à partir du site de Pincevent (vers 14 000 ans av. J.-C.).' },
+  { c: 'vie', r: [1, .09, .31, 'la légende de l’image de Pincevent'], q: 'À Pincevent, que fait-on avec les peaux des animaux ?', a: 'On les tanne', w: ['On les mange', 'On les peint en bleu'], e: 'Légende de Pincevent : 1 foyer, 2 taille du silex, 3 sagaie et propulseur, 4 tannage des peaux, 5 chasse.' },
+  { c: 'vie', r: [15, .25, .33, '« Ils habitent dans des huttes… »'], q: 'Où habitent les nomades du Paléolithique ?', a: 'Dans des huttes, des grottes ou des tentes de peaux', w: ['Dans des maisons en dur', 'Dans des châteaux forts'], e: 'Pourchassant le gibier, ils n’ont pas d’habitat fixe : huttes, grottes ou tentes de peaux.' },
+  { c: 'vie', r: [14, .18, .36, 'le biface « feuille de laurier »', .12, .3], q: 'Le biface « feuille de laurier » est taillé…', a: 'Sur les deux faces, pour être plus tranchant', w: ['Sur une seule face, pour faire joli', 'Il n’est pas taillé, il est moulé'], e: 'Le silex est taillé sur les deux faces pour le rendre plus tranchant.' },
+  { c: 'vie', r: [14, .19, .33, 'la pointe de sagaie en silex', .24, .42], q: 'Qu’est-ce qui apparaît à l’époque des pointes de sagaie en silex ?', a: 'Les premiers arcs', w: ['Les premiers vélos', 'L’écriture'], e: 'Pointe de sagaie en silex (vers 19 000 - 16 500 av. J.-C.) : les premiers arcs apparaissent.' },
+  { c: 'vie', r: [14, .74, .84, 'les objets trouvés autour du foyer', .17, .37], q: 'À quoi sert un grattoir ?', a: 'À retirer la chair de la peau du gibier', w: ['À se gratter le dos', 'À écrire sur les murs'], e: 'Grattoir : pour retirer la chair de la peau du gibier.' },
+  { c: 'vie', r: [9, .61, .68, 'la correction en vert'], q: 'Pourquoi le feu était-il si important ?', a: 'Lumière, chaleur et protection contre les bêtes sauvages', w: ['Pour faire des feux d’artifice', 'Pour envoyer des messages'], e: 'Le foyer : source de lumière, de chaleur et de protection contre les bêtes sauvages.' },
+  { c: 'vie', r: [1, .32, .38, 'le titre du document 3'], q: 'Une peinture « rupestre », c’est une peinture…', a: 'Sur la paroi d’une grotte', w: ['Sur une toile, dans un musée', 'Sur un mur de château'], e: 'Document 3 : la chasse au bison, peinture rupestre de la grotte de Niaux.' },
+  { c: 'vie', r: [9, .52, .61, 'la réponse 3)'], q: 'Que trouve-t-on en fouillant les campements ?', a: 'Des bifaces, des grattoirs, des pointes de flèches', w: ['Des pièces de monnaie', 'Des fourchettes en métal'], e: 'On trouve des bifaces, des grattoirs et des pointes de flèches (et des aiguilles en os).' },
+
+  // ===== 🌾 La révolution néolithique =====
+  { c: 'neo', r: [2, .34, .54, 'le document 2 (le texte)', .03, .52], q: 'Qu’est-ce que la « révolution néolithique » ?', a: 'L’invention de l’agriculture et de l’élevage', w: ['L’invention de l’écriture', 'La découverte du feu'], e: 'Néolithique : agriculture, domestication des animaux, élevage… et les humains se fixent.' },
+  { c: 'neo', r: [3, .44, .49, 'la réponse 5)'], q: 'Où apparaît le plus ancien foyer de la révolution néolithique ?', a: 'Au Proche-Orient', w: ['En Chine', 'Au Mexique'], e: 'Au Proche-Orient, vers 10 000 - 9 000 av. J.-C. (blé, orge, mouton, chèvre…).' },
+  { c: 'neo', r: [2, .12, .19, 'la carte : Proche-Orient', .49, .66], q: 'Que cultive-t-on d’abord au Proche-Orient ?', a: 'Le blé et l’orge', w: ['Le maïs et l’avocat', 'La pomme de terre et le piment'], e: 'Proche-Orient : blé, orge. Mexique : maïs, avocat. Andes : pomme de terre, piment.' },
+  { c: 'neo', r: [15, .415, .48, '« Vers 10 000 - 8000 av. J.-C. »'], q: 'Au Néolithique, les humains deviennent…', a: 'Sédentaires : ils fondent des villages', w: ['Nomades', 'Des chasseurs de mammouths'], e: 'Vers 10 000 - 8000 av. J.-C., ils cultivent la terre, deviennent sédentaires et fondent des villages.' },
+  { c: 'neo', r: [3, .60, .81, 'la réponse 8)'], q: 'Qu’est-ce qui change au Néolithique ?', a: 'Maisons en dur, villages, outils en métal', w: ['Les humains apprennent à marcher debout', 'Les humains inventent l’ordinateur'], e: 'Maisons en dur, sédentarisation, urbanisation, plus de population, outils en métal…' },
+  { c: 'neo', r: [2, .34, .54, 'la note 1 sous le texte', .03, .52], q: 'Un « boom démographique », c’est…', a: 'Une forte augmentation de la population', w: ['Une éruption de volcan', 'Un très gros orage'], e: 'La sédentarité permet un boom démographique : la population augmente fortement.' },
+  { c: 'neo', r: [2, .34, .53, '« A RETENIR : Nature d’un document »', .55, .97], q: 'Un document avec une légende et des flèches sur le monde, c’est…', a: 'Une carte', w: ['Un article de presse', 'Un tableau'], e: 'Nature d’un document : carte, article de presse, tableau, interview, article de dictionnaire, extrait d’un site.' },
+  { c: 'neo', r: [3, .12, .16, 'la réponse 2.'], q: 'Un entretien publié sur LePoint.fr, c’est…', a: 'Une interview dans un article de presse', w: ['Une carte', 'Un tableau'], e: 'Interview (entretien) publiée dans un article de journal : c’est sa nature.' },
+  { c: 'neo', r: [2, .18, .24, 'la carte : Chine', .56, .68], q: 'Que cultive-t-on en Chine au Néolithique ?', a: 'Le riz et le millet', w: ['Le blé et l’orge', 'La pomme de terre'], e: 'Chine, 8 000 - 7 000 av. J.-C. : riz, millet… et on élève porc, chien, poulet.' },
+  { c: 'neo', r: [2, .25, .31, 'la carte : Andes', .13, .28], q: 'Quels animaux domestique-t-on dans les Andes ?', a: 'Le lama, l’alpaga et le cobaye', w: ['Le mouton et la chèvre', 'Le kangourou'], e: 'Andes, 5 000 - 3 000 av. J.-C. : piment, pomme de terre, maïs… lama, alpaga et cobaye.' },
+  { c: 'neo', r: [2, .18, .24, 'la carte : Chine', .56, .68], q: 'Vers quand l’agriculture apparaît-elle en Chine ?', a: 'Vers 8 000 - 7 000 av. J.-C.', w: ['Vers 2 000 - 1 000 av. J.-C.', 'En 1492'], e: 'Chine : 8 000 - 7 000 av. J.-C. C’est le n°2, juste après le Proche-Orient.' },
+  { c: 'neo', r: [2, .15, .20, 'la carte : Est américain', .27, .42], q: 'Quel est le foyer le plus récent sur la carte ?', a: 'L’Est américain (2 000 - 1 000 av. J.-C.)', w: ['Le Proche-Orient', 'La Chine'], e: 'Du plus ancien au plus récent : Proche-Orient, Chine, Nouvelle-Guinée, Andes, Afrique, Est américain.' },
+  { c: 'neo', r: [2, .34, .54, 'le document 2 (le texte)', .03, .52], q: 'Au Néolithique, que deviennent les huttes ?', a: 'Des maisons en dur', w: ['Des tentes en peaux', 'Des igloos'], e: 'Les huttes deviennent des maisons en dur. L’urbanisation débute.' },
+  { c: 'neo', r: [2, .34, .54, 'le document 2 (le texte)', .03, .52], q: 'Pourquoi faut-il de nouveaux outils au Néolithique ?', a: 'Pour cultiver les champs', w: ['Pour chasser le mammouth', 'Pour écrire des livres'], e: 'Pour cultiver les champs, il faut des outils nouveaux : la pierre taillée ne suffit plus, on utilise les métaux.' },
+  { c: 'neo', r: [2, .11, .21, 'la légende de la carte', .74, .91], q: 'Quelles activités se diffusent à partir des foyers néolithiques ?', a: 'L’agriculture et l’élevage', w: ['La chasse et la cueillette', 'La lecture et l’écriture'], e: 'Les flèches vertes de la carte : diffusion de l’agriculture et de l’élevage.' },
+  { c: 'neo', r: [3, .16, .20, 'la réponse 3.'], q: 'Le thème du document 2 (l’interview), c’est…', a: 'La naissance de l’agriculture au Néolithique', w: ['Les migrations d’Homo erectus', 'La chasse au bison'], e: 'Le thème est la naissance de l’agriculture au Néolithique.' },
+  { c: 'neo', r: [2, .34, .54, 'le document 2 (le texte)', .03, .52], q: 'Au Néolithique, qu’est-ce qui commence ?', a: 'L’urbanisation (les premières villes)', w: ['La bipédie', 'Les migrations vers l’Amérique'], e: 'Les huttes deviennent des maisons en dur : l’urbanisation débute.' },
 ];
 
 // ---------- les animaux de compagnie ----------
@@ -4864,6 +5016,205 @@ function teacherScared(T, dt) {
     if (T.path) { const r = followPath(T, T.prof.chase * 16 * 0.95, dt); T.running = true; if (r === 'done' || (r && r.x !== undefined)) { T.path = null; T.moving = false; } }
   }
   if (T.st <= 0) { T.state = 'patrol'; T.path = null; T.detect = 0; T.running = false; }
+}
+
+// ================= L'INTERRO DE M. SILEX (mini-jeu du menu) =================
+// 10 questions sur un chapitre du cahier, 3 réponses au choix, une antisèche par interro.
+// Chaque correction dit où revérifier : la photo du cahier et l'endroit, avec la zone surlignée.
+// Toutes les 3 bonnes réponses : un squishy pour la collection. Les erreurs sont gardées pour les revoir.
+const HIST_CH = [
+  { k: 'intro', e: '⏳', n: 'Qu’est-ce que la Préhistoire ?', s: 'La frise, les dates, les périodes' },
+  { k: 'arch', e: '🔎', n: 'Comment connaît-on les débuts de l’humanité ?', s: 'Archéologues, vestiges, fouilles' },
+  { k: 'hum', e: '🦴', n: 'Qui étaient les premiers humains ?', s: 'Habilis, erectus, sapiens…' },
+  { k: 'migr', e: '🌍', n: 'Comment ont-ils peuplé la planète ?', s: 'Les migrations' },
+  { k: 'vie', e: '🏹', n: 'Comment vivaient-ils ?', s: 'Nomades, outils, chasse' },
+  { k: 'neo', e: '🌾', n: 'La révolution néolithique', s: 'Agriculture, élevage, villages' },
+];
+const QZ_N = 10, QZ_GIFT = 3;   // un squishy toutes les 3 bonnes réponses
+const LECON_RATIO = 2576 / 1450;   // les 16 photos ont le même format
+function lessonSrc(p) { return 'lecons/p' + String(p).padStart(2, '0') + '.jpg'; }
+function histRef(r) {
+  if (!r) return null;
+  const [p, y0, y1, what, x0 = 0.03, x1 = 0.97] = r, cy = (y0 + y1) / 2;
+  const v = cy < 0.36 ? 'en haut' : cy < 0.64 ? 'au milieu' : 'en bas';
+  const h = x1 - x0 < 0.62 ? ((x0 + x1) / 2 < 0.5 ? ', à gauche' : ', à droite') : '';
+  return { p, y0, y1, x0, x1, what, txt: 'Photo ' + p + ' · ' + v + h + ' : ' + what };
+}
+// l'encadré « photo du cahier » : la zone à revoir, surlignée. Sans les photos (version publique), il reste caché.
+function histShot(box, ref) {
+  box.innerHTML = ''; box.classList.add('hidden'); box.onclick = null; if (!ref) return;
+  const img = new Image(), hl = document.createElement('i'), tip = document.createElement('span');
+  img.alt = 'Photo ' + ref.p + ' du cahier'; img.draggable = false; tip.className = 'zoomTip'; tip.textContent = '🔍 agrandir';
+  img.onload = () => {
+    if (!box.isConnected) return;
+    box.append(img, hl, tip); box.classList.remove('hidden');
+    const W = box.clientWidth || 300, IH = W * LECON_RATIO, rh = (ref.y1 - ref.y0) * IH;
+    const H = Math.round(Math.min(230, Math.max(120, rh + 40)));
+    const top = Math.max(0, Math.min(IH - H, (ref.y0 + ref.y1) / 2 * IH - H / 2));
+    box.style.height = H + 'px'; img.style.transform = 'translateY(' + (-top) + 'px)';
+    hl.style.top = (ref.y0 * IH - top - 3) + 'px'; hl.style.height = (rh + 6) + 'px';
+    hl.style.left = (ref.x0 * 100) + '%'; hl.style.width = ((ref.x1 - ref.x0) * 100) + '%';
+    box.onclick = () => histZoom(ref);
+  };
+  img.onerror = () => box.classList.add('hidden');
+  img.src = lessonSrc(ref.p);
+}
+// la photo en grand, défilée jusqu'à la zone
+function histZoom(ref) {
+  AU.sfx('blip');
+  const z = $('qzZoom'), w = $('qzZoomPage'); $('qzZoomT').textContent = '📸 ' + ref.txt;
+  w.innerHTML = `<img src="${lessonSrc(ref.p)}" alt="Photo ${ref.p} du cahier"><i style="top:${ref.y0 * 100}%;height:${(ref.y1 - ref.y0) * 100}%;left:${ref.x0 * 100}%;width:${(ref.x1 - ref.x0) * 100}%"></i>`;
+  z.classList.remove('hidden');
+  const go = () => { const s = $('qzZoomScroll'); s.scrollTop = Math.max(0, ref.y0 * w.clientHeight - 90); };
+  const im = w.querySelector('img'); if (im.complete) go(); else im.onload = go;
+}
+
+const QZ_GOOD = ['Exact. Je suis presque fier.', 'Bonne réponse. Pas de quoi prendre la grosse tête.', 'Correct ! Tu as ouvert ton cahier, toi.', 'Juste. Même Lucy n’aurait pas trouvé.', 'Bravo, petit Homo sapiens.', 'Bien. Très bien. Bon, ça va.'];
+const QZ_STREAK = ['{n} de suite ! Tu as une antisèche dans la manche ?', '{n} d’affilée… Je surveille, hein.', 'Série de {n} ! Le mammouth est impressionné.', '{n} sans faute. Suspect. Très suspect.'];
+const QZ_BAD = ['Raté. Ton cahier ne mord pas, tu sais.', 'Non ! Même un mammouth le savait.', 'Faux. Tu dormais au fond de la classe ?', 'Perdu. Le cahier, ce n’est pas décoratif.', 'Aïe. Retour à la pierre taillée.', 'Mauvaise réponse. Je note. Je note tout.'];
+const QZ_HELLO = ['Interro surprise ! Choisis ton chapitre… avant que je change d’avis.', 'Rangez vos affaires, sortez une feuille. Enfin, un doigt.', 'Pas de panique : c’est seulement noté. Sur 20.', 'Ton cahier, tu l’as relu ? On va vite le savoir.'];
+const QZ_JOKER = ['Je n’ai RIEN vu. Cette fois.', 'Une antisèche ? Où ça ? Bon, d’accord…', 'Je regarde par la fenêtre… 3 secondes.'];
+function qzBulletin(n) {
+  if (n >= 20) return 'Vingt sur vingt. Je vérifie ta trousse… Rien. Félicitations, sincèrement.';
+  if (n >= 16) return 'Très bien. Je suis obligé de te féliciter. Ça me coûte.';
+  if (n >= 12) return 'Bien. Peut mieux faire, comme tout le monde.';
+  if (n >= 8) return 'Moyen. Ton cahier s’ennuie de toi.';
+  return 'Catastrophe préhistorique. Même l’homme de Tautavel aurait fait mieux.';
+}
+
+const Quiz = {
+  bound: false, ch: null, qs: [], i: 0, ok: 0, streak: 0, joker: true, opts: [], answered: false, wrong: [], marks: [], gifts: [],
+  prof() { return PROFS.find(p => p.lesson === 'hist') || PROFS[0]; },
+  data() { const d = store.get('nds_quiz', {}); return d && typeof d === 'object' ? d : {}; },
+  save(d) { store.set('nds_quiz', d); },
+  missed() { const m = this.data().missed; return Array.isArray(m) ? m.filter(t => HIST_BANK.some(q => q.q === t)) : []; },
+  bind() {
+    if (this.bound) return; this.bound = true;
+    $('qzList').addEventListener('click', e => { const b = e.target.closest('.qzCh'); if (!b) return; AU.init(); AU.sfx('blip'); this.start(b.dataset.k); });
+    $('qzChoices').addEventListener('click', e => { const b = e.target.closest('.choice'); if (!b || b.disabled) return; this.choose(+b.dataset.i); });
+    $('qzJoker').addEventListener('click', () => this.useJoker());
+    $('qzNext').addEventListener('click', () => { AU.sfx('blip'); this.next(); });
+    $('qzQuit').addEventListener('click', () => { AU.sfx('blip'); this.home(); });
+    $('qzBack').addEventListener('click', () => { AU.sfx('blip'); UI.openTitle(); });
+    $('qzAgain').addEventListener('click', () => { AU.sfx('blip'); this.start(this.ch); });
+    $('qzRetry').addEventListener('click', () => { AU.sfx('blip'); this.start('miss', this.wrong.map(w => w.q)); });
+    $('qzOther').addEventListener('click', () => { AU.sfx('blip'); this.home(); });
+    $('qzEndBack').addEventListener('click', () => { AU.sfx('blip'); UI.openTitle(); });
+    $('qzZoom').addEventListener('click', e => { if (e.target.id === 'qzZoom' || e.target.closest('#qzZoomX')) { AU.sfx('blip'); $('qzZoom').classList.add('hidden'); } });
+  },
+  open() { this.bind(); this.home(); UI.show('sQuiz'); },
+  view(v) { ['qzHome', 'qzPlay', 'qzEnd'].forEach(id => $(id).classList.toggle('hidden', id !== v)); $('qzZoom').classList.add('hidden'); $('sQuiz').scrollTop = 0; },
+  face(id) { const P = this.prof(); portrait($(id), P.cfg, P.v, 1); },
+  home() {
+    this.view('qzHome'); this.face('qzProf0');
+    const line = pick(QZ_HELLO); $('qzHello').textContent = line;
+    const best = this.data().best || {}, cnt = k => HIST_BANK.filter(q => k === 'all' || q.c === k).length;
+    const rec = k => k === 'miss' ? '' : best[k] != null ? 'Record : ' + best[k] + '/20' : 'Jamais tenté';
+    const row = (k, e, n, s) => `<button class="qzCh" data-k="${k}"><span class="em">${e}</span><span class="tx"><b>${esc(n)}</b><small>${esc(s)}</small></span><span class="rec${best[k] >= 16 ? ' top' : ''}">${rec(k)}</span></button>`;
+    let h = HIST_CH.map(c => row(c.k, c.e, c.n, c.s + ' · ' + cnt(c.k) + ' questions')).join('');
+    h += row('all', '🎲', 'Tout le chapitre, mélangé', 'Les débuts de l’humanité · ' + cnt('all') + ' questions');
+    const m = this.missed(); if (m.length) h += row('miss', '🎯', 'Mes erreurs à revoir', m.length + ' question' + (m.length > 1 ? 's' : '') + ' ratée' + (m.length > 1 ? 's' : ''));
+    $('qzList').innerHTML = h;
+    AU.say(line, this.prof(), 0.6);
+  },
+  start(k, list) {
+    let pool;
+    if (k === 'miss') { const m = list || this.missed(); pool = HIST_BANK.filter(q => m.includes(q.q)); }
+    else pool = HIST_BANK.filter(q => k === 'all' || q.c === k);
+    if (!pool.length) { this.home(); return; }
+    this.ch = k; this.qs = shuffle(pool.slice()).slice(0, QZ_N); this.i = 0; this.ok = 0; this.streak = 0; this.joker = true; this.wrong = []; this.marks = []; this.gifts = [];
+    const c = HIST_CH.find(c => c.k === k);
+    $('qzChap').textContent = c ? c.e + ' ' + c.n : k === 'all' ? '🎲 Tout le chapitre' : '🎯 Mes erreurs';
+    this.view('qzPlay'); this.face('qzProf1'); $('qzSay').textContent = 'Première question. Pas de copiage.';
+    this.ask();
+  },
+  ask() {
+    const q = this.qs[this.i]; this.answered = false;
+    $('qzSub').textContent = 'Question ' + (this.i + 1) + ' / ' + this.qs.length + ' · 🧸 ' + (this.ok % QZ_GIFT) + '/' + QZ_GIFT + (this.streak >= 2 ? ' · 🔥 ' + this.streak : '');
+    $('qzDots').innerHTML = this.qs.map((_, k) => `<i class="${this.marks[k] || (k === this.i ? 'cur' : '')}"></i>`).join('');
+    $('qzQ').textContent = q.q;
+    const ch = [{ t: q.a, good: true }, { t: q.w[0] }, { t: q.w[1] }]; shuffle(ch); this.opts = ch;
+    $('qzChoices').innerHTML = ch.map((c, k) => `<button class="choice" data-i="${k}"><b>${'ABC'[k]}</b><span>${esc(c.t)}</span></button>`).join('');
+    $('qzJoker').disabled = !this.joker; $('qzJoker').textContent = this.joker ? '📝 Antisèche (1)' : '📝 Antisèche utilisée';
+    $('qzJoker').classList.remove('hidden'); $('qzRes').classList.add('hidden');
+    $('sQuiz').scrollTop = 0;
+  },
+  useJoker() {
+    if (!this.joker || this.answered) return; this.joker = false; AU.sfx('tick');
+    const bad = this.opts.map((o, k) => o.good ? -1 : k).filter(k => k >= 0), k = pick(bad);
+    const b = $('qzChoices').children[k]; b.disabled = true; b.classList.add('off');
+    $('qzJoker').disabled = true; $('qzJoker').textContent = '📝 Antisèche utilisée';
+    $('qzSay').textContent = pick(QZ_JOKER);
+  },
+  choose(i) {
+    if (this.answered) return; this.answered = true;
+    const q = this.qs[this.i], o = this.opts[i], good = !!o.good;
+    [...$('qzChoices').children].forEach((b, k) => { b.disabled = true; b.classList.add(this.opts[k].good ? 'good' : k === i ? 'bad' : 'off'); });
+    if (good) { this.ok++; this.streak++; } else { this.streak = 0; this.wrong.push(q); }
+    this.marks[this.i] = good ? 'ok' : 'ko';
+    $('qzDots').children[this.i].className = this.marks[this.i];
+    $('qzSay').textContent = good ? (this.streak >= 3 ? pick(QZ_STREAK).replace('{n}', this.streak) : pick(QZ_GOOD)) : pick(QZ_BAD);
+    $('qzVerdict').className = 'lsVerdict ' + (good ? 'ok' : 'ko'); $('qzVerdict').textContent = good ? pick(['✅ Bravo !', '✅ Exact !', '✅ Parfait !']) : '❌ Raté !';
+    $('qzYou').innerHTML = good ? '' : 'Ta réponse : <s>' + esc(o.t) + '</s>';
+    $('qzAns').textContent = q.a; $('qzTip').textContent = (good ? '📚 ' : '💡 ') + q.e;
+    const ref = histRef(q.r); $('qzRef').textContent = ref ? '📸 Revérifie dans ton cahier — ' + ref.txt : '';
+    $('qzNext').textContent = this.i + 1 < this.qs.length ? 'Question suivante ▶' : 'Voir ma note 📝';
+    $('qzJoker').classList.add('hidden'); $('qzRes').classList.remove('hidden');
+    histShot($('qzShot'), ref);
+    AU.sfx(good ? 'found' : 'fail');
+    // toutes les 3 bonnes réponses : un squishy !
+    const gf = $('qzGift'); gf.innerHTML = ''; gf.classList.add('hidden');
+    if (good && this.ok % QZ_GIFT === 0) { const g = this.gift(); gf.append(g.cv, g.t); gf.classList.remove('hidden'); setTimeout(() => AU.sfx('squish'), 300); }
+    $('qzSub').textContent = 'Question ' + (this.i + 1) + ' / ' + this.qs.length + ' · 🧸 ' + (this.ok % QZ_GIFT) + '/' + QZ_GIFT;
+    setTimeout(() => { const r = $('qzRes'); if (r.scrollIntoView) r.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120);
+  },
+  // un squishy tiré au sort (rareté pondérée), rangé tout de suite dans la collection
+  gift() {
+    const id = SqCol.roll(), isNew = SqCol.add(id), s = SQUISHIES[id]; this.gifts.push(id);
+    const cv = document.createElement('canvas'); cv.width = 14; cv.height = 14; cv.getContext('2d').drawImage(squishyCanvas(id), 0, 0);
+    const t = document.createElement('div');
+    t.innerHTML = `🎁 ${this.ok} bonnes réponses ! M. Silex te donne un squishy (confisqué à un autre élève…) :<br><b>${esc(s.n)}</b> <span class="qzRar" style="background:${SQ_RARITY[s.r].col}">${SQ_RARITY[s.r].n}</span>${isNew ? ' <b class="qzNew">nouveau !</b>' : ''}`;
+    return { cv, t };
+  },
+  next() { if (!this.answered) return; this.i++; if (this.i < this.qs.length) this.ask(); else this.end(); },
+  end() {
+    this.view('qzEnd'); this.face('qzProf2');
+    const n = Math.round(this.ok / this.qs.length * 20), d = this.data(); d.best = d.best || {};
+    // erreurs à revoir : on ajoute les ratées, on retire celles qu'on vient de réussir
+    const okNow = this.qs.filter(q => !this.wrong.includes(q)).map(q => q.q);
+    d.missed = this.missed().filter(t => !okNow.includes(t)).concat(this.wrong.map(q => q.q).filter(t => !(d.missed || []).includes(t)));
+    const rec = this.ch !== 'miss' && (d.best[this.ch] == null || n > d.best[this.ch]); if (rec) d.best[this.ch] = n;
+    this.save(d);
+    $('qzNote').innerHTML = '<span>' + n + '</span>/20';
+    $('qzNote').className = 'qzNote ' + (n >= 16 ? 'top' : n >= 10 ? 'mid' : 'low');
+    const line = qzBulletin(n); $('qzBull').textContent = '« ' + line + ' »';
+    $('qzRec').textContent = rec && this.ch !== 'miss' ? '🏆 Nouveau record pour ce chapitre !' : this.ch === 'miss' ? '🎯 Révision des erreurs' : '';
+    // les squishies gagnés pendant l'interro
+    const rw = $('qzReward'); rw.innerHTML = ''; rw.classList.toggle('hidden', !this.gifts.length);
+    if (this.gifts.length) {
+      const row = document.createElement('div'); row.className = 'qzGifts';
+      this.gifts.forEach(id => { const cv = document.createElement('canvas'); cv.width = 14; cv.height = 14; cv.getContext('2d').drawImage(squishyCanvas(id), 0, 0); cv.title = SQUISHIES[id].n; row.appendChild(cv); });
+      const t = document.createElement('div'); t.textContent = '🧸 ' + this.gifts.length + ' squishy' + (this.gifts.length > 1 ? 's' : '') + ' gagné' + (this.gifts.length > 1 ? 's' : '') + ' : ' + this.gifts.map(id => SQUISHIES[id].n).join(', ') + '. Collection : ' + SqCol.count() + '/' + SQUISHIES.length;
+      rw.append(row, t);
+    }
+    // les erreurs, avec où revérifier
+    $('qzMissT').classList.toggle('hidden', !this.wrong.length);
+    $('qzMiss').innerHTML = this.wrong.map(q => { const r = histRef(q.r); return `<div class="qzM"><b>${esc(q.q)}</b><span>✅ ${esc(q.a)}</span>${r ? `<small>📸 ${esc(r.txt)}</small>` : ''}</div>`; }).join('');
+    $('qzRetry').classList.toggle('hidden', !this.wrong.length);
+    $('qzAgain').classList.toggle('hidden', this.ch === 'miss');
+    AU.sfx(n >= 10 ? 'found' : 'fail'); if (n >= 16 || this.gifts.length) confettiScreen();
+    AU.say(line, this.prof(), 0.6);
+  }
+};
+// petite pluie de confettis sur l'écran de note
+function confettiScreen() {
+  const box = $('qzEnd'); const cols = ['#ffd23f', '#ff6fb5', '#5fd3ff', '#7dff9a', '#ff8a3a'];
+  for (let k = 0; k < 26; k++) {
+    const p = document.createElement('i'); p.className = 'qzConf';
+    p.style.left = Math.random() * 100 + '%'; p.style.background = pick(cols);
+    p.style.animationDelay = (Math.random() * 0.5) + 's'; p.style.animationDuration = (1.4 + Math.random()) + 's';
+    box.appendChild(p); setTimeout(() => p.remove(), 3200);
+  }
 }
 
 // ================= SURVEILLANTS EN ÉQUIPE =================
@@ -7810,7 +8161,7 @@ const UI = {
   show(id) {
     Input.reset();
     if (['sTitle', 'sLevels', 'sResult', 'sMulti', 'sIntro', 'sChars', 'sCreator'].includes(id)) Lesson.abort();
-    ['sTitle', 'sChars', 'sCreator', 'sLevels', 'sIntro', 'sPause', 'sResult', 'sMulti', 'sSquish'].forEach(s => $(s).classList.toggle('hidden', s !== id));
+    ['sTitle', 'sChars', 'sCreator', 'sLevels', 'sIntro', 'sPause', 'sResult', 'sMulti', 'sSquish', 'sQuiz'].forEach(s => $(s).classList.toggle('hidden', s !== id));
     $('hud').classList.toggle('hidden', !['play'].includes(id) && !['sIntro', 'sPause', 'sResult'].includes(id));
     if (id === 'sIntro') this.introPages();
   },
@@ -7870,7 +8221,7 @@ const UI = {
     const tap = (id, f) => $(id).addEventListener('click', e => { AU.init(); AU.sfx('blip'); f(e); });
     tap('bPlay', () => { if (!this.chars.length) this.openCreator(-1, 'levels'); else this.openLevels(); });
     tap('bChars', () => this.openChars('title'));
-    tap('bSquish', () => SqAlbum.open('title')); tap('bSqBack', () => this.openTitle());
+    tap('bSquish', () => SqAlbum.open('title')); tap('bQuiz', () => Quiz.open()); tap('bSqBack', () => this.openTitle());
     tap('bMulti', () => Multi.open());
     tap('bInf', () => { AU.init(); if (!this.chars.length) this.openCreator(-1, 'inf'); else this.launchInf(); });
     tap('bPlan', () => this.openPlan());

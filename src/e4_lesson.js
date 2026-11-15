@@ -296,7 +296,7 @@ const Lesson = {
     let idx = HIST_BANK.map((q, i) => i).filter(i => !this.usedH.has(i));
     if (!idx.length) { this.usedH.clear(); idx = HIST_BANK.map((q, i) => i); }
     const i = idx[Math.floor(Math.random() * idx.length)]; this.usedH.add(i); const h = HIST_BANK[i];
-    return { hist: 1, show: h.q, ask: pick(['Interro surprise ! Alors, petit Homo sapiens…', 'Voyons si tu as bien appris ta leçon…', 'Question d’histoire !', 'Sors ton cahier… dans ta tête !']), en: h.a, c: h.w.slice(), e: h.e, p: h.a };
+    return { hist: 1, show: h.q, ask: pick(['Interro surprise ! Alors, petit Homo sapiens…', 'Voyons si tu as bien appris ta leçon…', 'Question d’histoire !', 'Sors ton cahier… dans ta tête !']), en: h.a, c: h.w.slice(), e: h.e, p: h.a, r: h.r };
   },
   pick() {
     const r = Math.random();
@@ -380,6 +380,10 @@ const Lesson = {
     else line('lsGiftT', '🎁 Miss Teacup voulait t’offrir un objet magique… mais ton sac est plein !');
     $('lsDone').textContent = hist ? (r.ok ? 'Merci, Monsieur ! 🏃' : 'Pardon, Monsieur… 😔') : r.ok ? 'Thank you, Miss! 🏃' : 'Sorry, Miss… 😔';
     $('lsAsk').classList.add('hidden'); $('lsType').classList.add('hidden'); $('lsRes').classList.remove('hidden');
+    // où revérifier dans le cahier (histoire)
+    const ref = hist ? histRef(this.q.r) : null;
+    if (ref) { const d = document.createElement('div'); d.className = 'lsRef'; d.textContent = '📸 Revérifie dans ton cahier — ' + ref.txt; $('lsTip').appendChild(d); }
+    histShot($('lsShot'), ref);
     AU.sfx(r.ok ? 'found' : 'fail'); if (gift) AU.sfx('pickup'); if (r.ok) confetti(G.P.x, G.P.y - 10, 24);
     if (!hist && !this.q.toFr && !this.q.toNum) setTimeout(() => { if (this.res) AU.sayEn(this.q.en, PROFS[5]); }, 350);
   },

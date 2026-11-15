@@ -322,6 +322,46 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
 #msgs>#toast,#msgs>#banner{width:min(100%,440px);font-size:17px;line-height:1.05;padding:5px 10px;animation:msgUp .3s cubic-bezier(.2,1.6,.4,1)}
 #msgs>#toast{background:rgba(20,11,38,.88)}
 @keyframes msgUp{from{transform:translateY(14px) scale(.85);opacity:0}to{transform:none;opacity:1}}
+
+/* ---- l'interro de M. Silex ---- */
+.qzBtn{background:#e8b07a}
+.qzPanel{margin:0 auto 12px;animation:none}
+#sQuiz .lsName{color:#8a4a1a}#sQuiz .lsChoices .choice{background:#f6e3c4}#sQuiz .lsChoices .choice:disabled{cursor:default}
+#sQuiz .lsChoices .choice.good{background:#c8f5b8}#sQuiz .lsChoices .choice.bad{background:#ffc9cf}
+.qzSay{position:relative;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:7px 10px;margin:4px 0 8px;font-size:20px;color:#5a3a8a}
+.qzHint{font-size:18px;color:#7a5a3a}
+.qzList{display:flex;flex-direction:column;gap:8px;max-width:440px;margin:0 auto 12px}
+.qzCh{display:flex;align-items:center;gap:10px;text-align:left;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:12px;box-shadow:0 4px 0 var(--ink);padding:9px 10px;font-family:'VT323',monospace;touch-action:manipulation}
+.qzCh:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.qzCh .em{font-size:30px;flex:0 0 auto}.qzCh .tx{flex:1;min-width:0;display:flex;flex-direction:column}.qzCh .tx b{font-size:21px;line-height:1.05}.qzCh .tx small{font-size:17px;color:#7a5a3a}
+.qzCh .rec{flex:0 0 auto;font-size:16px;color:#7a5a3a;text-align:right;max-width:74px;line-height:1}.qzCh .rec.top{color:#2e8a3a;font-weight:bold}
+.qzQuit{margin-left:auto;background:#fff;border:3px solid var(--ink);border-radius:8px;font-size:18px;padding:2px 9px;touch-action:manipulation}
+.qzChap{font-size:18px;color:#7a5a3a;margin-bottom:4px}
+.qzDots{display:flex;gap:4px;margin-bottom:6px}.qzDots i{flex:1;height:8px;border-radius:4px;background:#e2d3bd}.qzDots i.cur{background:#ffd23f}.qzDots i.ok{background:#3fae4f}.qzDots i.ko{background:#e0404f}
+.qzQ{font-size:24px}
+.qzRef{font-size:19px;color:#1f4e99;margin:2px 0 6px}
+.qzShot{position:relative;overflow:hidden;border:3px solid var(--ink);border-radius:10px;background:#fff;margin-bottom:10px;cursor:zoom-in;touch-action:manipulation}
+.qzShot img{position:absolute;left:0;top:0;width:100%;display:block;pointer-events:none}
+.qzShot i,#qzZoomPage i{position:absolute;border:3px solid #ff2d6f;border-radius:8px;background:rgba(255,230,0,.18);box-shadow:0 0 0 2000px rgba(20,10,40,.28);pointer-events:none;animation:qzBlink 1.2s ease-in-out 2}
+@keyframes qzBlink{50%{border-color:#ffd23f}}
+.qzShot .zoomTip{position:absolute;right:6px;bottom:6px;background:var(--ink);color:var(--yel);font-size:15px;border-radius:6px;padding:2px 6px;pointer-events:none}
+#qzZoom{position:fixed;inset:0;z-index:80;background:rgba(10,6,20,.85);display:flex;align-items:center;justify-content:center;padding:10px}
+.qzZoomBox{width:100%;max-width:560px;max-height:100%;display:flex;flex-direction:column;background:var(--paper);border:4px solid var(--ink);border-radius:12px;overflow:hidden}
+.qzZoomHead{display:flex;gap:8px;align-items:center;padding:6px 8px;font-size:18px;color:var(--ink)}.qzZoomHead span{flex:1}
+#qzZoomX{background:#fff;border:3px solid var(--ink);border-radius:8px;font-size:18px;padding:2px 9px}
+#qzZoomScroll{overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y pinch-zoom}
+#qzZoomPage{position:relative;overflow:hidden}#qzZoomPage img{width:100%;display:block}
+.qzNote{font-family:'Press Start 2P',monospace;font-size:16px;text-align:center;margin:6px 0 10px;color:#7a5a3a}.qzNote span{font-size:44px}
+.qzNote.top span{color:#2e8a3a}.qzNote.mid span{color:#d07a10}.qzNote.low span{color:#d0283a}
+.qzRec{font-size:20px;color:#2e8a3a;text-align:center;margin-bottom:6px}
+.qzReward{display:flex;align-items:center;gap:10px;background:#fff0f8;border:3px solid #ff6fb5;border-radius:10px;padding:8px;font-size:19px;margin-bottom:8px}
+.qzReward{flex-wrap:wrap}#qzGift{flex-wrap:nowrap}.qzRar{color:var(--ink);border:2px solid var(--ink);border-radius:6px;padding:0 5px;font-size:16px;white-space:nowrap}.qzNew{color:#d0283a}.qzGifts{display:flex;gap:6px;flex-wrap:wrap}.qzGifts canvas{width:44px!important;height:44px!important}
+.qzReward canvas{width:56px;height:56px;image-rendering:pixelated;flex:0 0 auto;animation:lsPop .6s .2s both}
+.qzMissT{font-size:19px;color:#a0303a;margin:4px 0}
+.qzM{background:#fff;border:2px solid #d8c8b0;border-radius:8px;padding:6px 8px;margin-bottom:6px;display:flex;flex-direction:column;font-size:18px;line-height:1.1}.qzM span{color:#2e8a3a}.qzM small{color:#1f4e99;font-size:17px}
+#qzEnd{position:relative}.qzConf{position:absolute;top:-10px;width:8px;height:12px;border-radius:2px;pointer-events:none;animation:qzFall 2s linear forwards}
+@keyframes qzFall{to{transform:translateY(520px) rotate(540deg);opacity:0}}
+#sLesson .qzShot{margin-top:-2px}.lsRef{font-size:18px;color:#1f4e99;margin-top:4px}
 </style>
 </head>
 <body>
@@ -355,6 +395,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
         <div id="lsYou" class="lsYou"></div>
         <div class="lsAnsBox"><span id="lsAns" class="lsAns"></span><button id="lsEar" class="lsEar" aria-label="Écouter la phrase">🔊</button></div>
         <div id="lsTip" class="lsTip"></div>
+        <div id="lsShot" class="qzShot hidden"></div>
         <div id="lsLost" class="lsLost"></div>
         <button class="btn big green" id="lsDone">OK</button>
       </div>
@@ -387,6 +428,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <button class="btn pink" id="bMulti">👥 À deux en ligne</button>
       <button class="btn cyan" id="bChars">👕 Mes personnages</button>
       <button class="btn sqBtn" id="bSquish">🧸 Mes squishies</button>
+      <button class="btn qzBtn" id="bQuiz">🦴 L’interro de M. Silex</button>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
       <div class="panel howto">
@@ -461,6 +503,58 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       <button class="btn ghost" id="bSqBack">◀ Retour</button>
     </div>
   </div>
+
+  <!-- L'interro de M. Silex (mini-jeu) -->
+  <div id="sQuiz" class="screen hidden">
+    <div class="wrap">
+      <div id="qzHome">
+        <div class="lsPanel qzPanel">
+          <div class="lsHead"><canvas id="qzProf0" width="22" height="34"></canvas><div><div class="lsName">M. Silex</div><div class="lsSub">L’interro d’histoire</div></div><div class="lsFlag">🦴</div></div>
+          <div class="qzSay" id="qzHello"></div>
+          <div class="qzHint">10 questions sur ton cahier. Chaque correction te dit sur quelle photo et à quel endroit revérifier. Toutes les 3 bonnes réponses : un squishy pour ta collection !</div>
+        </div>
+        <div id="qzList" class="qzList"></div>
+        <button class="btn ghost" id="qzBack">◀ Retour</button>
+      </div>
+      <div id="qzPlay" class="hidden">
+        <div class="lsPanel qzPanel">
+          <div class="lsHead"><canvas id="qzProf1" width="22" height="34"></canvas><div style="min-width:0"><div class="lsName">M. Silex</div><div class="lsSub" id="qzSub"></div></div><button class="qzQuit" id="qzQuit" aria-label="Arrêter l’interro">✖</button></div>
+          <div class="qzChap" id="qzChap"></div>
+          <div class="qzDots" id="qzDots"></div>
+          <div class="qzSay" id="qzSay"></div>
+          <div class="lsFr qzQ" id="qzQ"></div>
+          <div class="lsChoices" id="qzChoices"></div>
+          <button class="lsType" id="qzJoker">📝 Antisèche (1)</button>
+          <div id="qzRes" class="hidden">
+            <div id="qzVerdict" class="lsVerdict"></div>
+            <div id="qzYou" class="lsYou"></div>
+            <div class="lsAnsBox"><span id="qzAns" class="lsAns"></span></div>
+            <div id="qzTip" class="lsTip"></div>
+            <div id="qzGift" class="qzReward hidden"></div>
+            <div id="qzRef" class="qzRef"></div>
+            <div id="qzShot" class="qzShot hidden"></div>
+            <button class="btn big green" id="qzNext">Question suivante ▶</button>
+          </div>
+        </div>
+      </div>
+      <div id="qzEnd" class="hidden">
+        <div class="lsPanel qzPanel">
+          <div class="lsHead"><canvas id="qzProf2" width="22" height="34"></canvas><div><div class="lsName">M. Silex</div><div class="lsSub">Ta note</div></div><div class="lsFlag">📝</div></div>
+          <div id="qzNote" class="qzNote"></div>
+          <div id="qzBull" class="qzSay"></div>
+          <div id="qzRec" class="qzRec"></div>
+          <div id="qzReward" class="qzReward hidden"></div>
+          <div id="qzMissT" class="qzMissT">À revoir dans ton cahier :</div>
+          <div id="qzMiss"></div>
+        </div>
+        <button class="btn green" id="qzRetry">🎯 Refaire mes erreurs</button>
+        <button class="btn" id="qzAgain">🔁 Rejouer ce chapitre</button>
+        <button class="btn cyan" id="qzOther">📚 Autre chapitre</button>
+        <button class="btn ghost" id="qzEndBack">🏠 Menu</button>
+      </div>
+    </div>
+  </div>
+  <div id="qzZoom" class="hidden"><div class="qzZoomBox"><div class="qzZoomHead"><span id="qzZoomT"></span><button id="qzZoomX" aria-label="Fermer la photo">✖</button></div><div id="qzZoomScroll"><div id="qzZoomPage"></div></div></div></div>
 
   <!-- Intro de niveau -->
   <div id="sIntro" class="overlay hidden">

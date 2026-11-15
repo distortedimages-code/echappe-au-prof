@@ -114,7 +114,7 @@ const UI = {
   show(id) {
     Input.reset();
     if (['sTitle', 'sLevels', 'sResult', 'sMulti', 'sIntro', 'sChars', 'sCreator'].includes(id)) Lesson.abort();
-    ['sTitle', 'sChars', 'sCreator', 'sLevels', 'sIntro', 'sPause', 'sResult', 'sMulti', 'sSquish'].forEach(s => $(s).classList.toggle('hidden', s !== id));
+    ['sTitle', 'sChars', 'sCreator', 'sLevels', 'sIntro', 'sPause', 'sResult', 'sMulti', 'sSquish', 'sQuiz'].forEach(s => $(s).classList.toggle('hidden', s !== id));
     $('hud').classList.toggle('hidden', !['play'].includes(id) && !['sIntro', 'sPause', 'sResult'].includes(id));
     if (id === 'sIntro') this.introPages();
   },
@@ -174,7 +174,7 @@ const UI = {
     const tap = (id, f) => $(id).addEventListener('click', e => { AU.init(); AU.sfx('blip'); f(e); });
     tap('bPlay', () => { if (!this.chars.length) this.openCreator(-1, 'levels'); else this.openLevels(); });
     tap('bChars', () => this.openChars('title'));
-    tap('bSquish', () => SqAlbum.open('title')); tap('bSqBack', () => this.openTitle());
+    tap('bSquish', () => SqAlbum.open('title')); tap('bQuiz', () => Quiz.open()); tap('bSqBack', () => this.openTitle());
     tap('bMulti', () => Multi.open());
     tap('bInf', () => { AU.init(); if (!this.chars.length) this.openCreator(-1, 'inf'); else this.launchInf(); });
     tap('bPlan', () => this.openPlan());
