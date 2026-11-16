@@ -185,6 +185,52 @@ ul.hints li{background:rgba(255,255,255,.06);border-radius:6px;padding:5px 8px;l
 #plTabs button.on{background:var(--yel);color:var(--ink)}
 #planCv{width:100%;display:block;border:3px solid var(--ink);border-radius:8px;background:#f6efd8}
 .plLegend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:16px;margin-top:6px;opacity:.9}
+/* chi-fou-mi : une tuile qui tombe par-dessus l'écran */
+#rps{position:absolute;inset:0;z-index:42;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(10,4,24,.5);pointer-events:auto;--u:clamp(1.5px,.42vmin,2.3px)}
+#rps.in{animation:rpsBg .18s ease-out}#rps.out{animation:rpsBgOut .28s ease-in forwards}#rps.out .rpsCard{animation:rpsOut .28s cubic-bezier(.5,-.6,.8,.4) forwards}
+@keyframes rpsBg{from{background:rgba(10,4,24,0)}}@keyframes rpsBgOut{to{background:rgba(10,4,24,0)}}
+.rpsCard{position:relative;width:min(94vw,470px);background:linear-gradient(#2f2156,#22163f);border:4px solid var(--ink);border-radius:20px;box-shadow:0 10px 0 var(--ink),inset 0 0 0 3px var(--yel);padding:12px 12px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;overflow:hidden;animation:rpsIn .42s cubic-bezier(.2,1.7,.45,1)}
+@keyframes rpsIn{0%{transform:translateY(-110vh) rotate(-10deg) scale(.7)}70%{transform:translateY(8px) rotate(2deg) scale(1.02)}100%{transform:none}}
+@keyframes rpsOut{to{transform:translateY(-30px) scale(1.25) rotate(4deg);opacity:0}}
+.rpsTitle{font-size:22px;line-height:1.05;text-align:center}.rpsTitle b{color:var(--yel)}.rpsTitle span{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--pink);display:inline-block;animation:wob .5s ease-in-out infinite}
+.rpsPick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
+.rpsB{position:relative;padding:6px 2px 7px;border:3px solid var(--ink);border-radius:14px;background:var(--yel);color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:3px;box-shadow:0 6px 0 var(--ink),inset 0 -5px 0 rgba(0,0,0,.18),inset 0 4px 0 rgba(255,255,255,.45);transition:transform .08s,filter .12s,opacity .12s}
+.rpsB:nth-child(2){background:#7ee05f}.rpsB:nth-child(3){background:#6fd6f0}
+.rpsB canvas{width:clamp(44px,13vmin,74px);height:clamp(44px,13vmin,74px);image-rendering:pixelated;pointer-events:none}
+.rpsB b{font-family:'Press Start 2P',monospace;font-size:clamp(7px,2.1vmin,11px);pointer-events:none}
+.rpsB:active,.rpsB.sel{transform:translateY(4px) scale(1.06);box-shadow:0 2px 0 var(--ink),0 0 0 3px #fff}
+.rpsB.dim{filter:grayscale(1) brightness(.55);opacity:.6}
+.rpsArena{display:flex;align-items:center;justify-content:center;gap:2px;width:100%;padding:4px 0 0}
+.rpsSide{display:flex;align-items:flex-end;gap:2px;transition:transform .15s,filter .2s}
+.rpsFace{width:calc(var(--u)*28);height:calc(var(--u)*47.6);image-rendering:pixelated;flex:none}
+.rpsHand{width:calc(var(--u)*52);height:calc(var(--u)*52);image-rendering:pixelated;flex:none;transform-origin:50% 90%}
+.rpsSide.kid .rpsHand{transform:scaleX(-1)}
+.rpsSide.me{animation:rpsSlideL .32s cubic-bezier(.2,1.6,.4,1)}.rpsSide.kid{animation:rpsSlideR .32s cubic-bezier(.2,1.6,.4,1)}
+@keyframes rpsSlideL{from{transform:translateX(-60vw)}}@keyframes rpsSlideR{from{transform:translateX(60vw)}}
+.rpsHand.pump{animation:rpsPump .16s ease-out}.rpsSide.kid .rpsHand.pump{animation:rpsPumpK .16s ease-out}
+@keyframes rpsPump{40%{transform:translateY(calc(var(--u)*-16)) rotate(-12deg)}}@keyframes rpsPumpK{40%{transform:scaleX(-1) translateY(calc(var(--u)*-16)) rotate(-12deg)}}
+.rpsHand.slam{animation:rpsSlam .3s cubic-bezier(.2,1.8,.4,1)}.rpsSide.kid .rpsHand.slam{animation:rpsSlamK .3s cubic-bezier(.2,1.8,.4,1)}
+@keyframes rpsSlam{0%{transform:scale(1.6)}100%{transform:scale(1)}}@keyframes rpsSlamK{0%{transform:scaleX(-1.6) scaleY(1.6)}100%{transform:scaleX(-1)}}
+.rpsSide.win{transform:scale(1.14);filter:drop-shadow(0 0 8px #fff2a0)}.rpsSide.lose{transform:translateY(8px) rotate(-6deg) scale(.88);filter:grayscale(.85) brightness(.75)}.rpsSide.kid.lose{transform:translateY(8px) rotate(6deg) scale(.88)}
+.rpsCall{font-family:'Press Start 2P',monospace;font-size:clamp(13px,4vmin,24px);color:var(--paper);min-width:3.4em;text-align:center;text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink)}
+.rpsCall.beat{color:var(--yel)}.rpsCall.go{animation:rpsBeat .16s cubic-bezier(.2,1.8,.4,1)}
+@keyframes rpsBeat{from{transform:scale(2.1) rotate(-8deg);opacity:.3}}
+.rpsRes{font-family:'Press Start 2P',monospace;font-size:clamp(11px,3.4vmin,17px);min-height:1.4em;text-align:center;color:var(--paper)}
+.rpsRes.win{color:#7ee05f}.rpsRes.lose{color:var(--red)}.rpsRes.tie{color:var(--yel)}
+.rpsRes.slam{animation:rpsRes .3s cubic-bezier(.2,1.9,.4,1)}@keyframes rpsRes{from{transform:scale(2.4) rotate(6deg);opacity:0}}
+.rpsStreak{display:flex;align-items:center;gap:8px;font-size:18px;opacity:.95}
+.rpsStreak i{width:22px;height:22px;border:3px solid var(--ink);border-radius:50%;background:#3b2b6b;box-shadow:0 2px 0 var(--ink)}
+.rpsStreak i.on{background:var(--yel);box-shadow:0 2px 0 var(--ink),0 0 10px #ffd23f}
+.rpsStreak i.pop{animation:slotBump .35s}.rpsStreak.shake{animation:shake .3s}
+.rpsCard.shake{animation:rpsShake .25s}@keyframes rpsShake{20%{transform:translate(-6px,3px) rotate(-1deg)}40%{transform:translate(5px,-3px) rotate(1deg)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-1px)}}
+.rpsCard.flash::after{content:'';position:absolute;inset:0;background:#fff;pointer-events:none;animation:rpsFlash .2s ease-out forwards}@keyframes rpsFlash{from{opacity:.75}to{opacity:0}}
+.rpsGift{position:absolute;inset:auto 10px 10px;display:flex;align-items:center;gap:10px;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:14px;padding:8px 12px;box-shadow:0 5px 0 var(--ink);z-index:2}
+.rpsGift canvas{width:48px;height:48px;image-rendering:pixelated;flex:none;animation:bob .7s ease-in-out infinite}.rpsGift b{font-size:21px;line-height:1.05;font-weight:normal}
+.rpsGift.pop{animation:rpsGiftIn .4s cubic-bezier(.2,1.8,.4,1)}@keyframes rpsGiftIn{from{transform:translateY(60px) scale(.5) rotate(-6deg);opacity:0}}
+.rpsQuit{margin-top:2px;padding:5px 12px;white-space:nowrap;border:3px solid var(--ink);border-radius:12px;background:#3b2b6b;color:var(--paper);font-family:inherit;font-size:19px;box-shadow:0 4px 0 var(--ink)}.rpsQuit span{opacity:.7;font-size:16px}
+.rpsQuit:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.rpsStar{position:absolute;left:50%;top:58%;font-size:22px;pointer-events:none;text-shadow:0 2px 0 var(--ink);animation:rpsStar .6s cubic-bezier(.2,.8,.4,1) forwards}
+@keyframes rpsStar{from{transform:translate(-50%,-50%) scale(.4)}to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.1) rotate(180deg);opacity:0}}
 #sTask{position:absolute;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;padding:0 8px calc(8px + env(safe-area-inset-bottom));pointer-events:auto}
 .tkPanel{width:min(100%,440px,calc(56vh * 300 / 210 + 22px));background:var(--panel);border:3px solid var(--ink);border-radius:14px;box-shadow:0 5px 0 var(--ink);padding:8px;animation:tkIn .32s cubic-bezier(.2,1.6,.4,1)}
 @keyframes tkIn{from{transform:translateY(60px) scale(.85);opacity:0}}
@@ -465,6 +511,23 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
       </div>
     </div></div>
     <div id="sPlan" class="hidden"><div class="plPanel"><div class="plHead"><b>🗺️ Plan du collège</b><button id="plClose" aria-label="Fermer le plan">✖</button></div><div id="plTabs"></div><canvas id="planCv" width="440" height="330"></canvas><div class="plLegend"><span>🟢 toi</span><span>🔴 surveillant</span><span>🟠 profs</span><span>⬇️⬆️ escaliers</span><span>🔑 trousseau</span><span>🔥 alarme</span></div></div></div>
+    <div id="rps" class="hidden"><div class="rpsCard" id="rpsCard">
+      <div class="rpsTitle"><b id="rpsName">Lina</b> te barre la route : <span>CHI-FOU-MI !</span></div>
+      <div class="rpsPick">
+        <button class="rpsB" data-h="0"><canvas></canvas><b>PIERRE</b></button>
+        <button class="rpsB" data-h="1"><canvas></canvas><b>FEUILLE</b></button>
+        <button class="rpsB" data-h="2"><canvas></canvas><b>CISEAUX</b></button>
+      </div>
+      <div class="rpsArena">
+        <div class="rpsSide me"><canvas class="rpsFace"></canvas><canvas class="rpsHand"></canvas></div>
+        <div class="rpsCall" id="rpsCall">VS</div>
+        <div class="rpsSide kid"><canvas class="rpsHand"></canvas><canvas class="rpsFace"></canvas></div>
+      </div>
+      <div class="rpsRes" id="rpsRes"></div>
+      <div class="rpsStreak"><i></i><i></i><span>2 victoires d’affilée = un cadeau !</span></div>
+      <div class="rpsGift hidden" id="rpsGift"><canvas></canvas><b></b></div>
+      <button class="rpsQuit" id="rpsQuit">🏃 Abandonner <span>(il va hurler !)</span></button>
+    </div></div>
     <div id="sTask" class="hidden">
       <div class="tkPanel">
         <div class="tkHead"><div id="tkTitle"></div><button id="tkClose" aria-label="Fermer">✖</button></div>

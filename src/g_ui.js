@@ -65,6 +65,7 @@ const Input = {
       if (G.mode === 'play') {
         if (e.code === 'Space' || e.code === 'KeyE' || e.code === 'Enter') { doAction(G.actions[0]); e.preventDefault(); }
         if (e.code === 'KeyR' || e.code === 'KeyF') doAction(G.actions[1]);
+        if (G.rps) { const h = { Digit1: 0, Digit2: 1, Digit3: 2, KeyA: 0, KeyZ: 1, KeyE: 2 }[e.code]; if (h != null) { RPS.pick(h); e.preventDefault(); return; } }
         if (e.code === 'Digit1') useItem(0); if (e.code === 'Digit2') useItem(1); if (e.code === 'Digit3') useItem(2);
         if (e.code === 'Escape' || e.code === 'KeyP') UI.pause();
         if (e.code.startsWith('Arrow')) e.preventDefault();
@@ -378,6 +379,7 @@ const UI = {
     if (G.cls && G.cls.teachers.length) extra.push('👩‍🏫 Des <b>profs font cours</b> : s’ils te voient, ils préviennent ' + pr.name + '.');
     if (G.cls && G.cls.snitches.length) extra.push(i === 0 ? '🙊 Les autres élèves ne balancent pas. Normalement. (Un « ! » au-dessus d’une tête = file !)' : '🙊 Certains élèves <b>balancent</b> : un « ! » au-dessus d’une tête = file vite !');
     else if (i === 0) extra.push('🧒 Les autres élèves ne balancent pas. Normalement.');
+    if (!G.net && Math.random() < 0.5) extra.push('✊ Un élève te bloque pour un <b>chi-fou-mi</b> ? 2 victoires d’affilée = un cadeau ! Abandonner… le fait hurler.');
     if (G.seed != null) extra.unshift('🎲 <b>Plan surprise</b> : collège différent à chaque fois. Les indices restent vrais.');
     $('inTips').innerHTML = (extra.length ? extra.join('<br>') + '<br>' : '') + '👆 Un peu = discret · à fond = bruyant.';
     G.mode = 'intro'; this.show('sIntro'); this.hudSig = null; this.invSig = null; $('bGo').textContent = 'C’est parti !'; $('bGo').disabled = false;

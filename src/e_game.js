@@ -145,7 +145,7 @@ function startLevel(idx, cfg, setup, opts) {
   let L = seed != null ? buildProcLevel(idx, seed) : null;
   if (!L) L = finalizeLevel(def.build());
   L.def = def; G.seed = L.seed != null ? L.seed : null; G.net = null; G.inf = null; G.alarmFlash = false; G.appleId = 0; G.alarmT = 0; G.pVis = true;
-  G.L = L; G.m = L.m; G.lvl = idx; G.lessons = 0; G.time = 0; G.spotted = 0; G.reveal = 0; G.slowT = 0; G.shake = 0; G.found = 0; G.petFound = false; G.cls = null; G.power = null; G.dark = false; G.P2 = null; G.T2 = null; G.cc = null; G.ccMe = null; G.doorSync = null;
+  G.L = L; G.m = L.m; G.lvl = idx; G.lessons = 0; G.time = 0; RPS.reset(); G.spotted = 0; G.reveal = 0; G.slowT = 0; G.shake = 0; G.found = 0; G.petFound = false; G.cls = null; G.power = null; G.dark = false; G.P2 = null; G.T2 = null; G.cc = null; G.ccMe = null; G.doorSync = null;
   G.cues = []; G.parts = []; G.apples = []; G.searched = new Set(); G.intercomT = 24; G.kidCueT = 3; G.smallDoorTip = false; G.banner = null; G.heartT = 0;
   G.doorIdx = new Int16Array(L.m.w * L.m.h).fill(-1);
   G.doors = L.m.doors.map((d, i) => { G.doorIdx[d.y * L.m.w + d.x] = i; return { x: d.x, y: d.y, open: 0, target: 0, closeT: 0, locked: false, byPlayer: false, hideP: false, horiz: L.m.get(d.x - 1, d.y) !== K.FLOOR && L.m.get(d.x + 1, d.y) !== K.FLOOR }; });
@@ -345,7 +345,7 @@ const RUSH_LINES = ['Hé ?!', 'Qui va là ?!', 'Hé, toi, là-bas !', 'J’ai vu
 const INSPECT_LINES = ['Hmm… y a quelqu’un par ici ?', 'Je vais jeter un œil…', 'Ça sent l’élève caché, ça…', 'Voyons voir par là…', 'Je suis sûr d’avoir entendu quelque chose…'];
 function enterChase() {
   const T = G.T, pr = T.prof;
-  T.rush = false; T.state = 'chase'; T.chaseT = 0; T.repathT = 0; T.goingLast = false; T.goingSpot = false; T.path = null; T.lostT = 0;
+  T.rush = false; T.rushFull = false; T.state = 'chase'; T.chaseT = 0; T.repathT = 0; T.goingLast = false; T.goingSpot = false; T.path = null; T.lostT = 0;
   if (G.time - T.lastSpotT > 4) {
     G.spotted++; say(pick(pr.lines.spot)); AU.sfx('spot'); G.shake = 0.25; setMark(T, '!', 1.3); FX.spotted(); T.flashT = 0.18; hop(T, 90);
     if (pr.whistle) { AU.sfx('whistle', 0.8); cue(T.x, T.y - 26, 'word', 'PRIIIT !', { col: '#9fe0ff', life: 1 }); }
@@ -381,7 +381,7 @@ function startSearch(center, n, opt = {}) {
   const furn = searchFurn(center, 5).map(s => [s, dC(s) + rand(0, 60)]).sort((a, b) => a[1] - b[1]).slice(0, opt.furn != null ? opt.furn : 2);
   spots = spots.concat(furn).sort((a, b) => a[1] - b[1]).map(a => a[0]);
   if (T.knows && !excl.includes(T.knows)) { spots = spots.filter(s => s !== T.knows); spots.unshift(T.knows); }
-  T.searchQ = spots; T.searchI = 0; T.state = 'search'; T.path = null; T.rush = false;
+  T.searchQ = spots; T.searchI = 0; T.state = 'search'; T.path = null; T.rush = false; T.rushFull = false;
   if (AU.songName === 'chase') AU.play('sneak');
 }
 function goToSpot(T, s) {
@@ -459,8 +459,8 @@ function updateTeacher(dt) {
       // il a tilté au loin : il va voir d'un bon pas, en visant là où il te voit
       if (T.rush && sees && T.lastSeen) { T.rushRe -= dt; if (T.rushRe <= 0 || !T.path) { T.rushRe = 0.5; const [x, y] = tileXY(T.lastSeen[0], T.lastSeen[1]); goTo(T, x, y); } }
       if (!T.path && T.rush && T.lastSeen) { const [x, y] = tileXY(T.lastSeen[0], T.lastSeen[1]); if (!goTo(T, x, y)) { T.rush = false; T.state = 'look'; T.st = 1; T.lookBase = T.ang; break; } }
-      const r = followPath(T, (T.rush ? pr.patrol * 0.2 + pr.chase * 0.8 : (pr.patrol + pr.chase) / 2) * 16 * slow, dt);
-      if (r === 'done') { T.rush = false; T.state = 'look'; T.st = 1.3; T.lookBase = T.ang; T.after = 'search'; T.path = null; }
+      const r = followPath(T, (T.rushFull ? pr.chase : T.rush ? pr.patrol * 0.2 + pr.chase * 0.8 : (pr.patrol + pr.chase) / 2) * 16 * slow, dt);
+      if (r === 'done') { T.rush = false; T.rushFull = false; T.state = 'look'; T.st = 1.3; T.lookBase = T.ang; T.after = 'search'; T.path = null; }
       else if (r && r.x !== undefined) onLocked(T, r);
       break;
     }
@@ -599,6 +599,7 @@ function updateKids(dt) {
   const kidTarget = (k, r) => { if (G.pathBudget-- <= 0) return; const [kx, ky] = tileOf(k); const near = G.L.kidSpots.filter(([x, y]) => Math.abs(x - kx) + Math.abs(y - ky) < r); const t = pick(near.length ? near : G.L.kidSpots); const p = astar(kx, ky, t[0], t[1], pass); if (p) { k.path = p; k.pi = 0; } };
   G.kids.forEach((k, i) => {
     if (k.gone) return;
+    if (G.rps && G.rps.kid === k) { k.moving = false; return; }
     switch (k.beh) {
       case 'watch': infWatcher(k, dt); break;
       case 'cteach': classTeacher(k, dt); break;
@@ -729,6 +730,7 @@ function updatePlayer(dt) {
   if (P.out) { P.moving = false; return; }
   if (P.jail) { P.jailT = (P.jailT || 0) + dt; if (P.jailT > 60) coopAutoRelease(); }
   if (P.lesson) { P.moving = false; P.running = false; return; }
+  if (G.rps) { P.moving = false; P.running = false; P.vx = 0; P.vy = 0; return; }   // un élève te tient en chi-fou-mi
   P.vx = 0; P.vy = 0;
   { const dT = dist(T.x, T.y, P.x, P.y) / 16, danger = ['chase', 'search', 'check', 'investigate', 'alert'].includes(T.state);
     P.trem = 0;
@@ -849,7 +851,7 @@ function unhide() {
 function computeActions() {
   if (G.net && G.net.role === 'teacher') return computeActionsT();
   const P = G.P, acts = [], m = G.m, L = G.L;
-  if (G.mode !== 'play') return acts;
+  if (G.mode !== 'play' || G.rps) return acts;
   if (P.hidden) { acts.push({ id: 'unhide', icon: '👀', label: 'Sortir', sub: P.hidden.n }); return acts; }
   if (P.busy) return [{ id: 'busy', icon: '⏳', label: P.busy.label, sub: 'Bouge pour annuler', progress: P.busy.t / P.busy.dur }];
   if (G.m.pools) { const pa = poolActions(P); if (pa) return pa; }
@@ -1097,7 +1099,7 @@ function update(dt) {
     if (AU.songName === 'chase' && G.T.state !== 'chase' && G.T.state !== 'edge' && !['tired'].includes(G.T.state)) AU.play('sneak');
     if (AU.songName == null || AU.songName === 'menu') AU.play('sneak');
     }
-    if (G.mode === 'play') { npcChatter(dt); cuteTick(dt); lifeFootBall(dt); gagsUpdate(dt); digUpdate(dt); }
+    if (G.mode === 'play') { npcChatter(dt); cuteTick(dt); lifeFootBall(dt); gagsUpdate(dt); digUpdate(dt); RPS.tick(dt); }
   } else if (G.mode === 'escape') {
     G.escT += dt; const P = G.P, t = Math.min(1, G.escT / 0.8);
     const ex0 = P.x, ey0 = P.y; P.x = lerp(G.escFrom[0], G.escTo[0], t); P.y = lerp(G.escFrom[1], G.escTo[1], t); P.moving = t < 1; P.running = true; P.dist = (P.dist || 0) + Math.hypot(P.x - ex0, P.y - ey0) + dt * 30; P.skidT = 0;
