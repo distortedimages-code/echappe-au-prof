@@ -149,7 +149,7 @@ function classTeacher(k, dt) {
   // (à deux : il surveille les deux élèves)
   let d = 0, W = P; if (k.cool <= 0) for (const t of classTargets()) { const dd = classSees(k, k.prof.range, k.prof.fov, t); if (dd && (!d || dd < d)) { d = dd; W = t; } }
   if (d) {
-    const rate = detectRate(d, k.prof.range * 16) * (W.running ? 1.5 : 1) * (W.disguised ? 0.3 : 1);
+    const rate = detectRate(d, k.prof.range * 16) * (W.running ? 1.8 : 1) * (W.disguised ? 0.3 : 1);
     const was = k.detect; k.detect = Math.min(1.2, k.detect + rate * dt);
     if (was < 0.3 && k.detect >= 0.3) { teamMark(k, '?', 0.8); if (k.state === 'board' || k.state === 'teach') { k.state = 'look'; k.st = 1.4; k.lookBase = Math.atan2(W.y - k.y, W.x - k.x); } }
     if (k.detect >= 1) {

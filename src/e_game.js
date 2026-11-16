@@ -298,13 +298,14 @@ function npcChatter(dt) {
   }
 }
 // ---------- Le temps qu'il faut pour « tilter » ----------
-// Quelqu'un qui te voit met un moment avant de réagir : 1 s si tu passes collé à lui,
-// ~4 s si tu es au bout de son champ de vision, et entre les deux, de plus en plus long avec la distance.
-// (courir le fait tilter plus vite, être déguisé·e plus lentement)
-const DETECT_NEAR = 1, DETECT_FAR = 4;
+// Quelqu'un qui te voit met un moment avant de réagir : très vite si tu passes collé à lui,
+// plus longtemps au bout de son champ de vision, et entre les deux, de plus en plus long avec la distance.
+// (courir le fait tilter plus vite, être déguisé·e plus lentement ; le mode facile laisse plus de temps)
+const DETECT_NEAR = 0.45, DETECT_FAR = 2.2, DETECT_NEAR_EASY = 0.8, DETECT_FAR_EASY = 3.2;
 function detectRate(d, range) {
-  const f = clamp((d - 18) / Math.max(1, range - 18), 0, 1);
-  return 1 / (DETECT_NEAR + (DETECT_FAR - DETECT_NEAR) * f);
+  const f = clamp((d - 18) / Math.max(1, range - 18), 0, 1), e = easyOn();
+  const n = e ? DETECT_NEAR_EASY : DETECT_NEAR, fa = e ? DETECT_FAR_EASY : DETECT_FAR;
+  return 1 / (n + (fa - n) * f);
 }
 // ---------- Le prof ----------
 function perceive(dt) {
@@ -323,17 +324,17 @@ function perceive(dt) {
     if (sees && G.inf && T.state !== 'chase' && (G.inf.grace > 0 || !infOut(T))) sees = false;
     if (sees && G.inf && T.state === 'chase' && !infOut(T)) sees = false;
     if (sees) {
-      const rate = detectRate(d, range) * (P.running ? 1.5 : 1) * (P.disguised ? 0.5 : 1);
+      const rate = detectRate(d, range) * (P.running ? 1.8 : 1) * (P.disguised ? 0.5 : 1);
       T.detect = Math.min(1.3, T.detect + rate * dt); T.lastSeen = [P.x, P.y];
     }
   }
-  if (!sees) T.detect = Math.max(0, T.detect - dt * (T.state === 'chase' ? 0.25 : 0.45));
+  if (!sees) T.detect = Math.max(0, T.detect - dt * (T.state === 'chase' ? 0.25 : 0.3));
   T.seeNow = sees;
   if (sees && T.state !== 'tired') {
     if (T.detect >= 1 && T.state !== 'chase' && T.state !== 'edge') {
       if (G.inf && !G.inf.hunt) infWarn(T);
       // vu de près : il court ; vu au loin : il tilte (« Hé ?! ») et vient voir d'un bon pas, il ne court qu'une fois assez près
-      else if (T.seeD <= Math.max(3 * 16, T.seeR * 0.5) || G.m.pools) enterChase();
+      else if (T.seeD <= Math.max(4 * 16, T.seeR * 0.65) || G.m.pools) enterChase();
       else if (!T.rush) { T.rush = true; T.rushRe = 0; T.state = 'investigate'; T.path = null; setMark(T, '!', 1.1); hop(T, 70); say(pick(RUSH_LINES)); AU.sfx('spot', 0.45); }
     }
     else if (T.detect > 0.3 && !T.rush && ['patrol', 'look', 'search', 'check', 'investigate'].includes(T.state)) { T.state = 'alert'; T.st = 0.55; T.path = null; setMark(T, '?', 0.8); hop(T, 60); }
@@ -458,7 +459,7 @@ function updateTeacher(dt) {
       // il a tilté au loin : il va voir d'un bon pas, en visant là où il te voit
       if (T.rush && sees && T.lastSeen) { T.rushRe -= dt; if (T.rushRe <= 0 || !T.path) { T.rushRe = 0.5; const [x, y] = tileXY(T.lastSeen[0], T.lastSeen[1]); goTo(T, x, y); } }
       if (!T.path && T.rush && T.lastSeen) { const [x, y] = tileXY(T.lastSeen[0], T.lastSeen[1]); if (!goTo(T, x, y)) { T.rush = false; T.state = 'look'; T.st = 1; T.lookBase = T.ang; break; } }
-      const r = followPath(T, (T.rush ? pr.patrol * 0.35 + pr.chase * 0.65 : (pr.patrol + pr.chase) / 2) * 16 * slow, dt);
+      const r = followPath(T, (T.rush ? pr.patrol * 0.2 + pr.chase * 0.8 : (pr.patrol + pr.chase) / 2) * 16 * slow, dt);
       if (r === 'done') { T.rush = false; T.state = 'look'; T.st = 1.3; T.lookBase = T.ang; T.after = 'search'; T.path = null; }
       else if (r && r.x !== undefined) onLocked(T, r);
       break;
