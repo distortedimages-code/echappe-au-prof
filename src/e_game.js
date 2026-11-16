@@ -261,6 +261,12 @@ function makeNoise(x, y, r, word, kind) {
   if (!los(T.x, T.y - 12, x, y - 6)) R *= 0.6;
   if (d > R) return;
   T.lastSeen = [x, y];
+  // quelqu'un qui court tout près : ça attire son regard → il s'arrête et se tourne vers toi (et te voit si tu restes là)
+  if (kind === 'step' && !T.rush) {
+    if (T.state !== 'alert') { if (G.time - T.heardT > 3.5) say(pick(T.prof.lines.heard)); setMark(T, '?', 0.9); hop(T, 50); T.state = 'alert'; T.st = 0.75; T.path = null; T.moving = false; }
+    else T.st = Math.min(1.2, T.st + 0.25);
+    T.heardT = G.time; return;
+  }
   if (G.time - T.heardT > 3.5) say(pick(T.prof.lines.heard));
   T.heardT = G.time; setMark(T, '?', 1);
   T.state = 'investigate'; const [tx, ty] = tileXY(x, y); if (!goTo(T, tx, ty)) { T.state = 'look'; T.st = 1; T.lookBase = T.ang; }
@@ -302,6 +308,19 @@ function npcChatter(dt) {
 // plus longtemps au bout de son champ de vision, et entre les deux, de plus en plus long avec la distance.
 // (courir le fait tilter plus vite, être déguisé·e plus lentement ; le mode facile laisse plus de temps)
 const DETECT_NEAR = 0.45, DETECT_FAR = 2.2, DETECT_NEAR_EASY = 0.8, DETECT_FAR_EASY = 3.2;
+// un élève qui court tout près attire le regard d'un adulte posté (prof en classe, surveillant) : il se tourne vers lui
+function runGaze(k, t, states) {
+  if (!t || !t.running || t.hidden || t.under || G.mode !== 'play' || !states.includes(k.state)) return false;
+  const d = Math.hypot(t.x - k.x, t.y - k.y); if (d > (t.small > 0 ? 2.5 : 4.5) * 16 || !los(k.x, k.y - 12, t.x, t.y - 7)) return false;
+  if (k.state !== 'look') { setMark(k, '?', 0.7); hop(k, 50); k.st = 0; }
+  k.state = 'look'; k.st = Math.max(k.st, 1.6); k.lookBase = Math.atan2(t.y - 7 - (k.y - 12), t.x - k.x); k.gazeT = 1; k.path = null;
+  return true;
+}
+// regarder autour de soi (un adulte posté) : d'abord fixement là où ça a bougé, puis il balaie du regard
+function lookStep(k, dt) {
+  let a = k.lookBase; if (k.gazeT > 0) k.gazeT -= dt; else a += Math.sin(G.time * 2 + (k.ph || 0)) * 1.1;
+  k.ang += angDiff(a, k.ang) * Math.min(1, dt * 9); k.face = faceFromAng(k.ang);
+}
 function detectRate(d, range) {
   const f = clamp((d - 18) / Math.max(1, range - 18), 0, 1), e = easyOn();
   const n = e ? DETECT_NEAR_EASY : DETECT_NEAR, fa = e ? DETECT_FAR_EASY : DETECT_FAR;
@@ -642,7 +661,13 @@ function updateKids(dt) {
       }
     }
   });
-  if (G.ball) { G.ball.t += dt / 0.9; if (G.ball.t >= 1) { G.ball.t = 0; const f = G.ball.from; G.ball.from = G.ball.to; G.ball.to = f; } }
+  // la balle que se renvoient deux élèves : si l'un d'eux s'en va (alarme, classe…), la partie s'arrête — sinon elle traverserait les murs
+  if (G.ball) {
+    const a = G.kids[G.ball.from], b = G.kids[G.ball.to];
+    if (!a || !b || a.gone || b.gone || a.beh !== 'ball' || b.beh !== 'ball' || dist(a.x, a.y, b.x, b.y) > 5 * 16 || !los(a.x, a.y - 8, b.x, b.y - 8)) {
+      [a, b].forEach(k => { if (k && k.beh === 'ball') { k.beh = 'wander'; k.st = rand(0.5, 2); } }); G.ball = null;
+    } else { G.ball.t += dt / 0.9; if (G.ball.t >= 1) { G.ball.t = 0; const f = G.ball.from; G.ball.from = G.ball.to; G.ball.to = f; } }
+  }
   G.kidCueT -= dt;
   if (G.kidCueT <= 0) {
     G.kidCueT = rand(3, 7);

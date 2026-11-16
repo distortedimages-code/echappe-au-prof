@@ -124,8 +124,25 @@ function drawDoor(c, d, px, py) {
     if (d.open < 0.5) { R(0, 0, 16, 16, frame); R(1, 1, 14, 15, wood); R(3, 3, 10, 4, dark); R(3, 9, 10, 5, dark); R(11, 8, 2, 2, '#ffd23f'); R(1, 1, 14, 1, '#c99260'); }
     else { const lw = Math.round(3 + (1 - Math.min(1, d.open)) * 8); R(0, 0, 2, 16, frame); R(14, 0, 2, 16, frame); R(0, 0, 16, 2, frame); R(2, 2, lw, 13, wood); R(2, 2, lw, 1, '#c99260'); }
   } else {
-    if (d.open < 0.5) { R(5, 0, 6, 16, frame); R(6, 0, 4, 16, wood); R(6, 7, 4, 2, '#ffd23f'); }
-    else { const lh = Math.round(3 + (1 - Math.min(1, d.open)) * 6); R(5, 0, 6, 2, frame); R(5, 14, 6, 2, frame); R(7, 2, 9, lh, wood); R(7, 2, 9, 1, '#c99260'); }
+    // porte dans un mur vertical (vue de côté) : un vrai passage dans le mur, bien lisible
+    // seuil clair entre deux montants, battant épais avec sa tranche, ses gonds et une poignée de chaque côté
+    const sill = '#c8b89c', sillD = '#9c8a6c', jamb = '#2a1f42', jambL = '#4a3a6e';
+    R(0, 2, 16, 12, sill); R(0, 2, 16, 1, sillD); R(0, 13, 16, 1, sillD);
+    for (let i = 2; i < 16; i += 5) R(i, 3, 1, 10, 'rgba(120,100,70,0.35)');
+    R(0, 0, 16, 2, jamb); R(0, 14, 16, 2, jamb); R(0, 0, 16, 1, jambL); R(0, 14, 16, 1, jambL);
+    if (d.open < 0.5) {
+      c.fillStyle = 'rgba(10,6,20,0.28)'; c.fillRect(px + 10, py + 3, 2, 11);   // ombre du battant
+      R(5, 1, 6, 14, frame); R(6, 1, 4, 13, wood); R(7, 1, 2, 13, '#c99260');
+      R(6, 4, 4, 1, dark); R(6, 10, 4, 1, dark);
+      R(5, 3, 1, 2, '#c8ccd8'); R(5, 11, 1, 2, '#c8ccd8');   // gonds
+      R(3, 7, 2, 2, '#ffd23f'); R(11, 7, 2, 2, '#ffd23f'); R(3, 7, 2, 1, '#fff2a0'); R(11, 7, 2, 1, '#fff2a0');   // poignées
+    } else {
+      // ouverte : le battant est rabattu contre le mur, on voit sa face (panneaux + poignée)
+      const lw = Math.round(5 + Math.min(1, d.open) * 5);
+      R(5, 1, 2, 3, frame);
+      R(6, 1, lw, 5, frame); R(7, 2, lw - 2, 3, wood); R(7, 2, lw - 2, 1, '#c99260'); R(8, 3, Math.max(1, lw - 5), 1, dark);
+      R(6 + lw - 3, 3, 1, 1, '#ffd23f');
+    }
   }
   if (d.locked) { c.fillStyle = 'rgba(255,40,60,0.22)'; c.fillRect(px, py, 16, 16); const b = Math.round(Math.sin(G.time * 5) * 1); R(5, 7 + b, 6, 5, '#ffd23f'); R(6, 4 + b, 1, 3, '#d0d6e0'); R(9, 4 + b, 1, 3, '#d0d6e0'); R(6, 4 + b, 4, 1, '#d0d6e0'); R(7, 9 + b, 2, 2, frame); }
 }
@@ -426,7 +443,7 @@ function renderGame(dt) {
   const behindFront = (x, y) => { const k = G.m.get(Math.floor(x / 16), Math.floor(y / 16) + 1); return FRONT_KINDS[k] ? y + 24 : y; };
   G.items.forEach(it => { if (inV(it.x, it.y)) ents.push([behindFront(it.x, it.y), () => drawItemW(ctx, it)]); });
   // le bazar sorti des meubles pendant les fouilles
-  (G.m.junk || []).forEach(j => { if (inV(j.x, j.y)) ents.push([j.head ? j.head.y + 0.6 : j.y, () => drawJunk(ctx, j)]); });
+  (G.m.junk || []).forEach(j => { if (inV(j.x, j.y)) ents.push([j.head ? j.head.y + 0.6 : j.y, () => occlude(ctx, j.head || j, () => drawJunk(ctx, j))]); });   // caché par les murs, comme les élèves
   G.apples.forEach(a => inV(a.x, a.y) && ents.push([behindFront(a.x, a.y), () => { const w = Math.sin(G.time * 4) * 0.12; ctx.save(); ctx.translate(a.x, a.y - 6); ctx.rotate(w); ctx.drawImage(itemCanvas('apple'), -7, -7); ctx.restore(); }]));
   G.kids.forEach(k => {
     if (!k.vis || !inV(k.x, k.y)) return;

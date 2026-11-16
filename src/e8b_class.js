@@ -140,7 +140,7 @@ function classTeacher(k, dt) {
       break;
     }
     case 'look':
-      k.moving = false; k.ang = k.lookBase + Math.sin(G.time * 2 + k.ph) * 1.1; k.face = faceFromAng(k.ang); k.st -= dt;
+      k.moving = false; lookStep(k, dt); k.st -= dt;
       if (k.st <= 0) { if (goTo(k, k.home[0], k.home[1])) { k.state = 'walk'; k.next = 'teach'; } else k.state = 'teach'; }
       break;
   }
@@ -159,7 +159,7 @@ function classTeacher(k, dt) {
       if (callTeacher(W.x, W.y, k)) ccTell(W, '📣 ' + k.name + ' t’a vu·e et prévient ' + n + ' ! Bouge de là !', 2.6);
       G.shake = Math.max(G.shake, 0.12);
     }
-  } else k.detect = Math.max(0, k.detect - dt * 0.5);
+  } else { k.detect = Math.max(0, k.detect - dt * 0.5); if (k.cool <= 0) for (const t of classTargets()) if (runGaze(k, t, ['teach', 'board', 'look'])) break; }
 }
 // les élèves qui balancent : un « ! » au-dessus de la tête… et s'ils te voient encore un moment, ils crient
 function classSnitch(k, dt) {

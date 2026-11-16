@@ -270,7 +270,7 @@ function infWatcher(k, dt) {
       break;
     }
     case 'look':
-      k.moving = false; k.ang = k.lookBase + Math.sin(G.time * 2 + k.ph) * 1.1; k.face = faceFromAng(k.ang); k.st -= dt;
+      k.moving = false; lookStep(k, dt); k.st -= dt;
       if (k.st <= 0) { if (goTo(k, k.home[0], k.home[1])) { k.state = 'walk'; k.next = 'teach'; } else k.state = 'teach'; }
       break;
     case 'doorlook': {
@@ -305,7 +305,7 @@ function infWatcherSee(k, dt, P) {
       if (k.detect >= 1) infWarn(k);
     }
   }
-  if (!sees) k.detect = Math.max(0, k.detect - dt * 0.5);
+  if (!sees) { k.detect = Math.max(0, k.detect - dt * 0.5); runGaze(k, P, ['teach', 'board', 'guard', 'look']); }
 }
 // ---------- élèves et profs qui évacuent ----------
 function infEvacStep(k, dt) {

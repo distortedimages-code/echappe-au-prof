@@ -446,7 +446,8 @@ function genIndoor(R, S) {
   // casiers encastrés et déco des couloirs
   const decAt = new Set(); m.decor.forEach(d => { for (let i = 0; i < (d.w || 1); i++) decAt.add(d.y * W + d.x + i); });
   const lockerRun = (pts) => { if (S.noLockers) return; let run = 0; pts.forEach(([x, y, cx, cy]) => {
-    const okp = !decAt.has(y * W + x) && m.get(x, y) === K.WALL && m.get(cx, cy) === K.FLOOR && ![[0, 0], ...D4, [1, 1], [-1, 1], [1, -1], [-1, -1]].some(([dx, dy]) => m.get(x + dx, y + dy) === K.DOOR || isExitK(m.get(x + dx, y + dy)));
+    const up = cy > y ? m.get(x, y - 1) : cy < y ? m.get(x, y + 1) : K.WALL;   // le haut du casier dépasse sur la case derrière le mur : elle doit être libre
+    const okp = !decAt.has(y * W + x) && m.get(x, y) === K.WALL && m.get(cx, cy) === K.FLOOR && (cy === y || up === K.WALL || up === K.FLOOR) && ![[0, 0], ...D4, [1, 1], [-1, 1], [1, -1], [-1, -1]].some(([dx, dy]) => m.get(x + dx, y + dy) === K.DOOR || isExitK(m.get(x + dx, y + dy)));
     if (!okp) { run = 0; return; }
     if (run > 0) { m.set(x, y, K.LOCKER); run--; } else if (R.ch(0.16)) { run = R.i(1, 4); m.set(x, y, K.LOCKER); }
   }); };
@@ -464,6 +465,7 @@ function genIndoor(R, S) {
       const a = [], b = []; for (let y = c.y + 2; y < c.y + c.h - 1; y++) { a.push([c.x - 1, y, c.x, y]); b.push([c.x + 3, y, c.x + 2, y]); } lockerRun(a); lockerRun(b);
     }
   });
+  unstack(m);
   // des fenêtres partout sur les murs extérieurs (la seule qui s'ouvre est entrouverte, avec son rideau qui vole)
   {
     const nearExit = (x, y) => [[0, 0], [1, 0], [-1, 0], [2, 0], [-2, 0], [0, 1], [0, -1]].some(([dx, dy]) => isExitK(m.get(x + dx, y + dy)));
@@ -507,6 +509,20 @@ function genIndoor(R, S) {
   L.tasks = S.tasks && S.tasks.length ? placeTasks(g, L, S.tasks) : [];
   L.g = g;
   return L;
+}
+
+// chaque meuble à sa place : un grand meuble (casier, armoire, étagère, photocopieuse…) collé juste sous un autre meuble
+// donnerait l'impression qu'ils sont empilés l'un sur l'autre → on le retire (un casier encastré redevient un bout de mur)
+function unstack(m) {
+  const free = k => k == null || k === K.FLOOR || k === K.DOOR || k === K.WALL || isWallish(k);
+  let n = 0;
+  for (let y = 1; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+    const k = m.get(x, y); if (!TALL_KINDS.has(k) || k === K.WALL || k === K.PILLAR || (isWallish(k) && k !== K.LOCKER)) continue;
+    const up = m.get(x, y - 1); if (up === k || free(up)) continue;
+    const inWall = k === K.LOCKER && !m.roomAt(x, y);
+    m.set(x, y, inWall ? K.WALL : K.FLOOR); n++;
+  }
+  return n;
 }
 
 // ---------- postes de tâches ----------
