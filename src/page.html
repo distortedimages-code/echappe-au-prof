@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Échappe au prof">
 <meta name="theme-color" content="#22163f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Luckiest+Guy&display=swap" rel="stylesheet">
 <style>
 :root{--ink:#140b26;--bg:#22163f;--panel:#2f2156;--panel2:#3b2b6b;--yel:#ffd23f;--pink:#ff4f8b;--cyan:#2ce8d5;--green:#63c74d;--red:#ff4a5a;--paper:#fff6e6}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -185,52 +185,56 @@ ul.hints li{background:rgba(255,255,255,.06);border-radius:6px;padding:5px 8px;l
 #plTabs button.on{background:var(--yel);color:var(--ink)}
 #planCv{width:100%;display:block;border:3px solid var(--ink);border-radius:8px;background:#f6efd8}
 .plLegend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:16px;margin-top:6px;opacity:.9}
-/* chi-fou-mi : une tuile qui tombe par-dessus l'écran */
-#rps{position:absolute;inset:0;z-index:42;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(10,4,24,.5);pointer-events:auto;--u:clamp(1.5px,.42vmin,2.3px)}
+/* chi-fou-mi, style manga : une tuile qui tombe par-dessus l'écran */
+#rps{position:absolute;inset:0;z-index:42;display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(10,4,24,.55);pointer-events:auto;--fist:clamp(92px,31vmin,150px)}
 #rps.in{animation:rpsBg .18s ease-out}#rps.out{animation:rpsBgOut .28s ease-in forwards}#rps.out .rpsCard{animation:rpsOut .28s cubic-bezier(.5,-.6,.8,.4) forwards}
 @keyframes rpsBg{from{background:rgba(10,4,24,0)}}@keyframes rpsBgOut{to{background:rgba(10,4,24,0)}}
-.rpsCard{position:relative;width:min(94vw,470px);background:linear-gradient(#2f2156,#22163f);border:4px solid var(--ink);border-radius:20px;box-shadow:0 10px 0 var(--ink),inset 0 0 0 3px var(--yel);padding:12px 12px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;overflow:hidden;animation:rpsIn .42s cubic-bezier(.2,1.7,.45,1)}
+.rpsCard{position:relative;width:min(94vw,440px);height:min(90svh,660px);min-height:min(90svh,470px);background:#fff;border:4px solid var(--ink);border-radius:22px;box-shadow:0 10px 0 var(--ink);overflow:hidden;animation:rpsIn .42s cubic-bezier(.2,1.7,.45,1)}
 @keyframes rpsIn{0%{transform:translateY(-110vh) rotate(-10deg) scale(.7)}70%{transform:translateY(8px) rotate(2deg) scale(1.02)}100%{transform:none}}
 @keyframes rpsOut{to{transform:translateY(-30px) scale(1.25) rotate(4deg);opacity:0}}
-.rpsTitle{font-size:22px;line-height:1.05;text-align:center}.rpsTitle b{color:var(--yel)}.rpsTitle span{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--pink);display:inline-block;animation:wob .5s ease-in-out infinite}
-.rpsPick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
-.rpsB{position:relative;padding:6px 2px 7px;border:3px solid var(--ink);border-radius:14px;background:var(--yel);color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:3px;box-shadow:0 6px 0 var(--ink),inset 0 -5px 0 rgba(0,0,0,.18),inset 0 4px 0 rgba(255,255,255,.45);transition:transform .08s,filter .12s,opacity .12s}
-.rpsB:nth-child(2){background:#7ee05f}.rpsB:nth-child(3){background:#6fd6f0}
-.rpsB canvas{width:clamp(44px,13vmin,74px);height:clamp(44px,13vmin,74px);image-rendering:pixelated;pointer-events:none}
-.rpsB b{font-family:'Press Start 2P',monospace;font-size:clamp(7px,2.1vmin,11px);pointer-events:none}
-.rpsB:active,.rpsB.sel{transform:translateY(4px) scale(1.06);box-shadow:0 2px 0 var(--ink),0 0 0 3px #fff}
-.rpsB.dim{filter:grayscale(1) brightness(.55);opacity:.6}
-.rpsArena{display:flex;align-items:center;justify-content:center;gap:2px;width:100%;padding:4px 0 0}
-.rpsSide{display:flex;align-items:flex-end;gap:2px;transition:transform .15s,filter .2s}
-.rpsFace{width:calc(var(--u)*28);height:calc(var(--u)*47.6);image-rendering:pixelated;flex:none}
-.rpsHand{width:calc(var(--u)*52);height:calc(var(--u)*52);image-rendering:pixelated;flex:none;transform-origin:50% 90%}
-.rpsSide.kid .rpsHand{transform:scaleX(-1)}
-.rpsSide.me{animation:rpsSlideL .32s cubic-bezier(.2,1.6,.4,1)}.rpsSide.kid{animation:rpsSlideR .32s cubic-bezier(.2,1.6,.4,1)}
-@keyframes rpsSlideL{from{transform:translateX(-60vw)}}@keyframes rpsSlideR{from{transform:translateX(60vw)}}
-.rpsHand.pump{animation:rpsPump .16s ease-out}.rpsSide.kid .rpsHand.pump{animation:rpsPumpK .16s ease-out}
-@keyframes rpsPump{40%{transform:translateY(calc(var(--u)*-16)) rotate(-12deg)}}@keyframes rpsPumpK{40%{transform:scaleX(-1) translateY(calc(var(--u)*-16)) rotate(-12deg)}}
-.rpsHand.slam{animation:rpsSlam .3s cubic-bezier(.2,1.8,.4,1)}.rpsSide.kid .rpsHand.slam{animation:rpsSlamK .3s cubic-bezier(.2,1.8,.4,1)}
-@keyframes rpsSlam{0%{transform:scale(1.6)}100%{transform:scale(1)}}@keyframes rpsSlamK{0%{transform:scaleX(-1.6) scaleY(1.6)}100%{transform:scaleX(-1)}}
-.rpsSide.win{transform:scale(1.14);filter:drop-shadow(0 0 8px #fff2a0)}.rpsSide.lose{transform:translateY(8px) rotate(-6deg) scale(.88);filter:grayscale(.85) brightness(.75)}.rpsSide.kid.lose{transform:translateY(8px) rotate(6deg) scale(.88)}
-.rpsCall{font-family:'Press Start 2P',monospace;font-size:clamp(13px,4vmin,24px);color:var(--paper);min-width:3.4em;text-align:center;text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink)}
-.rpsCall.beat{color:var(--yel)}.rpsCall.go{animation:rpsBeat .16s cubic-bezier(.2,1.8,.4,1)}
-@keyframes rpsBeat{from{transform:scale(2.1) rotate(-8deg);opacity:.3}}
-.rpsRes{font-family:'Press Start 2P',monospace;font-size:clamp(11px,3.4vmin,17px);min-height:1.4em;text-align:center;color:var(--paper)}
-.rpsRes.win{color:#7ee05f}.rpsRes.lose{color:var(--red)}.rpsRes.tie{color:var(--yel)}
-.rpsRes.slam{animation:rpsRes .3s cubic-bezier(.2,1.9,.4,1)}@keyframes rpsRes{from{transform:scale(2.4) rotate(6deg);opacity:0}}
-.rpsStreak{display:flex;align-items:center;gap:8px;font-size:18px;opacity:.95}
-.rpsStreak i{width:22px;height:22px;border:3px solid var(--ink);border-radius:50%;background:#3b2b6b;box-shadow:0 2px 0 var(--ink)}
-.rpsStreak i.on{background:var(--yel);box-shadow:0 2px 0 var(--ink),0 0 10px #ffd23f}
-.rpsStreak i.pop{animation:slotBump .35s}.rpsStreak.shake{animation:shake .3s}
+.rpsCam{position:absolute;inset:0;transform-origin:50% 55%}
+.rpsCam.punch{animation:rpsPunch .26s cubic-bezier(.2,1.6,.4,1)}@keyframes rpsPunch{from{transform:scale(1.14) rotate(-1deg)}}
+.rpsLines{position:absolute;left:50%;top:52%;width:1400px;height:1400px;margin:-700px 0 0 -700px;background:repeating-conic-gradient(#140b26 0 1.2deg,transparent 1.2deg 7deg);opacity:.9;-webkit-mask:radial-gradient(circle,transparent 0 110px,#000 250px);mask:radial-gradient(circle,transparent 0 110px,#000 250px);animation:spin 18s linear infinite}
+.rpsDots{position:absolute;inset:0;background:radial-gradient(#ff4f8b 1.6px,transparent 2px) 0 0/10px 10px;opacity:.22}
+.rpsFist{position:absolute;font-size:var(--fist);line-height:1;z-index:3;filter:drop-shadow(3px 0 0 #fff) drop-shadow(-3px 0 0 #fff) drop-shadow(0 3px 0 #fff) drop-shadow(0 -3px 0 #fff) drop-shadow(0 6px 0 rgba(20,11,38,.9))}
+.rpsFist.me{left:1%;bottom:17%;transform:rotate(38deg)}
+.rpsFist.kid{right:1%;top:21%;transform:rotate(-142deg) scaleY(-1)}
+.rpsFist.me.hit{animation:rpsHitMe .26s cubic-bezier(.3,0,.4,1)}@keyframes rpsHitMe{45%{transform:translate(14%,-14%) rotate(38deg) scale(1.08)}}
+.rpsFist.kid.hit{animation:rpsHitKid .26s cubic-bezier(.3,0,.4,1)}@keyframes rpsHitKid{45%{transform:translate(-14%,14%) rotate(-142deg) scaleY(-1) scale(1.08)}}
+.rpsFist.win{animation:rpsWinF .5s cubic-bezier(.2,1.8,.4,1)}@keyframes rpsWinF{from{scale:1.5}}
+.rpsFist.lose{filter:grayscale(1) brightness(.45) drop-shadow(0 6px 0 rgba(20,11,38,.9));transition:filter .3s}
+.rpsBoom{position:absolute;left:50%;top:52%;z-index:4;width:150px;height:150px;margin:-75px 0 0 -75px;display:flex;align-items:center;justify-content:center;font-family:'Luckiest Guy','Press Start 2P',cursive;font-size:42px;color:var(--ink);background:var(--yel);clip-path:polygon(50% 0,61% 30%,95% 18%,72% 45%,100% 62%,66% 66%,72% 100%,50% 76%,26% 100%,32% 68%,0 62%,28% 45%,6% 16%,40% 30%);transform:scale(0);pointer-events:none}
+.rpsBoom.go{animation:rpsBoom .3s cubic-bezier(.2,1.9,.4,1) forwards}@keyframes rpsBoom{from{transform:scale(.3) rotate(-20deg)}to{transform:scale(1) rotate(0)}}
+.rpsRes{position:absolute;left:0;right:0;top:44%;z-index:6;text-align:center;font-family:'Luckiest Guy','Press Start 2P',cursive;font-size:clamp(46px,15vmin,74px);line-height:1;letter-spacing:1px;pointer-events:none;transform:rotate(-8deg);white-space:nowrap}
+.rpsRes span{display:inline-block;-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;text-shadow:0 7px 0 var(--ink);animation:rpsLet .45s cubic-bezier(.2,1.9,.4,1) both,rpsWig .5s ease-in-out .5s infinite alternate;animation-delay:calc(var(--i) * 40ms),calc(.45s + var(--i) * 60ms)}
+@keyframes rpsLet{from{transform:translateY(-70px) scale(.2) rotate(-25deg);opacity:0}}
+@keyframes rpsWig{from{transform:translateY(0) rotate(-3deg)}to{transform:translateY(-6px) rotate(3deg)}}
+.rpsCard.inv::after{content:'';position:absolute;inset:0;z-index:9;background:#000;mix-blend-mode:difference;pointer-events:none;animation:rpsInv .14s steps(1) forwards}@keyframes rpsInv{to{opacity:0}}
 .rpsCard.shake{animation:rpsShake .25s}@keyframes rpsShake{20%{transform:translate(-6px,3px) rotate(-1deg)}40%{transform:translate(5px,-3px) rotate(1deg)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-1px)}}
-.rpsCard.flash::after{content:'';position:absolute;inset:0;background:#fff;pointer-events:none;animation:rpsFlash .2s ease-out forwards}@keyframes rpsFlash{from{opacity:.75}to{opacity:0}}
-.rpsGift{position:absolute;inset:auto 10px 10px;display:flex;align-items:center;gap:10px;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:14px;padding:8px 12px;box-shadow:0 5px 0 var(--ink);z-index:2}
+.rpsPick{position:absolute;left:10px;right:10px;top:10px;z-index:7;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rpsB{position:relative;padding:6px 2px 8px;border:3px solid var(--ink);border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 0 var(--ink),inset 0 -6px 0 rgba(0,0,0,.12);transition:transform .08s,filter .12s,opacity .12s}
+.rpsB:nth-child(1){background:#c9cede}.rpsB:nth-child(2){background:#fff6e6}.rpsB:nth-child(3){background:#ff8f99}
+.rpsB .e{font-size:clamp(38px,11vmin,54px);line-height:1.1;pointer-events:none;filter:drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff)}
+.rpsB:active,.rpsB.sel{transform:translateY(4px) scale(1.06);box-shadow:0 2px 0 var(--ink),0 0 0 3px var(--yel)}
+.rpsB.dim{filter:grayscale(1) brightness(.55);opacity:.55}
+.rpsTag{position:absolute;z-index:7;display:flex;align-items:flex-end;gap:6px;background:var(--ink);color:#fff;border-radius:10px;padding:5px 9px 6px 6px}
+.rpsTag.kid{right:10px;top:calc(10px + clamp(38px,11vmin,54px) + 28px);flex-direction:row-reverse;padding:5px 6px 6px 9px;text-align:right}
+.rpsTag.me{left:10px;bottom:58px}
+.rpsTag b{font-family:'Press Start 2P',monospace;font-size:10px;color:var(--yel);display:block;margin-bottom:3px}.rpsTag span{font-size:17px;line-height:1;display:block;white-space:nowrap}
+.rpsFace{width:26px;height:44px;image-rendering:pixelated;flex:none}
+.rpsStreak{display:flex;gap:6px;margin:2px 0 4px}
+.rpsStreak i{width:16px;height:16px;border:3px solid #fff;border-radius:50%;background:rgba(255,255,255,.18)}
+.rpsStreak i.on{background:var(--yel);border-color:var(--yel);box-shadow:0 0 10px var(--yel)}
+.rpsStreak i.pop{animation:slotBump .35s}.rpsStreak.shake{animation:shake .3s}
+.rpsQuit{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:7;padding:4px 14px;white-space:nowrap;border:3px solid var(--ink);border-radius:12px;background:#3b2b6b;color:var(--paper);font-family:inherit;font-size:19px;box-shadow:0 4px 0 var(--ink)}.rpsQuit span{opacity:.7;font-size:16px}
+.rpsQuit:active{transform:translateX(-50%) translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.rpsGift{position:absolute;left:10px;right:10px;bottom:10px;z-index:8;display:flex;align-items:center;gap:10px;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:14px;padding:8px 12px;box-shadow:0 5px 0 var(--ink)}
 .rpsGift canvas{width:48px;height:48px;image-rendering:pixelated;flex:none;animation:bob .7s ease-in-out infinite}.rpsGift b{font-size:21px;line-height:1.05;font-weight:normal}
 .rpsGift.pop{animation:rpsGiftIn .4s cubic-bezier(.2,1.8,.4,1)}@keyframes rpsGiftIn{from{transform:translateY(60px) scale(.5) rotate(-6deg);opacity:0}}
-.rpsQuit{margin-top:2px;padding:5px 12px;white-space:nowrap;border:3px solid var(--ink);border-radius:12px;background:#3b2b6b;color:var(--paper);font-family:inherit;font-size:19px;box-shadow:0 4px 0 var(--ink)}.rpsQuit span{opacity:.7;font-size:16px}
-.rpsQuit:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
-.rpsStar{position:absolute;left:50%;top:58%;font-size:22px;pointer-events:none;text-shadow:0 2px 0 var(--ink);animation:rpsStar .6s cubic-bezier(.2,.8,.4,1) forwards}
-@keyframes rpsStar{from{transform:translate(-50%,-50%) scale(.4)}to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.1) rotate(180deg);opacity:0}}
+.rpsStar{position:absolute;font-size:24px;z-index:8;pointer-events:none;text-shadow:0 2px 0 var(--ink);animation:rpsStar .6s cubic-bezier(.2,.8,.4,1) forwards}
+@keyframes rpsStar{from{transform:translate(-50%,-50%) scale(.4)}to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.2) rotate(200deg);opacity:0}}
+.rpsPuff{position:absolute;z-index:5;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid var(--ink);pointer-events:none;animation:rpsPuff .35s ease-out forwards}
+@keyframes rpsPuff{from{transform:translate(-50%,-50%) scale(.4);opacity:1}to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.2);opacity:0}}
 #sTask{position:absolute;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;padding:0 8px calc(8px + env(safe-area-inset-bottom));pointer-events:auto}
 .tkPanel{width:min(100%,440px,calc(56vh * 300 / 210 + 22px));background:var(--panel);border:3px solid var(--ink);border-radius:14px;box-shadow:0 5px 0 var(--ink);padding:8px;animation:tkIn .32s cubic-bezier(.2,1.6,.4,1)}
 @keyframes tkIn{from{transform:translateY(60px) scale(.85);opacity:0}}
@@ -512,19 +516,20 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     </div></div>
     <div id="sPlan" class="hidden"><div class="plPanel"><div class="plHead"><b>🗺️ Plan du collège</b><button id="plClose" aria-label="Fermer le plan">✖</button></div><div id="plTabs"></div><canvas id="planCv" width="440" height="330"></canvas><div class="plLegend"><span>🟢 toi</span><span>🔴 surveillant</span><span>🟠 profs</span><span>⬇️⬆️ escaliers</span><span>🔑 trousseau</span><span>🔥 alarme</span></div></div></div>
     <div id="rps" class="hidden"><div class="rpsCard" id="rpsCard">
-      <div class="rpsTitle"><b id="rpsName">Lina</b> te barre la route : <span>CHI-FOU-MI !</span></div>
+      <div class="rpsCam" id="rpsCam">
+        <div class="rpsLines"></div><div class="rpsDots"></div>
+        <span class="rpsFist kid" id="rpsFk"></span>
+        <span class="rpsFist me" id="rpsFm"></span>
+        <div class="rpsBoom" id="rpsBoom"></div>
+        <div class="rpsRes" id="rpsRes"></div>
+      </div>
       <div class="rpsPick">
-        <button class="rpsB" data-h="0"><canvas></canvas><b>PIERRE</b></button>
-        <button class="rpsB" data-h="1"><canvas></canvas><b>FEUILLE</b></button>
-        <button class="rpsB" data-h="2"><canvas></canvas><b>CISEAUX</b></button>
+        <button class="rpsB" data-h="0" aria-label="Pierre"><span class="e"></span></button>
+        <button class="rpsB" data-h="1" aria-label="Feuille"><span class="e"></span></button>
+        <button class="rpsB" data-h="2" aria-label="Ciseaux"><span class="e"></span></button>
       </div>
-      <div class="rpsArena">
-        <div class="rpsSide me"><canvas class="rpsFace"></canvas><canvas class="rpsHand"></canvas></div>
-        <div class="rpsCall" id="rpsCall">VS</div>
-        <div class="rpsSide kid"><canvas class="rpsHand"></canvas><canvas class="rpsFace"></canvas></div>
-      </div>
-      <div class="rpsRes" id="rpsRes"></div>
-      <div class="rpsStreak"><i></i><i></i><span>2 victoires d’affilée = un cadeau !</span></div>
+      <div class="rpsTag kid"><canvas class="rpsFace" id="rpsFaceK"></canvas><div><b id="rpsName">Lina</b><span>te barre la route !</span></div></div>
+      <div class="rpsTag me"><canvas class="rpsFace" id="rpsFaceM"></canvas><div><b>TOI</b><div class="rpsStreak"><i></i><i></i></div><span>2 d’affilée = 🎁</span></div></div>
       <div class="rpsGift hidden" id="rpsGift"><canvas></canvas><b></b></div>
       <button class="rpsQuit" id="rpsQuit">🏃 Abandonner <span>(il va hurler !)</span></button>
     </div></div>

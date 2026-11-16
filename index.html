@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Échappe au prof">
 <meta name="theme-color" content="#22163f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Luckiest+Guy&display=swap" rel="stylesheet">
 <style>
 :root{--ink:#140b26;--bg:#22163f;--panel:#2f2156;--panel2:#3b2b6b;--yel:#ffd23f;--pink:#ff4f8b;--cyan:#2ce8d5;--green:#63c74d;--red:#ff4a5a;--paper:#fff6e6}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -185,52 +185,56 @@ ul.hints li{background:rgba(255,255,255,.06);border-radius:6px;padding:5px 8px;l
 #plTabs button.on{background:var(--yel);color:var(--ink)}
 #planCv{width:100%;display:block;border:3px solid var(--ink);border-radius:8px;background:#f6efd8}
 .plLegend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:16px;margin-top:6px;opacity:.9}
-/* chi-fou-mi : une tuile qui tombe par-dessus l'écran */
-#rps{position:absolute;inset:0;z-index:42;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(10,4,24,.5);pointer-events:auto;--u:clamp(1.5px,.42vmin,2.3px)}
+/* chi-fou-mi, style manga : une tuile qui tombe par-dessus l'écran */
+#rps{position:absolute;inset:0;z-index:42;display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(10,4,24,.55);pointer-events:auto;--fist:clamp(92px,31vmin,150px)}
 #rps.in{animation:rpsBg .18s ease-out}#rps.out{animation:rpsBgOut .28s ease-in forwards}#rps.out .rpsCard{animation:rpsOut .28s cubic-bezier(.5,-.6,.8,.4) forwards}
 @keyframes rpsBg{from{background:rgba(10,4,24,0)}}@keyframes rpsBgOut{to{background:rgba(10,4,24,0)}}
-.rpsCard{position:relative;width:min(94vw,470px);background:linear-gradient(#2f2156,#22163f);border:4px solid var(--ink);border-radius:20px;box-shadow:0 10px 0 var(--ink),inset 0 0 0 3px var(--yel);padding:12px 12px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;overflow:hidden;animation:rpsIn .42s cubic-bezier(.2,1.7,.45,1)}
+.rpsCard{position:relative;width:min(94vw,440px);height:min(90svh,660px);min-height:min(90svh,470px);background:#fff;border:4px solid var(--ink);border-radius:22px;box-shadow:0 10px 0 var(--ink);overflow:hidden;animation:rpsIn .42s cubic-bezier(.2,1.7,.45,1)}
 @keyframes rpsIn{0%{transform:translateY(-110vh) rotate(-10deg) scale(.7)}70%{transform:translateY(8px) rotate(2deg) scale(1.02)}100%{transform:none}}
 @keyframes rpsOut{to{transform:translateY(-30px) scale(1.25) rotate(4deg);opacity:0}}
-.rpsTitle{font-size:22px;line-height:1.05;text-align:center}.rpsTitle b{color:var(--yel)}.rpsTitle span{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--pink);display:inline-block;animation:wob .5s ease-in-out infinite}
-.rpsPick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
-.rpsB{position:relative;padding:6px 2px 7px;border:3px solid var(--ink);border-radius:14px;background:var(--yel);color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:3px;box-shadow:0 6px 0 var(--ink),inset 0 -5px 0 rgba(0,0,0,.18),inset 0 4px 0 rgba(255,255,255,.45);transition:transform .08s,filter .12s,opacity .12s}
-.rpsB:nth-child(2){background:#7ee05f}.rpsB:nth-child(3){background:#6fd6f0}
-.rpsB canvas{width:clamp(44px,13vmin,74px);height:clamp(44px,13vmin,74px);image-rendering:pixelated;pointer-events:none}
-.rpsB b{font-family:'Press Start 2P',monospace;font-size:clamp(7px,2.1vmin,11px);pointer-events:none}
-.rpsB:active,.rpsB.sel{transform:translateY(4px) scale(1.06);box-shadow:0 2px 0 var(--ink),0 0 0 3px #fff}
-.rpsB.dim{filter:grayscale(1) brightness(.55);opacity:.6}
-.rpsArena{display:flex;align-items:center;justify-content:center;gap:2px;width:100%;padding:4px 0 0}
-.rpsSide{display:flex;align-items:flex-end;gap:2px;transition:transform .15s,filter .2s}
-.rpsFace{width:calc(var(--u)*28);height:calc(var(--u)*47.6);image-rendering:pixelated;flex:none}
-.rpsHand{width:calc(var(--u)*52);height:calc(var(--u)*52);image-rendering:pixelated;flex:none;transform-origin:50% 90%}
-.rpsSide.kid .rpsHand{transform:scaleX(-1)}
-.rpsSide.me{animation:rpsSlideL .32s cubic-bezier(.2,1.6,.4,1)}.rpsSide.kid{animation:rpsSlideR .32s cubic-bezier(.2,1.6,.4,1)}
-@keyframes rpsSlideL{from{transform:translateX(-60vw)}}@keyframes rpsSlideR{from{transform:translateX(60vw)}}
-.rpsHand.pump{animation:rpsPump .16s ease-out}.rpsSide.kid .rpsHand.pump{animation:rpsPumpK .16s ease-out}
-@keyframes rpsPump{40%{transform:translateY(calc(var(--u)*-16)) rotate(-12deg)}}@keyframes rpsPumpK{40%{transform:scaleX(-1) translateY(calc(var(--u)*-16)) rotate(-12deg)}}
-.rpsHand.slam{animation:rpsSlam .3s cubic-bezier(.2,1.8,.4,1)}.rpsSide.kid .rpsHand.slam{animation:rpsSlamK .3s cubic-bezier(.2,1.8,.4,1)}
-@keyframes rpsSlam{0%{transform:scale(1.6)}100%{transform:scale(1)}}@keyframes rpsSlamK{0%{transform:scaleX(-1.6) scaleY(1.6)}100%{transform:scaleX(-1)}}
-.rpsSide.win{transform:scale(1.14);filter:drop-shadow(0 0 8px #fff2a0)}.rpsSide.lose{transform:translateY(8px) rotate(-6deg) scale(.88);filter:grayscale(.85) brightness(.75)}.rpsSide.kid.lose{transform:translateY(8px) rotate(6deg) scale(.88)}
-.rpsCall{font-family:'Press Start 2P',monospace;font-size:clamp(13px,4vmin,24px);color:var(--paper);min-width:3.4em;text-align:center;text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink)}
-.rpsCall.beat{color:var(--yel)}.rpsCall.go{animation:rpsBeat .16s cubic-bezier(.2,1.8,.4,1)}
-@keyframes rpsBeat{from{transform:scale(2.1) rotate(-8deg);opacity:.3}}
-.rpsRes{font-family:'Press Start 2P',monospace;font-size:clamp(11px,3.4vmin,17px);min-height:1.4em;text-align:center;color:var(--paper)}
-.rpsRes.win{color:#7ee05f}.rpsRes.lose{color:var(--red)}.rpsRes.tie{color:var(--yel)}
-.rpsRes.slam{animation:rpsRes .3s cubic-bezier(.2,1.9,.4,1)}@keyframes rpsRes{from{transform:scale(2.4) rotate(6deg);opacity:0}}
-.rpsStreak{display:flex;align-items:center;gap:8px;font-size:18px;opacity:.95}
-.rpsStreak i{width:22px;height:22px;border:3px solid var(--ink);border-radius:50%;background:#3b2b6b;box-shadow:0 2px 0 var(--ink)}
-.rpsStreak i.on{background:var(--yel);box-shadow:0 2px 0 var(--ink),0 0 10px #ffd23f}
-.rpsStreak i.pop{animation:slotBump .35s}.rpsStreak.shake{animation:shake .3s}
+.rpsCam{position:absolute;inset:0;transform-origin:50% 55%}
+.rpsCam.punch{animation:rpsPunch .26s cubic-bezier(.2,1.6,.4,1)}@keyframes rpsPunch{from{transform:scale(1.14) rotate(-1deg)}}
+.rpsLines{position:absolute;left:50%;top:52%;width:1400px;height:1400px;margin:-700px 0 0 -700px;background:repeating-conic-gradient(#140b26 0 1.2deg,transparent 1.2deg 7deg);opacity:.9;-webkit-mask:radial-gradient(circle,transparent 0 110px,#000 250px);mask:radial-gradient(circle,transparent 0 110px,#000 250px);animation:spin 18s linear infinite}
+.rpsDots{position:absolute;inset:0;background:radial-gradient(#ff4f8b 1.6px,transparent 2px) 0 0/10px 10px;opacity:.22}
+.rpsFist{position:absolute;font-size:var(--fist);line-height:1;z-index:3;filter:drop-shadow(3px 0 0 #fff) drop-shadow(-3px 0 0 #fff) drop-shadow(0 3px 0 #fff) drop-shadow(0 -3px 0 #fff) drop-shadow(0 6px 0 rgba(20,11,38,.9))}
+.rpsFist.me{left:1%;bottom:17%;transform:rotate(38deg)}
+.rpsFist.kid{right:1%;top:21%;transform:rotate(-142deg) scaleY(-1)}
+.rpsFist.me.hit{animation:rpsHitMe .26s cubic-bezier(.3,0,.4,1)}@keyframes rpsHitMe{45%{transform:translate(14%,-14%) rotate(38deg) scale(1.08)}}
+.rpsFist.kid.hit{animation:rpsHitKid .26s cubic-bezier(.3,0,.4,1)}@keyframes rpsHitKid{45%{transform:translate(-14%,14%) rotate(-142deg) scaleY(-1) scale(1.08)}}
+.rpsFist.win{animation:rpsWinF .5s cubic-bezier(.2,1.8,.4,1)}@keyframes rpsWinF{from{scale:1.5}}
+.rpsFist.lose{filter:grayscale(1) brightness(.45) drop-shadow(0 6px 0 rgba(20,11,38,.9));transition:filter .3s}
+.rpsBoom{position:absolute;left:50%;top:52%;z-index:4;width:150px;height:150px;margin:-75px 0 0 -75px;display:flex;align-items:center;justify-content:center;font-family:'Luckiest Guy','Press Start 2P',cursive;font-size:42px;color:var(--ink);background:var(--yel);clip-path:polygon(50% 0,61% 30%,95% 18%,72% 45%,100% 62%,66% 66%,72% 100%,50% 76%,26% 100%,32% 68%,0 62%,28% 45%,6% 16%,40% 30%);transform:scale(0);pointer-events:none}
+.rpsBoom.go{animation:rpsBoom .3s cubic-bezier(.2,1.9,.4,1) forwards}@keyframes rpsBoom{from{transform:scale(.3) rotate(-20deg)}to{transform:scale(1) rotate(0)}}
+.rpsRes{position:absolute;left:0;right:0;top:44%;z-index:6;text-align:center;font-family:'Luckiest Guy','Press Start 2P',cursive;font-size:clamp(46px,15vmin,74px);line-height:1;letter-spacing:1px;pointer-events:none;transform:rotate(-8deg);white-space:nowrap}
+.rpsRes span{display:inline-block;-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;text-shadow:0 7px 0 var(--ink);animation:rpsLet .45s cubic-bezier(.2,1.9,.4,1) both,rpsWig .5s ease-in-out .5s infinite alternate;animation-delay:calc(var(--i) * 40ms),calc(.45s + var(--i) * 60ms)}
+@keyframes rpsLet{from{transform:translateY(-70px) scale(.2) rotate(-25deg);opacity:0}}
+@keyframes rpsWig{from{transform:translateY(0) rotate(-3deg)}to{transform:translateY(-6px) rotate(3deg)}}
+.rpsCard.inv::after{content:'';position:absolute;inset:0;z-index:9;background:#000;mix-blend-mode:difference;pointer-events:none;animation:rpsInv .14s steps(1) forwards}@keyframes rpsInv{to{opacity:0}}
 .rpsCard.shake{animation:rpsShake .25s}@keyframes rpsShake{20%{transform:translate(-6px,3px) rotate(-1deg)}40%{transform:translate(5px,-3px) rotate(1deg)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-1px)}}
-.rpsCard.flash::after{content:'';position:absolute;inset:0;background:#fff;pointer-events:none;animation:rpsFlash .2s ease-out forwards}@keyframes rpsFlash{from{opacity:.75}to{opacity:0}}
-.rpsGift{position:absolute;inset:auto 10px 10px;display:flex;align-items:center;gap:10px;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:14px;padding:8px 12px;box-shadow:0 5px 0 var(--ink);z-index:2}
+.rpsPick{position:absolute;left:10px;right:10px;top:10px;z-index:7;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rpsB{position:relative;padding:6px 2px 8px;border:3px solid var(--ink);border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 0 var(--ink),inset 0 -6px 0 rgba(0,0,0,.12);transition:transform .08s,filter .12s,opacity .12s}
+.rpsB:nth-child(1){background:#c9cede}.rpsB:nth-child(2){background:#fff6e6}.rpsB:nth-child(3){background:#ff8f99}
+.rpsB .e{font-size:clamp(38px,11vmin,54px);line-height:1.1;pointer-events:none;filter:drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff)}
+.rpsB:active,.rpsB.sel{transform:translateY(4px) scale(1.06);box-shadow:0 2px 0 var(--ink),0 0 0 3px var(--yel)}
+.rpsB.dim{filter:grayscale(1) brightness(.55);opacity:.55}
+.rpsTag{position:absolute;z-index:7;display:flex;align-items:flex-end;gap:6px;background:var(--ink);color:#fff;border-radius:10px;padding:5px 9px 6px 6px}
+.rpsTag.kid{right:10px;top:calc(10px + clamp(38px,11vmin,54px) + 28px);flex-direction:row-reverse;padding:5px 6px 6px 9px;text-align:right}
+.rpsTag.me{left:10px;bottom:58px}
+.rpsTag b{font-family:'Press Start 2P',monospace;font-size:10px;color:var(--yel);display:block;margin-bottom:3px}.rpsTag span{font-size:17px;line-height:1;display:block;white-space:nowrap}
+.rpsFace{width:26px;height:44px;image-rendering:pixelated;flex:none}
+.rpsStreak{display:flex;gap:6px;margin:2px 0 4px}
+.rpsStreak i{width:16px;height:16px;border:3px solid #fff;border-radius:50%;background:rgba(255,255,255,.18)}
+.rpsStreak i.on{background:var(--yel);border-color:var(--yel);box-shadow:0 0 10px var(--yel)}
+.rpsStreak i.pop{animation:slotBump .35s}.rpsStreak.shake{animation:shake .3s}
+.rpsQuit{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:7;padding:4px 14px;white-space:nowrap;border:3px solid var(--ink);border-radius:12px;background:#3b2b6b;color:var(--paper);font-family:inherit;font-size:19px;box-shadow:0 4px 0 var(--ink)}.rpsQuit span{opacity:.7;font-size:16px}
+.rpsQuit:active{transform:translateX(-50%) translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.rpsGift{position:absolute;left:10px;right:10px;bottom:10px;z-index:8;display:flex;align-items:center;gap:10px;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:14px;padding:8px 12px;box-shadow:0 5px 0 var(--ink)}
 .rpsGift canvas{width:48px;height:48px;image-rendering:pixelated;flex:none;animation:bob .7s ease-in-out infinite}.rpsGift b{font-size:21px;line-height:1.05;font-weight:normal}
 .rpsGift.pop{animation:rpsGiftIn .4s cubic-bezier(.2,1.8,.4,1)}@keyframes rpsGiftIn{from{transform:translateY(60px) scale(.5) rotate(-6deg);opacity:0}}
-.rpsQuit{margin-top:2px;padding:5px 12px;white-space:nowrap;border:3px solid var(--ink);border-radius:12px;background:#3b2b6b;color:var(--paper);font-family:inherit;font-size:19px;box-shadow:0 4px 0 var(--ink)}.rpsQuit span{opacity:.7;font-size:16px}
-.rpsQuit:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
-.rpsStar{position:absolute;left:50%;top:58%;font-size:22px;pointer-events:none;text-shadow:0 2px 0 var(--ink);animation:rpsStar .6s cubic-bezier(.2,.8,.4,1) forwards}
-@keyframes rpsStar{from{transform:translate(-50%,-50%) scale(.4)}to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.1) rotate(180deg);opacity:0}}
+.rpsStar{position:absolute;font-size:24px;z-index:8;pointer-events:none;text-shadow:0 2px 0 var(--ink);animation:rpsStar .6s cubic-bezier(.2,.8,.4,1) forwards}
+@keyframes rpsStar{from{transform:translate(-50%,-50%) scale(.4)}to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.2) rotate(200deg);opacity:0}}
+.rpsPuff{position:absolute;z-index:5;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid var(--ink);pointer-events:none;animation:rpsPuff .35s ease-out forwards}
+@keyframes rpsPuff{from{transform:translate(-50%,-50%) scale(.4);opacity:1}to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.2);opacity:0}}
 #sTask{position:absolute;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;padding:0 8px calc(8px + env(safe-area-inset-bottom));pointer-events:auto}
 .tkPanel{width:min(100%,440px,calc(56vh * 300 / 210 + 22px));background:var(--panel);border:3px solid var(--ink);border-radius:14px;box-shadow:0 5px 0 var(--ink);padding:8px;animation:tkIn .32s cubic-bezier(.2,1.6,.4,1)}
 @keyframes tkIn{from{transform:translateY(60px) scale(.85);opacity:0}}
@@ -512,19 +516,20 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
     </div></div>
     <div id="sPlan" class="hidden"><div class="plPanel"><div class="plHead"><b>🗺️ Plan du collège</b><button id="plClose" aria-label="Fermer le plan">✖</button></div><div id="plTabs"></div><canvas id="planCv" width="440" height="330"></canvas><div class="plLegend"><span>🟢 toi</span><span>🔴 surveillant</span><span>🟠 profs</span><span>⬇️⬆️ escaliers</span><span>🔑 trousseau</span><span>🔥 alarme</span></div></div></div>
     <div id="rps" class="hidden"><div class="rpsCard" id="rpsCard">
-      <div class="rpsTitle"><b id="rpsName">Lina</b> te barre la route : <span>CHI-FOU-MI !</span></div>
+      <div class="rpsCam" id="rpsCam">
+        <div class="rpsLines"></div><div class="rpsDots"></div>
+        <span class="rpsFist kid" id="rpsFk"></span>
+        <span class="rpsFist me" id="rpsFm"></span>
+        <div class="rpsBoom" id="rpsBoom"></div>
+        <div class="rpsRes" id="rpsRes"></div>
+      </div>
       <div class="rpsPick">
-        <button class="rpsB" data-h="0"><canvas></canvas><b>PIERRE</b></button>
-        <button class="rpsB" data-h="1"><canvas></canvas><b>FEUILLE</b></button>
-        <button class="rpsB" data-h="2"><canvas></canvas><b>CISEAUX</b></button>
+        <button class="rpsB" data-h="0" aria-label="Pierre"><span class="e"></span></button>
+        <button class="rpsB" data-h="1" aria-label="Feuille"><span class="e"></span></button>
+        <button class="rpsB" data-h="2" aria-label="Ciseaux"><span class="e"></span></button>
       </div>
-      <div class="rpsArena">
-        <div class="rpsSide me"><canvas class="rpsFace"></canvas><canvas class="rpsHand"></canvas></div>
-        <div class="rpsCall" id="rpsCall">VS</div>
-        <div class="rpsSide kid"><canvas class="rpsHand"></canvas><canvas class="rpsFace"></canvas></div>
-      </div>
-      <div class="rpsRes" id="rpsRes"></div>
-      <div class="rpsStreak"><i></i><i></i><span>2 victoires d’affilée = un cadeau !</span></div>
+      <div class="rpsTag kid"><canvas class="rpsFace" id="rpsFaceK"></canvas><div><b id="rpsName">Lina</b><span>te barre la route !</span></div></div>
+      <div class="rpsTag me"><canvas class="rpsFace" id="rpsFaceM"></canvas><div><b>TOI</b><div class="rpsStreak"><i></i><i></i></div><span>2 d’affilée = 🎁</span></div></div>
       <div class="rpsGift hidden" id="rpsGift"><canvas></canvas><b></b></div>
       <button class="rpsQuit" id="rpsQuit">🏃 Abandonner <span>(il va hurler !)</span></button>
     </div></div>
@@ -564,7 +569,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
         <button class="tile tChars" id="bChars"><canvas data-ill="chars" width="88" height="56"></canvas><span class="tl"><b>Personnages</b><small>Crée tes élèves</small></span></button>
         <button class="tile tSquish" id="bSquish"><canvas data-ill="squish" width="88" height="56"></canvas><span class="tl"><b>Squishies</b><small id="tSqN">Ta collection</small></span></button>
         <button class="tile tSave" id="bSave"><span class="sv">💾</span><span class="tl"><b>Sauvegarde</b><small>Un code pour garder tes squishies</small></span></button>
-        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 16 nov. · 11h01</small></span></button>
+        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 16 nov. · 11h14</small></span></button>
       </div>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
@@ -10153,22 +10158,11 @@ const RPS_KID_LINES = {
   quit: ['MADAAAME ! Iel est là !', 'MONSIEUUUR ! Ici !', 'AU SECOURS, UN·E FUYARD·E !', 'IL EST LÀÀÀ !'],
 };
 
-// une main en gros pixels : l'émoji dessiné tout petit puis agrandi, avec contour (look rétro)
-const RPS_IMG = new Map();
-function rpsHandImg(h, tone) {
-  const key = h + '|' + tone; let c = RPS_IMG.get(key); if (c) return c;
-  const S = 26, [cv, x] = mkCanvas(S, S);
-  x.font = '20px ' + EMOJI_FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#000';
-  x.fillText(RPS_HANDS[h] + (RPS_TONES[tone] || ''), S / 2, S / 2 + 1);
-  try {   // on durcit les bords (pixels nets) puis on ajoute le contour
-    const id = x.getImageData(0, 0, S, S), d = id.data;
-    for (let i = 3; i < d.length; i += 4) d[i] = d[i] > 110 ? 255 : 0;
-    pixPasses(d, S, S); x.putImageData(id, 0, 0);
-  } catch (e) { }
-  RPS_IMG.set(key, cv); return cv;
-}
+// les mains : de gros émojis bien nets (contour blanc « autocollant » en CSS), avec la couleur de peau du perso
+function rpsHand(h, tone) { return RPS_HANDS[h] + (RPS_TONES[tone] || ''); }
 function rpsTone(cfg) { const n = SKINS.length; return (((cfg && cfg.skin) || 0) % n + n) % n; }
 function rpsDraw(cv, img) { const x = cv.getContext('2d'); cv.width = img.width; cv.height = img.height; x.imageSmoothingEnabled = false; x.clearRect(0, 0, cv.width, cv.height); x.drawImage(img, 0, 0); }
+const RPS_BEAT = 300;   // un coup de poing : 0,3 s — 3 coups (CHI… FOU… MI !) puis on dévoile
 
 const RPS = {
   el: null,
@@ -10205,7 +10199,7 @@ const RPS = {
     if (T && (T.state === 'chase' || G.mode !== 'play')) { this.abort(); return; }
     if (R.phase === 'intro' && R.t > 0.45) { R.phase = 'play'; this.open(); }
   },
-  // ---------- la tuile par-dessus l'écran ----------
+  // ---------- la tuile par-dessus l'écran (style manga) ----------
   build() {
     if (this.el) return;
     this.el = $('rps');
@@ -10220,74 +10214,90 @@ const RPS = {
     this.build(); const R = G.rps, el = this.el;
     R.tone = rpsTone(G.P.cfg); R.ktone = rpsTone(R.kid.cfg);
     $('rpsName').textContent = R.name;
-    el.querySelectorAll('.rpsB').forEach(b => { const h = +b.dataset.h; rpsDraw(b.querySelector('canvas'), rpsHandImg(h, R.tone)); b.classList.remove('sel', 'dim'); b.disabled = false; });
-    rpsDraw(el.querySelector('.me .rpsFace'), charCanvas(G.P.cfg, 0, 0, G.P.disguised ? G.P.v : null, 'idle'));
-    rpsDraw(el.querySelector('.kid .rpsFace'), charCanvas(R.kid.cfg, 0, 0, R.kid.v, 'idle'));
-    this.setHands(0, 0);
-    $('rpsCall').textContent = 'VS'; $('rpsCall').className = 'rpsCall';
-    this.say('Gagne 2 fois d’affilée pour passer !', '');
+    el.querySelectorAll('.rpsB').forEach(b => { b.querySelector('.e').textContent = rpsHand(+b.dataset.h, R.tone); b.classList.remove('sel', 'dim'); b.disabled = false; });
+    rpsDraw($('rpsFaceM'), charCanvas(G.P.cfg, 0, 0, G.P.disguised ? G.P.v : null, 'idle'));
+    rpsDraw($('rpsFaceK'), charCanvas(R.kid.cfg, 0, 0, R.kid.v, 'idle'));
+    this.ready();
     $('rpsGift').classList.add('hidden');
     this.pips();
-    const card = $('rpsCard'); card.className = 'rpsCard';
+    $('rpsCard').className = 'rpsCard';
     el.classList.remove('hidden', 'out'); void el.offsetWidth; el.classList.add('in');
     AU.sfx('whoosh', 0.6);
   },
-  setHands(a, b) {
-    const R = G.rps, el = this.el;
-    rpsDraw(el.querySelector('.me .rpsHand'), rpsHandImg(a, R.tone));
-    rpsDraw(el.querySelector('.kid .rpsHand'), rpsHandImg(b, R.ktone));
+  // les deux poings fermés, prêts à frapper
+  ready() {
+    const R = G.rps;
+    $('rpsFm').textContent = rpsHand(0, R.tone); $('rpsFk').textContent = rpsHand(0, R.ktone);
+    ['rpsFm', 'rpsFk'].forEach(id => $(id).classList.remove('win', 'lose', 'hit'));
+    const b = $('rpsBoom'); b.classList.remove('go'); b.style.transform = 'scale(0)';
+    this.res('');
   },
-  say(t, cls) { const r = $('rpsRes'); r.textContent = t; r.className = 'rpsRes' + (cls ? ' ' + cls : ''); void r.offsetWidth; if (cls) r.classList.add('slam'); },
+  // le grand mot du résultat, en lettres de BD qui tombent une à une puis gigotent
+  res(t, cols) {
+    const r = $('rpsRes'); r.innerHTML = '';
+    [...t].forEach((ch, i) => {
+      const sp = document.createElement('span'); sp.textContent = ch === ' ' ? '\u00a0' : ch; sp.style.setProperty('--i', i);
+      sp.style.color = cols ? cols[i % cols.length] : '#fff'; r.appendChild(sp);
+    });
+  },
   pips(anim) { this.el.querySelectorAll('.rpsStreak i').forEach((p, i) => { const on = i < G.rps.streak; p.classList.toggle('on', on); if (anim === 'win' && i === G.rps.streak - 1) { p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop'); } }); if (anim === 'lose') { const s = this.el.querySelector('.rpsStreak'); s.classList.remove('shake'); void s.offsetWidth; s.classList.add('shake'); } },
-  anim(sel, cls) { this.el.querySelectorAll(sel).forEach(e => { e.classList.remove(cls); void e.offsetWidth; e.classList.add(cls); }); },
-  // ---------- une manche : on choisit en haut, « CHI… FOU… MI ! », on montre ----------
+  re(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); },
+  puffs(x, y) {
+    const card = $('rpsCard');
+    for (let i = 0; i < 5; i++) {
+      const p = document.createElement('span'); p.className = 'rpsPuff'; p.style.left = x + 'px'; p.style.top = y + 'px';
+      p.style.setProperty('--dx', rand(-40, 40) + 'px'); p.style.setProperty('--dy', rand(-34, 10) + 'px'); card.appendChild(p); setTimeout(() => p.remove(), 400);
+    }
+  },
+  // ---------- une manche : on choisit en haut, les poings frappent 3 fois (CHI… FOU… MI !), puis on montre ----------
   pick(h) {
     const R = G.rps; if (!R || R.phase !== 'play' || R.busy) return;
     R.busy = true; AU.init();
     this.el.querySelectorAll('.rpsB').forEach(b => { const me = +b.dataset.h === h; b.classList.toggle('sel', me); b.classList.toggle('dim', !me); b.disabled = true; });
-    this.setHands(0, 0); this.say('', '');
-    const kidH = randi(0, 2), call = $('rpsCall'), beats = ['CHI', 'FOU', 'MI !'];
-    const sides = this.el.querySelectorAll('.rpsSide');
-    sides.forEach(s => s.classList.remove('win', 'lose', 'tie'));
-    beats.forEach((w, i) => setTimeout(() => {
-      if (G.rps !== R) return;
-      call.textContent = w; call.className = 'rpsCall beat'; void call.offsetWidth; call.classList.add('go');
-      this.anim('.rpsHand', 'pump'); AU.sfx('tick', 0.5 + i * 0.15);
-    }, i * 170));
-    setTimeout(() => { if (G.rps === R) this.reveal(h, kidH); }, 3 * 170 + 40);
+    this.ready();
+    const kidH = randi(0, 2), card = $('rpsCard'), cam = $('rpsCam'), boom = $('rpsBoom');
+    ['CHI!', 'FOU!', 'MI!'].forEach((w, i) => {
+      setTimeout(() => { if (G.rps !== R) return; this.re($('rpsFm'), 'hit'); this.re($('rpsFk'), 'hit'); }, i * RPS_BEAT);
+      setTimeout(() => {   // le choc : l'étoile, la caméra qui cogne, un petit nuage, un « boum »
+        if (G.rps !== R) return;
+        boom.textContent = w; boom.style.transform = ''; this.re(boom, 'go'); this.re(cam, 'punch');
+        this.puffs(card.clientWidth / 2, card.clientHeight * 0.52);
+        AU.sfx('bump', 0.8); AU.sfx('tick', 0.4 + i * 0.2);
+      }, i * RPS_BEAT + RPS_BEAT * 0.45);
+    });
+    setTimeout(() => { if (G.rps === R) this.reveal(h, kidH); }, 3 * RPS_BEAT - 20);
   },
   reveal(h, kh) {
-    const R = G.rps, card = $('rpsCard'), k = R.kid;
-    this.setHands(h, kh); this.anim('.rpsHand', 'slam');
-    card.classList.remove('flash', 'shake'); void card.offsetWidth; card.classList.add('flash', 'shake');
+    const R = G.rps, card = $('rpsCard'), k = R.kid, fm = $('rpsFm'), fk = $('rpsFk'), boom = $('rpsBoom');
+    boom.classList.remove('go'); boom.style.transform = 'scale(0)';
+    fm.textContent = rpsHand(h, R.tone); fk.textContent = rpsHand(kh, R.ktone);
+    this.re(card, 'inv'); this.re($('rpsCam'), 'punch'); AU.sfx('pouf', 0.8);
     const res = h === kh ? 0 : (h - kh + 3) % 3 === 1 ? 1 : -1;   // 1 : gagné, -1 : perdu
-    const me = this.el.querySelector('.rpsSide.me'), kid = this.el.querySelector('.rpsSide.kid');
-    $('rpsCall').textContent = res > 0 ? '★' : res < 0 ? '✖' : '=';
     if (res > 0) {
-      R.streak++; me.classList.add('win'); kid.classList.add('lose'); this.pips('win'); AU.sfx('ding', 0.8);
-      this.say(R.streak >= 2 ? 'TU PASSES !' : 'GAGNÉ ! Encore une !', 'win');
-      this.burst();
+      R.streak++; this.re(fm, 'win'); fk.classList.add('lose'); this.pips('win'); AU.sfx('ding', 0.8);
+      this.res(R.streak >= 2 ? 'BRAVO !' : 'VICTOIRE !', ['#ffd23f', '#ff4f8b', '#2ce8d5', '#7ee05f']);
+      this.burst(card.clientWidth * 0.3, card.clientHeight * 0.66);
       if (R.streak < 2) cue(k.x, k.y - 30, 'kid', pick(RPS_KID_LINES.lose), { life: 1.2 });
     } else if (res < 0) {
-      R.streak = 0; me.classList.add('lose'); kid.classList.add('win'); this.pips('lose'); AU.sfx('fail', 0.6);
-      this.say('PERDU ! On recommence…', 'lose'); cue(k.x, k.y - 30, 'kid', pick(RPS_KID_LINES.win), { life: 1.2 });
+      R.streak = 0; this.re(fk, 'win'); fm.classList.add('lose'); this.pips('lose'); AU.sfx('fail', 0.6);
+      this.res('RATÉ !', ['#ff4a5a']); cue(k.x, k.y - 30, 'kid', pick(RPS_KID_LINES.win), { life: 1.2 });
     } else {
-      me.classList.add('tie'); kid.classList.add('tie'); AU.sfx('boing', 0.4);
-      this.say('ÉGALITÉ ! Rejoue !', 'tie'); cue(k.x, k.y - 30, 'kid', pick(RPS_KID_LINES.tie), { life: 1.1 });
+      AU.sfx('boing', 0.4); this.res('ÉGALITÉ !', ['#ffffff']); cue(k.x, k.y - 30, 'kid', pick(RPS_KID_LINES.tie), { life: 1.1 });
     }
-    if (R.streak >= 2) { R.busy = true; setTimeout(() => { if (G.rps === R) this.win(); }, 420); return; }
+    if (R.streak >= 2) { setTimeout(() => { if (G.rps === R) this.win(); }, 650); return; }
     setTimeout(() => {
       if (G.rps !== R) return;
       R.busy = false; this.el.querySelectorAll('.rpsB').forEach(b => { b.classList.remove('sel', 'dim'); b.disabled = false; });
-      this.setHands(0, 0); $('rpsCall').textContent = 'VS'; $('rpsCall').className = 'rpsCall';
-    }, 620);
+      this.ready();
+    }, 950);
   },
   // de petites étoiles qui jaillissent
-  burst() {
+  burst(x, y) {
     const box = $('rpsCard');
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 12; i++) {
       const s = document.createElement('span'); s.className = 'rpsStar'; s.textContent = pick(['★', '✦', '✧', '♥']);
-      const a = rand(0, Math.PI * 2), d = rand(60, 140);
+      const a = rand(0, Math.PI * 2), d = rand(60, 150);
+      s.style.left = x + 'px'; s.style.top = y + 'px';
       s.style.setProperty('--dx', Math.cos(a) * d + 'px'); s.style.setProperty('--dy', Math.sin(a) * d + 'px');
       s.style.color = pick(['#ffd23f', '#ff8fbf', '#7ee05f', '#6fd6f0', '#ffffff']);
       box.appendChild(s); setTimeout(() => s.remove(), 650);
@@ -10303,8 +10313,8 @@ const RPS = {
       g.querySelector('b').textContent = R.name + ' te donne : ' + ITEMS[gift].n + ' !';
       AU.sfx('pickup'); AU.sfx('magic', 0.5);
     } else { gc.style.display = 'none'; g.querySelector('b').textContent = R.name + ' voulait te donner un objet… mais tes poches sont pleines !'; }
-    g.classList.remove('hidden'); this.anim('#rpsGift', 'pop');
-    this.burst();
+    g.classList.remove('hidden'); this.re(g, 'pop');
+    this.burst(g.offsetLeft + 34, g.offsetTop + 30);
     setTimeout(() => {
       if (G.rps !== R) return;
       if (gift) {
@@ -11619,7 +11629,7 @@ const Input = {
 // ================= INTERFACE =================
 const $ = id => document.getElementById(id);
 // ---------- recharger le jeu (pratique quand il est épinglé comme une app sur iPad : pas de bouton du navigateur) ----------
-const GAME_BUILD = '16 nov. · 11h01';
+const GAME_BUILD = '16 nov. · 11h14';
 function refreshGame() {
   try { sessionStorage.setItem('nds_refresh', '1'); } catch (e) { }
   $('tVer').textContent = '⏳ Rechargement…'; try { AU.sfx('blip'); } catch (e) { }

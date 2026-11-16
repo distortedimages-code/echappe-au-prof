@@ -17,22 +17,11 @@ const RPS_KID_LINES = {
   quit: ['MADAAAME ! Iel est là !', 'MONSIEUUUR ! Ici !', 'AU SECOURS, UN·E FUYARD·E !', 'IL EST LÀÀÀ !'],
 };
 
-// une main en gros pixels : l'émoji dessiné tout petit puis agrandi, avec contour (look rétro)
-const RPS_IMG = new Map();
-function rpsHandImg(h, tone) {
-  const key = h + '|' + tone; let c = RPS_IMG.get(key); if (c) return c;
-  const S = 26, [cv, x] = mkCanvas(S, S);
-  x.font = '20px ' + EMOJI_FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#000';
-  x.fillText(RPS_HANDS[h] + (RPS_TONES[tone] || ''), S / 2, S / 2 + 1);
-  try {   // on durcit les bords (pixels nets) puis on ajoute le contour
-    const id = x.getImageData(0, 0, S, S), d = id.data;
-    for (let i = 3; i < d.length; i += 4) d[i] = d[i] > 110 ? 255 : 0;
-    pixPasses(d, S, S); x.putImageData(id, 0, 0);
-  } catch (e) { }
-  RPS_IMG.set(key, cv); return cv;
-}
+// les mains : de gros émojis bien nets (contour blanc « autocollant » en CSS), avec la couleur de peau du perso
+function rpsHand(h, tone) { return RPS_HANDS[h] + (RPS_TONES[tone] || ''); }
 function rpsTone(cfg) { const n = SKINS.length; return (((cfg && cfg.skin) || 0) % n + n) % n; }
 function rpsDraw(cv, img) { const x = cv.getContext('2d'); cv.width = img.width; cv.height = img.height; x.imageSmoothingEnabled = false; x.clearRect(0, 0, cv.width, cv.height); x.drawImage(img, 0, 0); }
+const RPS_BEAT = 300;   // un coup de poing : 0,3 s — 3 coups (CHI… FOU… MI !) puis on dévoile
 
 const RPS = {
   el: null,
@@ -69,7 +58,7 @@ const RPS = {
     if (T && (T.state === 'chase' || G.mode !== 'play')) { this.abort(); return; }
     if (R.phase === 'intro' && R.t > 0.45) { R.phase = 'play'; this.open(); }
   },
-  // ---------- la tuile par-dessus l'écran ----------
+  // ---------- la tuile par-dessus l'écran (style manga) ----------
   build() {
     if (this.el) return;
     this.el = $('rps');
@@ -84,74 +73,90 @@ const RPS = {
     this.build(); const R = G.rps, el = this.el;
     R.tone = rpsTone(G.P.cfg); R.ktone = rpsTone(R.kid.cfg);
     $('rpsName').textContent = R.name;
-    el.querySelectorAll('.rpsB').forEach(b => { const h = +b.dataset.h; rpsDraw(b.querySelector('canvas'), rpsHandImg(h, R.tone)); b.classList.remove('sel', 'dim'); b.disabled = false; });
-    rpsDraw(el.querySelector('.me .rpsFace'), charCanvas(G.P.cfg, 0, 0, G.P.disguised ? G.P.v : null, 'idle'));
-    rpsDraw(el.querySelector('.kid .rpsFace'), charCanvas(R.kid.cfg, 0, 0, R.kid.v, 'idle'));
-    this.setHands(0, 0);
-    $('rpsCall').textContent = 'VS'; $('rpsCall').className = 'rpsCall';
-    this.say('Gagne 2 fois d’affilée pour passer !', '');
+    el.querySelectorAll('.rpsB').forEach(b => { b.querySelector('.e').textContent = rpsHand(+b.dataset.h, R.tone); b.classList.remove('sel', 'dim'); b.disabled = false; });
+    rpsDraw($('rpsFaceM'), charCanvas(G.P.cfg, 0, 0, G.P.disguised ? G.P.v : null, 'idle'));
+    rpsDraw($('rpsFaceK'), charCanvas(R.kid.cfg, 0, 0, R.kid.v, 'idle'));
+    this.ready();
     $('rpsGift').classList.add('hidden');
     this.pips();
-    const card = $('rpsCard'); card.className = 'rpsCard';
+    $('rpsCard').className = 'rpsCard';
     el.classList.remove('hidden', 'out'); void el.offsetWidth; el.classList.add('in');
     AU.sfx('whoosh', 0.6);
   },
-  setHands(a, b) {
-    const R = G.rps, el = this.el;
-    rpsDraw(el.querySelector('.me .rpsHand'), rpsHandImg(a, R.tone));
-    rpsDraw(el.querySelector('.kid .rpsHand'), rpsHandImg(b, R.ktone));
+  // les deux poings fermés, prêts à frapper
+  ready() {
+    const R = G.rps;
+    $('rpsFm').textContent = rpsHand(0, R.tone); $('rpsFk').textContent = rpsHand(0, R.ktone);
+    ['rpsFm', 'rpsFk'].forEach(id => $(id).classList.remove('win', 'lose', 'hit'));
+    const b = $('rpsBoom'); b.classList.remove('go'); b.style.transform = 'scale(0)';
+    this.res('');
   },
-  say(t, cls) { const r = $('rpsRes'); r.textContent = t; r.className = 'rpsRes' + (cls ? ' ' + cls : ''); void r.offsetWidth; if (cls) r.classList.add('slam'); },
+  // le grand mot du résultat, en lettres de BD qui tombent une à une puis gigotent
+  res(t, cols) {
+    const r = $('rpsRes'); r.innerHTML = '';
+    [...t].forEach((ch, i) => {
+      const sp = document.createElement('span'); sp.textContent = ch === ' ' ? '\u00a0' : ch; sp.style.setProperty('--i', i);
+      sp.style.color = cols ? cols[i % cols.length] : '#fff'; r.appendChild(sp);
+    });
+  },
   pips(anim) { this.el.querySelectorAll('.rpsStreak i').forEach((p, i) => { const on = i < G.rps.streak; p.classList.toggle('on', on); if (anim === 'win' && i === G.rps.streak - 1) { p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop'); } }); if (anim === 'lose') { const s = this.el.querySelector('.rpsStreak'); s.classList.remove('shake'); void s.offsetWidth; s.classList.add('shake'); } },
-  anim(sel, cls) { this.el.querySelectorAll(sel).forEach(e => { e.classList.remove(cls); void e.offsetWidth; e.classList.add(cls); }); },
-  // ---------- une manche : on choisit en haut, « CHI… FOU… MI ! », on montre ----------
+  re(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); },
+  puffs(x, y) {
+    const card = $('rpsCard');
+    for (let i = 0; i < 5; i++) {
+      const p = document.createElement('span'); p.className = 'rpsPuff'; p.style.left = x + 'px'; p.style.top = y + 'px';
+      p.style.setProperty('--dx', rand(-40, 40) + 'px'); p.style.setProperty('--dy', rand(-34, 10) + 'px'); card.appendChild(p); setTimeout(() => p.remove(), 400);
+    }
+  },
+  // ---------- une manche : on choisit en haut, les poings frappent 3 fois (CHI… FOU… MI !), puis on montre ----------
   pick(h) {
     const R = G.rps; if (!R || R.phase !== 'play' || R.busy) return;
     R.busy = true; AU.init();
     this.el.querySelectorAll('.rpsB').forEach(b => { const me = +b.dataset.h === h; b.classList.toggle('sel', me); b.classList.toggle('dim', !me); b.disabled = true; });
-    this.setHands(0, 0); this.say('', '');
-    const kidH = randi(0, 2), call = $('rpsCall'), beats = ['CHI', 'FOU', 'MI !'];
-    const sides = this.el.querySelectorAll('.rpsSide');
-    sides.forEach(s => s.classList.remove('win', 'lose', 'tie'));
-    beats.forEach((w, i) => setTimeout(() => {
-      if (G.rps !== R) return;
-      call.textContent = w; call.className = 'rpsCall beat'; void call.offsetWidth; call.classList.add('go');
-      this.anim('.rpsHand', 'pump'); AU.sfx('tick', 0.5 + i * 0.15);
-    }, i * 170));
-    setTimeout(() => { if (G.rps === R) this.reveal(h, kidH); }, 3 * 170 + 40);
+    this.ready();
+    const kidH = randi(0, 2), card = $('rpsCard'), cam = $('rpsCam'), boom = $('rpsBoom');
+    ['CHI!', 'FOU!', 'MI!'].forEach((w, i) => {
+      setTimeout(() => { if (G.rps !== R) return; this.re($('rpsFm'), 'hit'); this.re($('rpsFk'), 'hit'); }, i * RPS_BEAT);
+      setTimeout(() => {   // le choc : l'étoile, la caméra qui cogne, un petit nuage, un « boum »
+        if (G.rps !== R) return;
+        boom.textContent = w; boom.style.transform = ''; this.re(boom, 'go'); this.re(cam, 'punch');
+        this.puffs(card.clientWidth / 2, card.clientHeight * 0.52);
+        AU.sfx('bump', 0.8); AU.sfx('tick', 0.4 + i * 0.2);
+      }, i * RPS_BEAT + RPS_BEAT * 0.45);
+    });
+    setTimeout(() => { if (G.rps === R) this.reveal(h, kidH); }, 3 * RPS_BEAT - 20);
   },
   reveal(h, kh) {
-    const R = G.rps, card = $('rpsCard'), k = R.kid;
-    this.setHands(h, kh); this.anim('.rpsHand', 'slam');
-    card.classList.remove('flash', 'shake'); void card.offsetWidth; card.classList.add('flash', 'shake');
+    const R = G.rps, card = $('rpsCard'), k = R.kid, fm = $('rpsFm'), fk = $('rpsFk'), boom = $('rpsBoom');
+    boom.classList.remove('go'); boom.style.transform = 'scale(0)';
+    fm.textContent = rpsHand(h, R.tone); fk.textContent = rpsHand(kh, R.ktone);
+    this.re(card, 'inv'); this.re($('rpsCam'), 'punch'); AU.sfx('pouf', 0.8);
     const res = h === kh ? 0 : (h - kh + 3) % 3 === 1 ? 1 : -1;   // 1 : gagné, -1 : perdu
-    const me = this.el.querySelector('.rpsSide.me'), kid = this.el.querySelector('.rpsSide.kid');
-    $('rpsCall').textContent = res > 0 ? '★' : res < 0 ? '✖' : '=';
     if (res > 0) {
-      R.streak++; me.classList.add('win'); kid.classList.add('lose'); this.pips('win'); AU.sfx('ding', 0.8);
-      this.say(R.streak >= 2 ? 'TU PASSES !' : 'GAGNÉ ! Encore une !', 'win');
-      this.burst();
+      R.streak++; this.re(fm, 'win'); fk.classList.add('lose'); this.pips('win'); AU.sfx('ding', 0.8);
+      this.res(R.streak >= 2 ? 'BRAVO !' : 'VICTOIRE !', ['#ffd23f', '#ff4f8b', '#2ce8d5', '#7ee05f']);
+      this.burst(card.clientWidth * 0.3, card.clientHeight * 0.66);
       if (R.streak < 2) cue(k.x, k.y - 30, 'kid', pick(RPS_KID_LINES.lose), { life: 1.2 });
     } else if (res < 0) {
-      R.streak = 0; me.classList.add('lose'); kid.classList.add('win'); this.pips('lose'); AU.sfx('fail', 0.6);
-      this.say('PERDU ! On recommence…', 'lose'); cue(k.x, k.y - 30, 'kid', pick(RPS_KID_LINES.win), { life: 1.2 });
+      R.streak = 0; this.re(fk, 'win'); fm.classList.add('lose'); this.pips('lose'); AU.sfx('fail', 0.6);
+      this.res('RATÉ !', ['#ff4a5a']); cue(k.x, k.y - 30, 'kid', pick(RPS_KID_LINES.win), { life: 1.2 });
     } else {
-      me.classList.add('tie'); kid.classList.add('tie'); AU.sfx('boing', 0.4);
-      this.say('ÉGALITÉ ! Rejoue !', 'tie'); cue(k.x, k.y - 30, 'kid', pick(RPS_KID_LINES.tie), { life: 1.1 });
+      AU.sfx('boing', 0.4); this.res('ÉGALITÉ !', ['#ffffff']); cue(k.x, k.y - 30, 'kid', pick(RPS_KID_LINES.tie), { life: 1.1 });
     }
-    if (R.streak >= 2) { R.busy = true; setTimeout(() => { if (G.rps === R) this.win(); }, 420); return; }
+    if (R.streak >= 2) { setTimeout(() => { if (G.rps === R) this.win(); }, 650); return; }
     setTimeout(() => {
       if (G.rps !== R) return;
       R.busy = false; this.el.querySelectorAll('.rpsB').forEach(b => { b.classList.remove('sel', 'dim'); b.disabled = false; });
-      this.setHands(0, 0); $('rpsCall').textContent = 'VS'; $('rpsCall').className = 'rpsCall';
-    }, 620);
+      this.ready();
+    }, 950);
   },
   // de petites étoiles qui jaillissent
-  burst() {
+  burst(x, y) {
     const box = $('rpsCard');
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 12; i++) {
       const s = document.createElement('span'); s.className = 'rpsStar'; s.textContent = pick(['★', '✦', '✧', '♥']);
-      const a = rand(0, Math.PI * 2), d = rand(60, 140);
+      const a = rand(0, Math.PI * 2), d = rand(60, 150);
+      s.style.left = x + 'px'; s.style.top = y + 'px';
       s.style.setProperty('--dx', Math.cos(a) * d + 'px'); s.style.setProperty('--dy', Math.sin(a) * d + 'px');
       s.style.color = pick(['#ffd23f', '#ff8fbf', '#7ee05f', '#6fd6f0', '#ffffff']);
       box.appendChild(s); setTimeout(() => s.remove(), 650);
@@ -167,8 +172,8 @@ const RPS = {
       g.querySelector('b').textContent = R.name + ' te donne : ' + ITEMS[gift].n + ' !';
       AU.sfx('pickup'); AU.sfx('magic', 0.5);
     } else { gc.style.display = 'none'; g.querySelector('b').textContent = R.name + ' voulait te donner un objet… mais tes poches sont pleines !'; }
-    g.classList.remove('hidden'); this.anim('#rpsGift', 'pop');
-    this.burst();
+    g.classList.remove('hidden'); this.re(g, 'pop');
+    this.burst(g.offsetLeft + 34, g.offsetTop + 30);
     setTimeout(() => {
       if (G.rps !== R) return;
       if (gift) {
