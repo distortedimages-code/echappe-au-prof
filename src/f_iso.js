@@ -9,6 +9,9 @@
 // Le décor fixe est préparé une seule fois ; à chaque image on ne fait que recopier des petites images.
 const ISO = { LV: 2, u: 2, C: Math.SQRT1_2, ZK: 0.82, HW: 24, TH: 4, built: null, cam: null, objs: [], doorCache: new Map(), tmp: [], ox: 0, oy: 0, pages: [], at: {}, scr: {} };
 const isoOn = () => !!(G.iso && !G.inf && !G.net && G.m);
+// projection sans créer de tableau (utilisée à chaque image : moins de ménage mémoire, donc moins d'à-coups)
+function isoX(x, y) { return (x - y) * ISO.u * ISO.C + ISO.ox; }
+function isoY(x, y, z) { return (x + y) * ISO.u * ISO.C * 0.5 - (z || 0) * ISO.u * ISO.ZK + ISO.oy; }
 function isoP(x, y, z) { const u = ISO.u * ISO.C; return [(x - y) * u + ISO.ox, (x + y) * u * 0.5 - (z || 0) * ISO.u * ISO.ZK + ISO.oy]; }
 
 // ---------- petites briques de dessin ----------
@@ -65,28 +68,44 @@ function isoObj(x0, y0, z0, x1, y1, z1, draw, key, extra) {
   o.redraw = [x0, y0, z0, x1, y1, z1, draw];
   return o;
 }
-// pour assombrir un mur ou une porte du côté d'une pièce où l'on n'est pas : un masque de ses faces sud, un de ses faces est
-// (on redessine l'objet avec une couleur par côté, et on garde les pixels de chaque couleur)
-function isoFaceMasks(o, wantS, wantE) {
-  if (!o.redraw || (!wantS && !wantE)) return;
-  ISO.idMode = true; let R; try { R = isoRender(...o.redraw, 'id'); } finally { ISO.idMode = false; }
-  const d = R.sc.getContext('2d').getImageData(0, 0, R.w, R.h).data;
-  const mk = ch => {
-    const hit = i => { const v = d[i + ch]; return d[i + 3] > 8 && v > 90 && v >= d[i] && v >= d[i + 1] && v >= d[i + 2]; };
-    let mnx = 1e9, mny = 1e9, mxx = -1, mxy = -1;
-    for (let y = 0; y < R.h; y++) for (let x = 0; x < R.w; x++) if (hit((y * R.w + x) * 4)) { if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y; }
-    if (mxx < 0) return null;
-    const w = mxx - mnx + 1, h = mxy - mny + 1, [sc, c] = isoScratch('mk', w, h), id = c.createImageData(w, h);
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = ((y + mny) * R.w + x + mnx) * 4, j = (y * w + x) * 4; if (!hit(i)) continue; id.data[j] = 14; id.data[j + 1] = 8; id.data[j + 2] = 34; id.data[j + 3] = d[i + 3]; }
-    c.putImageData(id, 0, 0); const r = isoAlloc(w, h); r.c.drawImage(sc, 0, 0, w, h, r.x, r.y, w, h);
-    return { pg: r.pg, x: r.x, y: r.y, w, h, dx: mnx, dy: mny };
-  };
-  if (wantS) o.dkS = mk(0); if (wantE) o.dkE = mk(1);
-}
-function isoDark(o) {
+// Assombrir ce qui est dans une pièce où l'on n'est pas.
+// Pour que ce soit fluide, l'objet assombri est préparé une fois pour toutes (« cuit ») : à l'écran on dessine
+// soit l'image claire, soit l'image sombre (et les deux, en fondu, seulement pendant la seconde où une pièce s'allume).
+function isoBakeDark(o) {   // meuble : tout l'objet est dans la pièce
   const [sc, c] = isoScratch('dk', o.w, o.h); c.drawImage(o.pg, o.px, o.py, o.w, o.h, 0, 0, o.w, o.h);
-  c.globalCompositeOperation = 'source-in'; c.fillStyle = 'rgb(14,8,34)'; c.fillRect(0, 0, o.w, o.h); c.globalCompositeOperation = 'source-over';
-  const r = isoAlloc(o.w, o.h); r.c.drawImage(sc, 0, 0, o.w, o.h, r.x, r.y, o.w, o.h); o.dk = r;
+  c.globalCompositeOperation = 'source-atop'; c.fillStyle = 'rgba(14,8,34,0.93)'; c.fillRect(0, 0, o.w, o.h); c.globalCompositeOperation = 'source-over';
+  const r = isoAlloc(o.w, o.h); r.c.drawImage(sc, 0, 0, o.w, o.h, r.x, r.y, o.w, o.h); o.dkB = r; o.dkR = o.ri;
+}
+// mur ou porte : chaque face regarde un côté (sud ou est) et chaque morceau de face peut regarder une pièce différente.
+// segS / segE : [[X max, pièce], …] le long des faces sud / est (X en pixels de l'objet, croissant).
+// On redessine l'objet avec une couleur par côté pour savoir quel pixel appartient à quelle face (bords adoucis compris : pas de fente).
+function isoShadeFaces(o, segS, segE, asMasks) {
+  const w = o.w, h = o.h;
+  ISO.idMode = true; let R; try { R = isoRender(...o.redraw, 'id'); } finally { ISO.idMode = false; }
+  if (R.w !== w || R.h !== h) return;
+  const id = R.sc.getContext('2d').getImageData(0, 0, w, h).data;
+  const pick = (segs, X) => { for (let i = 0; i < segs.length; i++) if (X < segs[i][0]) return segs[i][1]; return -1; };
+  const groups = new Map(), add = (rm, k, v) => { let g = groups.get(rm); if (!g) { g = new Float32Array(w * h); groups.set(rm, g); } g[k] += v; };
+  // part de chaque côté dans la couleur du pixel (sans compter sa transparence : un bord adouci est assombri comme le reste)
+  for (let y = 0, k = 0; y < h; y++) for (let x = 0; x < w; x++, k++) {
+    const i = k * 4, a = id[i + 3]; if (a < 4) continue;
+    const sum = id[i] + id[i + 1] + id[i + 2]; if (sum < 24) continue;
+    if (segS && id[i] > 12) { const rm = pick(segS, x + 0.5); if (rm !== -1) add(rm, k, id[i] / sum); }
+    if (segE && id[i + 1] > 12) { const rm = pick(segE, x + 0.5); if (rm !== -1) add(rm, k, id[i + 1] / sum); }
+  }
+  if (!groups.size) return;
+  if (groups.size === 1 && !asMasks) {   // une seule pièce : on cuit l'image sombre
+    const [rm, g] = [...groups][0], [lc, lx] = isoScratch('lit', w, h); lx.drawImage(o.pg, o.px, o.py, w, h, 0, 0, w, h);
+    const im = lx.getImageData(0, 0, w, h), d = im.data;
+    for (let k = 0; k < w * h; k++) { const t = Math.min(1, g[k]) * 0.93; if (t <= 0) continue; const i = k * 4; d[i] += (14 - d[i]) * t; d[i + 1] += (8 - d[i + 1]) * t; d[i + 2] += (34 - d[i + 2]) * t; }
+    lx.putImageData(im, 0, 0); const r = isoAlloc(w, h); r.c.drawImage(lc, 0, 0, w, h, r.x, r.y, w, h); o.dkB = r; o.dkR = rm; return;
+  }
+  o.masks = [];   // plusieurs pièces (coins, croisements) ou porte : un calque sombre par pièce
+  for (const [rm, g] of groups) {
+    const [mc, mx] = isoScratch('mk', w, h), im = mx.createImageData(w, h), d = im.data;
+    for (let k = 0; k < w * h; k++) { const t = Math.min(1, g[k]); if (t <= 0) continue; const i = k * 4; d[i] = 14; d[i + 1] = 8; d[i + 2] = 34; d[i + 3] = t * 0.93 * id[i + 3]; }
+    mx.putImageData(im, 0, 0); const r = isoAlloc(w, h); r.c.drawImage(mc, 0, 0, w, h, r.x, r.y, w, h); o.masks.push({ room: rm, pg: r.pg, x: r.x, y: r.y });
+  }
 }
 function isoArt(k, x, y) { const [cv, c] = isoScratch('art', 16, 16); try { drawFurniture(c, k, 0, 0, x, y, G.m, G.L); } catch (e) { } return cv; }
 
@@ -155,7 +174,16 @@ function isoBuild() {
       if (lockS) { const a = isoArt(K.LOCKER, x, y); isoBox(c, Pl, 0.5, T1, 0, 15.5, T1 + 6, HW - 3, { top: shade(lc, 0.15), east: wk(x + 1, y) === 1 && m.get(x + 1, y) === K.LOCKER ? null : shade(lc, -0.4), south: [a, 0, 0, 16, 16] }); }
       if (lockE) { const a = isoArt(K.LOCKER, x, y); isoBox(c, Pl, T1, 0.5, 0, T1 + 6, 15.5, HW - 3, { top: shade(lc, 0.15), south: shade(lc, -0.25), east: [a, 0, 0, 16, 16] }); }
     }, x * 16 + y * 16 + 16, { wall: true }));
-    { const wo = objs[objs.length - 1]; wo.riS = roomOf(x, y + 1); wo.riE = roomOf(x + 1, y); isoFaceMasks(wo, wo.riS >= 0, wo.riE >= 0); }
+    {
+      const wo = objs[objs.length - 1];
+      const qroom = (dx, dy) => { for (const [a, b] of [[x, y + dy], [x + dx, y], [x + dx, y + dy]]) if (open(a, b)) return roomOf(a, b); return -1; };
+      const sR = [qroom(-1, 1), open(x, y + 1) ? roomOf(x, y + 1) : -1, qroom(1, 1)], eR = [qroom(1, -1), open(x + 1, y) ? roomOf(x + 1, y) : -1, qroom(1, 1)];
+      if (sR.some(r => r >= 0) || eR.some(r => r >= 0)) {
+        const XS = wx => isoP(wx, y * 16 + T1)[0] - wo.sx, XE = wy => isoP(x * 16 + T1, wy)[0] - wo.sx;
+        isoShadeFaces(wo, [[XS(x * 16 + T0), sR[0]], [XS(x * 16 + T1), sR[1]], [1e9, sR[2]]], [[XE(y * 16 + T1), eR[2]], [XE(y * 16 + T0), eR[1]], [1e9, eR[0]]]);
+      }
+      delete wo.redraw;
+    }
     // ombre de contact au pied du mur
     if (horiz) shadow(x * 16 + (w ? 0 : T0), y * 16 + T0, x * 16 + (e ? 16 : T1), y * 16 + T1 + (lockS ? 6 : 0), 0.22);
     if (vert) shadow(x * 16 + T0, y * 16 + (n ? 0 : T0), x * 16 + T1 + (lockE ? 6 : 0), y * 16 + (s ? 16 : T1), 0.22);
@@ -169,13 +197,15 @@ function isoBuild() {
       try { drawFurniture(fc, k, x * 16, y * 16, x, y, m, L); } catch (e) { } continue;
     }
     const ri = m.vroomAt ? m.vroomAt[y * m.w + x] : -1; o.ri = ri == null ? -1 : ri; o.hide = hideAt.get(y * m.w + x) || null;
-    if (o.ri >= 0) isoDark(o);
+    if (o.ri >= 0) isoBakeDark(o);
+    delete o.redraw;
     objs.push(o);
   }
   // le sol couché en losanges
   const [flc, flx] = mkCanvas(FW, FH); flx.imageSmoothingEnabled = false;
   flx.setTransform(ISO.u * ISO.C, ISO.u * ISO.C * 0.5, -ISO.u * ISO.C, ISO.u * ISO.C * 0.5, ISO.ox, ISO.oy); flx.drawImage(fcv, 0, 0);
   fcv.width = 0; fcv.height = 0;   // le sol vu de dessus ne sert plus : on rend la mémoire tout de suite
+  objs.sort((a, b) => a.key - b.key);
   ISO.floor = flc; ISO.objs = objs; ISO.built = m;
 }
 
@@ -312,10 +342,14 @@ function isoDoor(d) {
         isoBox(c, Pl, T0, 14, 0, T1, 16, HW, { top: S.top, east: fr, south: frE });
       }
     }, 0);
-    const [ax, ay] = isoP(0, 0); o.ax = ax; o.ay = ay; isoFaceMasks(o, true, true); ISO.doorCache.set(kk, o);
+    const [ax, ay] = isoP(0, 0); o.ax = ax; o.ay = ay; isoShadeFaces(o, [[1e9, 'S']], [[1e9, 'E']], true); delete o.redraw; ISO.doorCache.set(kk, o);
   }
-  const [bx, by] = isoP(d.x * 16, d.y * 16), rm = (x, y) => (x >= 0 && y >= 0 && x < m.w && y < m.h && m.vroomAt) ? (m.vroomAt[y * m.w + x] ?? -1) : -1;
-  return { sx: o.sx + bx - o.ax, sy: o.sy + by - o.ay, w: o.w, h: o.h, pg: o.pg, px: o.px, py: o.py, key: d.x * 16 + d.y * 16 + 16, ri: -1, wall: true, dkS: o.dkS, dkE: o.dkE, riS: rm(d.x, d.y + 1), riE: rm(d.x + 1, d.y) };
+  let e = d._iso;
+  if (!e || e.kk !== kk || e.m !== m) {
+    const [bx, by] = isoP(d.x * 16, d.y * 16), rm = (x, y) => (x >= 0 && y >= 0 && x < m.w && y < m.h && m.vroomAt) ? (m.vroomAt[y * m.w + x] ?? -1) : -1;
+    e = d._iso = { kk, m, sx: o.sx + bx - o.ax, sy: o.sy + by - o.ay, w: o.w, h: o.h, pg: o.pg, px: o.px, py: o.py, key: d.x * 16 + d.y * 16 + 16, ri: -1, wall: true, masks: o.masks, riS: rm(d.x, d.y + 1), riE: rm(d.x + 1, d.y) };
+  }
+  return e;
 }
 
 // ---------- commandes : « haut » sur le joystick = « haut » à l'écran ----------
@@ -331,7 +365,7 @@ function isoFace(a) {
   if (ang == null) return a._isoF != null ? a._isoF : a.face;
   const c = Math.cos(ang), s = Math.sin(ang); return (a._isoF = faceFromAng(Math.atan2((c + s) * 0.5, c - s)));
 }
-function isoScreen(x, y, h) { const [a, b] = isoP(x, y); return [a * ISO.Z + ISO.offX, b * ISO.Z + ISO.offY - (h || 0) * ISO.sp]; }
+function isoScreen(x, y, h) { return [isoX(x, y) * ISO.Z + ISO.offX, isoY(x, y) * ISO.Z + ISO.offY - (h || 0) * ISO.sp]; }
 
 // ---------- le dessin de chaque image ----------
 function renderIso(dt) {
@@ -367,13 +401,14 @@ function renderIso(dt) {
     if (shadeOn) for (const r of m.vrooms || []) { if (r.a <= 0.01) continue; ctx.fillStyle = 'rgba(14,8,34,' + (0.93 * r.a).toFixed(3) + ')'; ctx.fillRect(r.x * 16 - 8, r.y * 16 - 8, r.w * 16 + 16, r.h * 16 + 16); }
     ctx.setTransform(1, 0, 0, 1, 0, 0); }
   // 3) décor + personnages, du fond vers l'avant
-  const list = [], vx0 = -offX / Z - 40, vy0 = -offY / Z - 60, vx1 = (W - offX) / Z + 40, vy1 = (H - offY) / Z + 60;
+  const list = ISO.list || (ISO.list = []), dyn = ISO.dyn || (ISO.dyn = []); list.length = 0; dyn.length = 0;
+  const vx0 = -offX / Z - 40, vy0 = -offY / Z - 60, vx1 = (W - offX) / Z + 40, vy1 = (H - offY) / Z + 60;
   const vis = o => o.sx + o.w > vx0 && o.sx < vx1 && o.sy + o.h > vy0 && o.sy < vy1;
-  for (const o of ISO.objs) if (vis(o)) list.push({ key: o.key, o });
-  G.doors.forEach(d => { const o = isoDoor(d); if (vis(o)) list.push({ key: o.key, o }); });
-  const scr = (x, y) => { const [a, b] = isoP(x, y); return [a * Z + offX, b * Z + offY]; };
-  const act = (a, key, fn, sil) => { const [X, Y] = scr(a.x, a.y); if (X < -200 || X > W + 200 || Y < -300 || Y > H + 300) return; list.push({ key, a, fn, sil, X, Y }); };
-  const stand = (c, e, ox, oy, k) => { const a = e.a, q = k || 1; c.setTransform(sp * q, 0, 0, sp * q, (e.X - (ox || 0)) * q - a.x * sp * q, (e.Y - (oy || 0)) * q - a.y * sp * q); const f0 = a.face; if (e.sil) a.face = isoFace(a); try { e.fn(c); } finally { a.face = f0; } c.setTransform(1, 0, 0, 1, 0, 0); };
+  for (const d of G.doors) { const o = isoDoor(d); if (vis(o)) dyn.push(o); }
+  const scrX = (x, y) => isoX(x, y) * Z + offX, scrY = (x, y) => isoY(x, y) * Z + offY;
+  // les personnages tombent pile sur les pixels de l'écran : pas de tremblement d'un pixel quand ils bougent
+  const act = (a, key, fn, sil) => { const X = Math.round(scrX(a.x, a.y)), Y = Math.round(scrY(a.x, a.y)); if (X < -200 || X > W + 200 || Y < -300 || Y > H + 300) return; dyn.push({ key, a, fn, sil, X, Y }); };
+  const stand = (c, e, ox, oy, k) => { const a = e.a, q = k || 1, ax = Math.round(a.x * sp) / sp, ay = Math.round(a.y * sp) / sp; c.setTransform(sp * q, 0, 0, sp * q, (e.X - (ox || 0)) * q - ax * sp * q, (e.Y - (oy || 0)) * q - ay * sp * q); const f0 = a.face; if (e.sil) a.face = isoFace(a); try { e.fn(c); } finally { a.face = f0; } c.setTransform(1, 0, 0, 1, 0, 0); };
   G.items.forEach(it => act(it, it.x + it.y + 2, c => drawItemW(c, it)));
   (G.m.junk || []).forEach(j => act(j, (j.head ? j.head.x + j.head.y : j.x + j.y) + 1, c => drawJunk(c, j)));
   G.apples.forEach(ap => act(ap, ap.x + ap.y + 2, c => { const w = Math.sin(G.time * 4) * 0.12; c.translate(ap.x, ap.y - 6); c.rotate(w); c.drawImage(itemCanvas('apple'), -7, -7); }));
@@ -410,26 +445,34 @@ function renderIso(dt) {
     if (a && b && (a.vis || b.vis)) { const t = G.ball.t, bx = lerp(a.x, b.x, t), by = lerp(a.y, b.y, t); act({ x: bx, y: by }, bx + by, c => { const hh = Math.sin(Math.PI * t) * 14 + 10; c.fillStyle = 'rgba(10,6,20,0.3)'; c.beginPath(); c.ellipse(bx, by, 2.2, 0.9, 0, 0, 7); c.fill(); c.fillStyle = '#f77622'; c.beginPath(); c.arc(bx, by - hh, 2.2, 0, 7); c.fill(); }); }
   }
   if (P.hidden && viewerA() === P) { const hs = P.hidden; act({ x: hs.x * 16 + 8, y: hs.y * 16 + 22 }, hs.x * 16 + hs.y * 16 + 40, c => drawEyes(c, hs)); }
-  list.sort((a, b) => a.key - b.key);
+  dyn.sort((a, b) => a.key - b.key);
+  { let j = 0; for (const o of ISO.objs) { if (!vis(o)) continue; while (j < dyn.length && dyn[j].key < o.key) list.push(dyn[j++]); list.push(o); } while (j < dyn.length) list.push(dyn[j++]); }
   // on dessine ; on retient où sont les personnages pour leur silhouette derrière les murs
   const drawO = (c, o, ox, oy, k) => {
     let jx = 0; if (o.hide && o.hide.shake > 0) jx = Math.sin(G.time * 60) * (o.hide.shake > 0.1 ? 1.2 : 0.7) * ISO.u;
     const q = k || 1, X = ((o.sx + jx) * Z + offX - (ox || 0)) * q, Y = (o.sy * Z + offY - (oy || 0)) * q;
+    if (o.dkB && !k) {
+      const r = shadeOn && m.vrooms ? m.vrooms[o.dkR] : null, a = r ? r.a : 0;
+      if (a >= 0.99) { c.drawImage(o.dkB.pg, o.dkB.x, o.dkB.y, o.w, o.h, X, Y, o.w * Z, o.h * Z); return; }
+      c.drawImage(o.pg, o.px, o.py, o.w, o.h, X, Y, o.w * Z, o.h * Z);
+      if (a > 0.01) { c.globalAlpha = a; c.drawImage(o.dkB.pg, o.dkB.x, o.dkB.y, o.w, o.h, X, Y, o.w * Z, o.h * Z); c.globalAlpha = 1; }
+      return;
+    }
     c.drawImage(o.pg, o.px, o.py, o.w, o.h, X, Y, o.w * Z * q, o.h * Z * q);
     if (k) return;
     if (!shadeOn) return;
-    if (o.dk) { const r = m.vrooms && m.vrooms[o.ri]; if (r && r.a > 0.01) { c.globalAlpha = 0.93 * r.a; c.drawImage(o.dk.pg, o.dk.x, o.dk.y, o.w, o.h, X, Y, o.w * Z, o.h * Z); c.globalAlpha = 1; } }
-    for (const [mk, ri] of [[o.dkS, o.riS], [o.dkE, o.riE]]) {
-      if (!mk || ri == null || ri < 0) continue; const r = m.vrooms && m.vrooms[ri]; if (!r || r.a <= 0.01) continue;
-      c.globalAlpha = 0.93 * r.a; c.drawImage(mk.pg, mk.x, mk.y, mk.w, mk.h, X + mk.dx * Z, Y + mk.dy * Z, mk.w * Z, mk.h * Z); c.globalAlpha = 1;
+    const vr = m.vrooms;
+    if (o.masks) for (let i = 0; i < o.masks.length; i++) {
+      const mk = o.masks[i], ri = mk.room === 'S' ? o.riS : mk.room === 'E' ? o.riE : mk.room, r = ri >= 0 && vr ? vr[ri] : null;
+      if (!r || r.a <= 0.01) continue; c.globalAlpha = r.a; c.drawImage(mk.pg, mk.x, mk.y, o.w, o.h, X, Y, o.w * Z, o.h * Z); c.globalAlpha = 1;
     }
   };
-  list.forEach(e => { if (e.o) drawO(ctx, e.o); else stand(ctx, e); });
+  for (let i = 0; i < list.length; i++) { const e = list[i]; if (e.fn) stand(ctx, e); else drawO(ctx, e); }
   // la partie cachée d'un personnage : une silhouette plus sombre que le mur
   list.forEach((e, i) => {
     if (!e.sil) return;
     const bx0 = Math.floor(e.X - 18 * sp), by0 = Math.floor(e.Y - 54 * sp), bw = Math.ceil(36 * sp), bh = Math.ceil(62 * sp);
-    const occ = []; for (let j = i + 1; j < list.length; j++) { const o = list[j].o; if (!o) continue; const X = o.sx * Z + offX, Y = o.sy * Z + offY; if (X < bx0 + bw && X + o.w * Z > bx0 && Y < by0 + bh && Y + o.h * Z > by0) occ.push(o); }
+    const occ = []; for (let j = i + 1; j < list.length; j++) { const o = list[j]; if (o.fn) continue; const X = o.sx * Z + offX, Y = o.sy * Z + offY; if (X < bx0 + bw && X + o.w * Z > bx0 && Y < by0 + bh && Y + o.h * Z > by0) occ.push(o); }
     if (!occ.length) return;
     // (calculée en demi-résolution : une ombre n'a pas besoin de détails, et c'est 4 fois moins de travail)
     const k = 0.5, hw = Math.ceil(bw * k), hh = Math.ceil(bh * k);
@@ -442,7 +485,7 @@ function renderIso(dt) {
     ctx.globalAlpha = 0.6; ctx.drawImage(tA, 0, 0, hw, hh, bx0, by0, hw / k, hh / k); ctx.globalAlpha = 1;
   });
   // 4) particules, interface
-  drawParts(ctx, { x0: ISO.cam[0] - 600, y0: ISO.cam[1] - 600, x1: ISO.cam[0] + 600, y1: ISO.cam[1] + 600, t: (c, x, y) => { const [X, Y] = scr(x, y); c.setTransform(sp, 0, 0, sp, X - x * sp, Y - y * sp); } });
+  drawParts(ctx, { x0: ISO.cam[0] - 600, y0: ISO.cam[1] - 600, x1: ISO.cam[0] + 600, y1: ISO.cam[1] + 600, t: (c, x, y) => { c.setTransform(sp, 0, 0, sp, scrX(x, y) - x * sp, scrY(x, y) - y * sp); } });
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   drawOverlay(); drawPost();
 }
