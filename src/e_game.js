@@ -146,7 +146,7 @@ function startLevel(idx, cfg, setup, opts) {
   let L = seed != null ? buildProcLevel(idx, seed) : null;
   window.ISO_GEN = false;
   if (!L) L = finalizeLevel(def.build());
-  G.iso = !!window.ISO_NEXT; window.ISO_NEXT = false; ISO.cam = null; if (ISO.pages.length || ISO.floor) isoFree(); ISO.built = null;
+  G.iso = !!window.ISO_NEXT; window.ISO_NEXT = false; { const el = document.getElementById('sprDbg'); if (el) el.remove(); } ISO.cam = null; if (ISO.pages.length || ISO.floor) isoFree(); ISO.built = null;
   L.def = def; G.seed = L.seed != null ? L.seed : null; G.net = null; G.inf = null; G.alarmFlash = false; G.appleId = 0; G.alarmT = 0; G.pVis = true;
   G.L = L; G.m = L.m; G.lvl = idx; G.lessons = 0; G.time = 0; RPS.reset(); G.spotted = 0; G.reveal = 0; G.slowT = 0; G.shake = 0; G.found = 0; G.petFound = false; G.cls = null; G.power = null; G.dark = false; G.P2 = null; G.T2 = null; G.cc = null; G.ccMe = null; G.doorSync = null;
   G.cues = []; G.parts = []; G.apples = []; G.searched = new Set(); G.intercomT = 24; G.kidCueT = 3; G.smallDoorTip = false; G.banner = null; G.heartT = 0;

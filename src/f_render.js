@@ -93,13 +93,26 @@ function drawSprite(c, cfg, v, a, o = {}) {
       window.__sprRetryT = now;
       try { freeSpriteCache(0); drawSprite0(c, cfg, v, a, o); window.__sprFixed = (window.__sprFixed || 0) + 1; return; } catch (e5) { try { c.restore(); } catch (e6) { } }
     }
-    // plutôt qu'un rectangle : une autre image déjà prête du même personnage
+    window.__sprBad = (window.__sprBad || 0) + 1; sprDebug();
+    // dessiner le personnage directement, sans passer par une petite image (au cas où c'est elle qui pose problème)
+    try {
+      const g = o.gait || gaitOf(a), fr = frameOf(a, g), face = a.face, dir = face === 3 ? 2 : face, sc = o.scale || 1;
+      c.save(); c.translate(a.x + (o.dx || 0), a.y - (a.hz || 0)); c.scale(face === 3 ? -sc : sc, sc); c.translate(-10, -32);
+      drawCharInto(c, cfg, dir, fr, v || {}, g); c.restore(); window.__sprDirect = (window.__sprDirect || 0) + 1; return;
+    } catch (e7) { window.__lastErr2 = String(e7 && e7.message || e7).slice(0, 90); try { c.restore(); } catch (e8) { } }
+    // sinon : une autre image déjà prête du même personnage
     try {
       const pre = charKey(cfg, v) + '|', sc = o.scale || 1;
-      window.__sprBad = (window.__sprBad || 0) + 1;
       for (const [k, cv] of CHAR_CACHE) if (k.startsWith(pre) && cv.width > 1) { c.drawImage(cv, a.x - 10 * sc, a.y - 32 * sc - (a.hz || 0), 20 * sc, 34 * sc); return; }
     } catch (e4) { }
     c.fillStyle = '#1a1028'; c.fillRect(a.x - 5, a.y - 26, 10, 26); c.fillStyle = (cfg && cfg.topCol) || '#ff6f91'; c.fillRect(a.x - 4, a.y - 16, 8, 9); }
+}
+// essai iso : si un sprite ne peut pas être dessiné, on affiche pourquoi, en texte par-dessus le jeu (pour pouvoir corriger)
+function sprDebug() {
+  if (!isoOn()) return;
+  let el = document.getElementById('sprDbg');
+  if (!el) { el = document.createElement('div'); el.id = 'sprDbg'; el.style.cssText = 'position:fixed;left:6px;right:6px;top:calc(env(safe-area-inset-top) + 150px);z-index:9999;pointer-events:none;background:rgba(0,0,0,.82);color:#ffd23f;font:12px/1.35 monospace;padding:6px 8px;border-radius:6px;white-space:pre-wrap;word-break:break-all'; document.body.appendChild(el); }
+  el.textContent = '⚠ ' + (window.__lastErr || '?') + '\n' + (window.__sprCtx || '') + '\nerreurs ' + (window.__sprErr || 0) + ' · réparé ' + (window.__sprFixed || 0) + ' · direct ' + (window.__sprDirect || 0) + (window.__lastErr2 ? ' · ' + window.__lastErr2 : '') + '\n' + GAME_BUILD;
 }
 function drawSprite0(c, cfg, v, a, o = {}) {
   const scale = o.scale || 1, alpha = o.alpha == null ? 1 : o.alpha;

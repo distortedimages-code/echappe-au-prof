@@ -410,11 +410,5 @@ function renderIso(dt) {
   drawParts(ctx, { x0: ISO.cam[0] - 600, y0: ISO.cam[1] - 600, x1: ISO.cam[0] + 600, y1: ISO.cam[1] + 600, t: (c, x, y) => { const [X, Y] = scr(x, y); c.setTransform(sp, 0, 0, sp, X - x * sp, Y - y * sp); } });
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   drawOverlay(); drawPost();
-  if (window.__sprBad) {   // essai : si un sprite n'a pas pu être dessiné, on affiche pourquoi (pour pouvoir corriger)
-    const d = V.dpr, t1 = '⚠ ' + (window.__lastErr || '?'), t2 = (window.__sprCtx || '') + ' · ×' + window.__sprErr + ' · réparé ' + (window.__sprFixed || 0) + ' · ' + GAME_BUILD;
-    ctx.font = (10 * d) + 'px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    const w = Math.max(ctx.measureText(t1).width, ctx.measureText(t2).width) + 12 * d;
-    ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fillRect(6 * d, H - 300 * d, w, 30 * d); ctx.fillStyle = '#ffd23f'; ctx.fillText(t1, 12 * d, H - 296 * d); ctx.fillStyle = '#ffffff'; ctx.fillText(t2, 12 * d, H - 283 * d);
-  }
 }
 function isoTmp(i, w, h) { let c = ISO.tmp[i]; if (!c) { c = document.createElement('canvas'); ISO.tmp[i] = c; } if (c.width < w) c.width = w; if (c.height < h) c.height = h; return c; }
