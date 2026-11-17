@@ -184,7 +184,7 @@ const UI = {
     const tap = (id, f) => $(id).addEventListener('click', e => { AU.init(); AU.sfx('blip'); f(e); });
     tap('bPlay', () => { if (!this.chars.length) this.openCreator(-1, 'levels'); else this.openLevels(); });
     tap('bChars', () => this.openChars('title'));
-    tap('bSquish', () => SqAlbum.open('title')); tap('bQuiz', () => Quiz.open('hist')); tap('bQuizEn', () => Quiz.open('en')); tap('bGuard', () => Solo.levels()); tap('bRefresh', () => refreshGame()); tap('bSave', () => Save.open('title')); tap('bIso', () => this.launchIso()); tap('bSqSave', () => Save.open('squish')); tap('bSqBack', () => this.openTitle());
+    tap('bSquish', () => SqAlbum.open('title')); tap('bQuiz', () => Quiz.open('hist')); tap('bQuizEn', () => Quiz.open('en')); tap('bGuard', () => Solo.levels()); tap('bRefresh', () => refreshGame()); tap('bSave', () => Save.open('title')); tap('bIso', () => { AU.init(); if (!this.chars.length) this.openCreator(-1, 'iso'); else this.launchIso(); }); tap('bSqSave', () => Save.open('squish')); tap('bSqBack', () => this.openTitle());
     tap('bMulti', () => Multi.open());
     tap('bInf', () => { AU.init(); if (!this.chars.length) this.openCreator(-1, 'inf'); else this.launchInf(); });
     tap('bPlan', () => this.openPlan());
@@ -196,7 +196,7 @@ const UI = {
     tap('bCharsGo', () => { if (!this.chars.length) this.openCreator(-1, 'levels'); else this.openLevels(); });
     tap('cRand', () => { const n = this.editing.name; this.editing = randomChar(n); this.renderOpts(); });
     tap('cTurn', () => { this.prevDir = (this.prevDir + 1) % 4; this.prevT = 0; });
-    tap('cCancel', () => { if (this.after === 'inf') { this.openTitle(); return; } if (this.after === 'multi') { if (this.chars.length) Multi.open(); else this.openTitle(); } else if (this.after === 'levels' && this.chars.length) this.openLevels(); else if (this.after === 'levels') this.openTitle(); else this.openChars(this.charsBack); });
+    tap('cCancel', () => { if (this.after === 'inf' || this.after === 'iso') { this.openTitle(); return; } if (this.after === 'multi') { if (this.chars.length) Multi.open(); else this.openTitle(); } else if (this.after === 'levels' && this.chars.length) this.openLevels(); else if (this.after === 'levels') this.openTitle(); else this.openChars(this.charsBack); });
     tap('cSave', () => this.saveCreator());
     tap('bWho', () => this.openChars('levels'));
     tap('bLvlBack', () => this.openTitle());
@@ -284,7 +284,7 @@ const UI = {
     $('cName').style.outline = '';
     if (this.editIdx >= 0) this.chars[this.editIdx] = c; else { this.chars.push(c); this.cur = this.chars.length - 1; }
     this.save();
-    if (this.after === 'levels') this.openLevels(); else if (this.after === 'multi') Multi.open(); else if (this.after === 'inf') this.launchInf(); else this.openChars(this.charsBack);
+    if (this.after === 'levels') this.openLevels(); else if (this.after === 'multi') Multi.open(); else if (this.after === 'inf') this.launchInf(); else if (this.after === 'iso') this.launchIso(); else this.openChars(this.charsBack);
   },
   tickCreator(dt) {
     if ($('sCreator').classList.contains('hidden')) return;
@@ -363,7 +363,7 @@ const UI = {
   launch(i) {
     if (this.isoMode && i !== ISO.LV) this.isoMode = false;
     window.ISO_NEXT = !!this.isoMode;
-    startLevel(i, this.cfg(), null, { seed: newSeed() });
+    startLevel(i, this.cfg() || Object.assign(randomChar(), { name: 'Élève' }), null, { seed: newSeed() });
     const L = LEVELS[i], pr = PROFS[L.prof];
     $('inNum').textContent = (L.bonus ? '🚌 SORTIE SCOLAIRE' : 'NIVEAU ' + (i + 1)) + ' · ' + L.place.toUpperCase();
     if (G.iso) $('inNum').textContent += ' · VUE ISO (ESSAI) · ' + GAME_BUILD;
