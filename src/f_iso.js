@@ -93,6 +93,9 @@ function isoArt(k, x, y) { const [cv, c] = isoScratch('art', 16, 16); try { draw
 // ---------- préparation du niveau (une seule fois) ----------
 function isoBuild() {
   isoFree();
+  // les pièces « dans le noir » : on en a besoin tout de suite pour assombrir meubles et murs
+  // (sinon, si la vue est préparée pendant l'écran d'intro, avant la première mise à jour, rien n'est assombri)
+  if (G.m && !G.m.vroomAt) roomVisSetup(G.m);
   const m = G.m, L = G.L, HW = ISO.HW, T0 = 8 - ISO.TH / 2, T1 = 8 + ISO.TH / 2;
   ISO.ox = m.h * 16 * ISO.u * ISO.C + 8; ISO.oy = HW * ISO.u * ISO.ZK + 12;
   const FW = Math.ceil((m.w + m.h) * 16 * ISO.u * ISO.C) + 16, FH = Math.ceil((m.w + m.h) * 16 * ISO.u * ISO.C * 0.5 + ISO.oy + 16);
