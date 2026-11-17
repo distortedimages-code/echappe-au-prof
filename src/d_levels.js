@@ -438,9 +438,12 @@ function finalizeLevel(L) {
   L.hides = []; L.hideAt = new Map();
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
     const k = m.get(x, y), p = KP[k]; if (!p || !p.hide) continue;
-    const stand = [[0, 1], [0, -1], [1, 0], [-1, 0]].map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => m.get(a, b) === K.FLOOR && ok(a, b));
+    let stand = [[0, 1], [0, -1], [1, 0], [-1, 0]].map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => m.get(a, b) === K.FLOOR && ok(a, b));
+    // casier encastré dans un mur : il ne s'ouvre que du côté du couloir (pas à travers le mur depuis la salle d'à côté)
+    const front = k === K.LOCKER && m.front ? m.front.get(y * m.w + x) : null;
+    if (front) { const f = stand.filter(([a, b]) => a === x + front[0] && b === y + front[1]); if (f.length) stand = f; }
     if (!stand.length) continue;
-    const s = { x, y, k, n: p.hide.n, peek: p.hide.peek, small: !!p.hide.small, stand, idx: L.hides.length };
+    const s = { x, y, k, n: p.hide.n, peek: p.hide.peek, small: !!p.hide.small, stand, idx: L.hides.length, front: front && stand.length === 1 ? front : null };
     L.hides.push(s); L.hideAt.set(y * m.w + x, s);
   }
   // rondes

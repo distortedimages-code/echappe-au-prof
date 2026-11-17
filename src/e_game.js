@@ -889,6 +889,8 @@ function computeActions() {
     const tx = ptx + dx, ty = pty + dy, d = Math.hypot(tx * 16 + 8 - cx0, ty * 16 + 8 - cy0);
     if (d > 21 && !(d < 30 && G.inf && G.inf.coop && (G.L.exitAt.get(ty * m.w + tx) || {}).gate)) continue;
     const key = ty * m.w + tx, k = m.get(tx, ty);
+    // un casier encastré ne s'ouvre que de son côté (couloir) : depuis l'autre côté du mur, rien
+    { const fr = k === K.LOCKER && m.front ? m.front.get(key) : null; if (fr && ((fr[0] && Math.sign(ptx - tx) !== fr[0]) || (fr[1] && Math.sign(pty - ty) !== fr[1]))) continue; }
     const ex = L.exitAt.get(key);
     const locked = tasksLeft() > 0, lockSub = 'Finis tes tâches (' + G.tasksDone + '/' + G.tasks.length + ')';
     const tk = G.tasks.find(t => !t.done && t.x === tx && t.y === ty);
