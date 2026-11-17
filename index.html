@@ -570,7 +570,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
         <button class="tile tSquish" id="bSquish"><canvas data-ill="squish" width="88" height="56"></canvas><span class="tl"><b>Squishies</b><small id="tSqN">Ta collection</small></span></button>
         <button class="tile tSave tIso" id="bIso"><span class="sv">🧊</span><span class="tl"><b>Isométrique</b><small>Essai : vue façon années 90</small></span></button>
         <button class="tile tSave" id="bSave"><span class="sv">💾</span><span class="tl"><b>Sauvegarde</b><small>Un code pour garder tes squishies</small></span></button>
-        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 17 nov. · 16h47</small></span></button>
+        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 17 nov. · 16h54</small></span></button>
       </div>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
@@ -10430,6 +10430,7 @@ function isoTex(c, img, sx, sy, sw, sh, O, A, B) {
 }
 // une boîte : faces visibles = est, sud, dessus. Chaque face : couleur, texture [img, sx, sy, sw, sh] ou null (cachée)
 function isoBox(c, Pl, x0, y0, z0, x1, y1, z1, st) {
+  if (ISO.idMode) st = { top: st.top && '#0000ff', south: st.south && '#ff0000', east: st.east && '#00ff00' };
   const face = (f, O, A, B, D) => { if (!f) return; if (typeof f === 'string') isoPoly(c, [O, A, D, B], f); else isoTex(c, f[0], f[1], f[2], f[3], f[4], O, A, B); };
   face(st.east, Pl(x1, y0, z1), Pl(x1, y1, z1), Pl(x1, y0, z0), Pl(x1, y1, z0));
   face(st.south, Pl(x0, y1, z1), Pl(x1, y1, z1), Pl(x0, y1, z0), Pl(x1, y1, z0));
@@ -10459,14 +10460,38 @@ function isoFree() {
   ISO.objs = []; ISO.doorCache.clear(); ISO.built = null;
 }
 // un objet du décor = un morceau de planche, avec sa profondeur (key) pour l'ordre de dessin
-function isoObj(x0, y0, z0, x1, y1, z1, draw, key, extra) {
+function isoRender(x0, y0, z0, x1, y1, z1, draw, slot) {
   let mnx = 1e9, mny = 1e9, mxx = -1e9, mxy = -1e9;
   for (const x of [x0, x1]) for (const y of [y0, y1]) for (const z of [z0, z1]) { const [a, b] = isoP(x, y, z); mnx = Math.min(mnx, a); mny = Math.min(mny, b); mxx = Math.max(mxx, a); mxy = Math.max(mxy, b); }
   const sx = Math.floor(mnx) - 1, sy = Math.floor(mny) - 1, w = Math.ceil(mxx) - sx + 2, h = Math.ceil(mxy) - sy + 2;
-  const [sc, c] = isoScratch('obj', w, h);
+  const [sc, c] = isoScratch(slot, w, h);
   draw(c, (x, y, z) => { const [a, b] = isoP(x, y, z); return [a - sx, b - sy]; });
-  const r = isoAlloc(w, h); r.c.drawImage(sc, 0, 0, w, h, r.x, r.y, w, h);
-  return Object.assign({ sx, sy, w, h, pg: r.pg, px: r.x, py: r.y, key, ri: -1 }, extra || {});
+  return { sx, sy, w, h, sc };
+}
+function isoObj(x0, y0, z0, x1, y1, z1, draw, key, extra) {
+  const R = isoRender(x0, y0, z0, x1, y1, z1, draw, 'obj');
+  const r = isoAlloc(R.w, R.h); r.c.drawImage(R.sc, 0, 0, R.w, R.h, r.x, r.y, R.w, R.h);
+  const o = Object.assign({ sx: R.sx, sy: R.sy, w: R.w, h: R.h, pg: r.pg, px: r.x, py: r.y, key, ri: -1 }, extra || {});
+  o.redraw = [x0, y0, z0, x1, y1, z1, draw];
+  return o;
+}
+// pour assombrir un mur ou une porte du côté d'une pièce où l'on n'est pas : un masque de ses faces sud, un de ses faces est
+// (on redessine l'objet avec une couleur par côté, et on garde les pixels de chaque couleur)
+function isoFaceMasks(o, wantS, wantE) {
+  if (!o.redraw || (!wantS && !wantE)) return;
+  ISO.idMode = true; let R; try { R = isoRender(...o.redraw, 'id'); } finally { ISO.idMode = false; }
+  const d = R.sc.getContext('2d').getImageData(0, 0, R.w, R.h).data;
+  const mk = ch => {
+    const hit = i => { const v = d[i + ch]; return d[i + 3] > 8 && v > 90 && v >= d[i] && v >= d[i + 1] && v >= d[i + 2]; };
+    let mnx = 1e9, mny = 1e9, mxx = -1, mxy = -1;
+    for (let y = 0; y < R.h; y++) for (let x = 0; x < R.w; x++) if (hit((y * R.w + x) * 4)) { if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y; }
+    if (mxx < 0) return null;
+    const w = mxx - mnx + 1, h = mxy - mny + 1, [sc, c] = isoScratch('mk', w, h), id = c.createImageData(w, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = ((y + mny) * R.w + x + mnx) * 4, j = (y * w + x) * 4; if (!hit(i)) continue; id.data[j] = 14; id.data[j + 1] = 8; id.data[j + 2] = 34; id.data[j + 3] = d[i + 3]; }
+    c.putImageData(id, 0, 0); const r = isoAlloc(w, h); r.c.drawImage(sc, 0, 0, w, h, r.x, r.y, w, h);
+    return { pg: r.pg, x: r.x, y: r.y, w, h, dx: mnx, dy: mny };
+  };
+  if (wantS) o.dkS = mk(0); if (wantE) o.dkE = mk(1);
 }
 function isoDark(o) {
   const [sc, c] = isoScratch('dk', o.w, o.h); c.drawImage(o.pg, o.px, o.py, o.w, o.h, 0, 0, o.w, o.h);
@@ -10508,6 +10533,7 @@ function isoBuild() {
     return cv;
   };
   const crop = (x, y) => { const [t, tc] = isoScratch('crop', 16, 16); tc.drawImage(G.mapCanvas, x * 16, y * 16, 16, 16, 0, 0, 16, 16); return t; };
+  const roomOf = (x, y) => { if (!inB(x, y) || !m.vroomAt) return -1; const r = m.vroomAt[y * m.w + x]; return r == null ? -1 : r; };
   const isFeat = k => k === K.X_WINDOW || k === K.X_DOOR || k === K.X_ELEV || k === K.X_HOLE;
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
     if (wk(x, y) !== 1) continue;
@@ -10536,6 +10562,7 @@ function isoBuild() {
       if (lockS) { const a = isoArt(K.LOCKER, x, y); isoBox(c, Pl, 0.5, T1, 0, 15.5, T1 + 6, HW - 3, { top: shade(lc, 0.15), east: wk(x + 1, y) === 1 && m.get(x + 1, y) === K.LOCKER ? null : shade(lc, -0.4), south: [a, 0, 0, 16, 16] }); }
       if (lockE) { const a = isoArt(K.LOCKER, x, y); isoBox(c, Pl, T1, 0.5, 0, T1 + 6, 15.5, HW - 3, { top: shade(lc, 0.15), south: shade(lc, -0.25), east: [a, 0, 0, 16, 16] }); }
     }, x * 16 + y * 16 + 16, { wall: true }));
+    { const wo = objs[objs.length - 1]; wo.riS = roomOf(x, y + 1); wo.riE = roomOf(x + 1, y); isoFaceMasks(wo, wo.riS >= 0, wo.riE >= 0); }
     // ombre de contact au pied du mur
     if (horiz) shadow(x * 16 + (w ? 0 : T0), y * 16 + T0, x * 16 + (e ? 16 : T1), y * 16 + T1 + (lockS ? 6 : 0), 0.22);
     if (vert) shadow(x * 16 + T0, y * 16 + (n ? 0 : T0), x * 16 + T1 + (lockE ? 6 : 0), y * 16 + (s ? 16 : T1), 0.22);
@@ -10692,10 +10719,10 @@ function isoDoor(d) {
         isoBox(c, Pl, T0, 14, 0, T1, 16, HW, { top: S.top, east: fr, south: frE });
       }
     }, 0);
-    const [ax, ay] = isoP(0, 0); o.ax = ax; o.ay = ay; ISO.doorCache.set(kk, o);
+    const [ax, ay] = isoP(0, 0); o.ax = ax; o.ay = ay; isoFaceMasks(o, true, true); ISO.doorCache.set(kk, o);
   }
-  const [bx, by] = isoP(d.x * 16, d.y * 16);
-  return { sx: o.sx + bx - o.ax, sy: o.sy + by - o.ay, w: o.w, h: o.h, pg: o.pg, px: o.px, py: o.py, key: d.x * 16 + d.y * 16 + 16, ri: -1, wall: true };
+  const [bx, by] = isoP(d.x * 16, d.y * 16), rm = (x, y) => (x >= 0 && y >= 0 && x < m.w && y < m.h && m.vroomAt) ? (m.vroomAt[y * m.w + x] ?? -1) : -1;
+  return { sx: o.sx + bx - o.ax, sy: o.sy + by - o.ay, w: o.w, h: o.h, pg: o.pg, px: o.px, py: o.py, key: d.x * 16 + d.y * 16 + 16, ri: -1, wall: true, dkS: o.dkS, dkE: o.dkE, riS: rm(d.x, d.y + 1), riE: rm(d.x + 1, d.y) };
 }
 
 // ---------- commandes : « haut » sur le joystick = « haut » à l'écran ----------
@@ -10735,7 +10762,7 @@ function renderIso(dt) {
   { const F = ISO.floor, x0 = Math.max(0, Math.floor(-offX / Z) - 1), y0 = Math.max(0, Math.floor(-offY / Z) - 1), x1 = Math.min(F.width, Math.ceil((W - offX) / Z) + 1), y1 = Math.min(F.height, Math.ceil((H - offY) / Z) + 1);
     if (x1 > x0 && y1 > y0) ctx.drawImage(F, x0, y0, x1 - x0, y1 - y0, x0 * Z + offX, y0 * Z + offY, (x1 - x0) * Z, (y1 - y0) * Z); }
   // 2) posé sur le sol : cônes de vision, flaques, pièces dans l'ombre
-  const showT = G.tVis || G.mode === 'caught';
+  const showT = G.tVis || G.mode === 'caught', shadeOn = !easyOn();
   { const a = ISO.u * ISO.C * Z; ctx.setTransform(a, a * 0.5, -a, a * 0.5, ISO.ox * Z + offX, ISO.oy * Z + offY);
     if (showT && !T.gone && !['sleep', 'caught', 'count', 'evac'].includes(T.state) && !isBlind(T)) drawCone(ctx);
     G.kids.forEach(k => {
@@ -10744,7 +10771,7 @@ function renderIso(dt) {
       else if (k.beh === 'cteach' && k.prof) { const v = detVal(k); if (v > 0.03) { ctx.globalAlpha = Math.min(0.85, v * 2.5); drawCone(ctx, k); ctx.globalAlpha = 1; } }
     });
     try { drawPuddles(ctx); } catch (e) { }
-    if (!easyOn()) drawRoomShade(ctx, 0, 0);
+    if (shadeOn) for (const r of m.vrooms || []) { if (r.a <= 0.01) continue; ctx.fillStyle = 'rgba(14,8,34,' + (0.93 * r.a).toFixed(3) + ')'; ctx.fillRect(r.x * 16 - 8, r.y * 16 - 8, r.w * 16 + 16, r.h * 16 + 16); }
     ctx.setTransform(1, 0, 0, 1, 0, 0); }
   // 3) décor + personnages, du fond vers l'avant
   const list = [], vx0 = -offX / Z - 40, vy0 = -offY / Z - 60, vx1 = (W - offX) / Z + 40, vy1 = (H - offY) / Z + 60;
@@ -10797,7 +10824,12 @@ function renderIso(dt) {
     const q = k || 1, X = ((o.sx + jx) * Z + offX - (ox || 0)) * q, Y = (o.sy * Z + offY - (oy || 0)) * q;
     c.drawImage(o.pg, o.px, o.py, o.w, o.h, X, Y, o.w * Z * q, o.h * Z * q);
     if (k) return;
+    if (!shadeOn) return;
     if (o.dk) { const r = m.vrooms && m.vrooms[o.ri]; if (r && r.a > 0.01) { c.globalAlpha = 0.93 * r.a; c.drawImage(o.dk.pg, o.dk.x, o.dk.y, o.w, o.h, X, Y, o.w * Z, o.h * Z); c.globalAlpha = 1; } }
+    for (const [mk, ri] of [[o.dkS, o.riS], [o.dkE, o.riE]]) {
+      if (!mk || ri == null || ri < 0) continue; const r = m.vrooms && m.vrooms[ri]; if (!r || r.a <= 0.01) continue;
+      c.globalAlpha = 0.93 * r.a; c.drawImage(mk.pg, mk.x, mk.y, mk.w, mk.h, X + mk.dx * Z, Y + mk.dy * Z, mk.w * Z, mk.h * Z); c.globalAlpha = 1;
+    }
   };
   list.forEach(e => { if (e.o) drawO(ctx, e.o); else stand(ctx, e); });
   // la partie cachée d'un personnage : une silhouette plus sombre que le mur
@@ -12137,7 +12169,7 @@ const Input = {
 // ================= INTERFACE =================
 const $ = id => document.getElementById(id);
 // ---------- recharger le jeu (pratique quand il est épinglé comme une app sur iPad : pas de bouton du navigateur) ----------
-const GAME_BUILD = '17 nov. · 16h47';
+const GAME_BUILD = '17 nov. · 16h54';
 function refreshGame() {
   try { sessionStorage.setItem('nds_refresh', '1'); } catch (e) { }
   $('tVer').textContent = '⏳ Rechargement…'; try { AU.sfx('blip'); } catch (e) { }
