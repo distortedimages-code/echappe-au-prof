@@ -570,7 +570,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
         <button class="tile tSquish" id="bSquish"><canvas data-ill="squish" width="88" height="56"></canvas><span class="tl"><b>Squishies</b><small id="tSqN">Ta collection</small></span></button>
         <button class="tile tSave tIso" id="bIso"><span class="sv">🧊</span><span class="tl"><b>Isométrique</b><small>Essai : vue façon années 90</small></span></button>
         <button class="tile tSave" id="bSave"><span class="sv">💾</span><span class="tl"><b>Sauvegarde</b><small>Un code pour garder tes squishies</small></span></button>
-        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 17 nov. · 15h30</small></span></button>
+        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 17 nov. · 16h26</small></span></button>
       </div>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
@@ -8190,7 +8190,7 @@ function startLevel(idx, cfg, setup, opts) {
   let L = seed != null ? buildProcLevel(idx, seed) : null;
   window.ISO_GEN = false;
   if (!L) L = finalizeLevel(def.build());
-  G.iso = !!window.ISO_NEXT; window.ISO_NEXT = false; ISO.built = null; ISO.cam = null;
+  G.iso = !!window.ISO_NEXT; window.ISO_NEXT = false; ISO.cam = null; if (ISO.pages.length || ISO.floor) isoFree(); ISO.built = null;
   L.def = def; G.seed = L.seed != null ? L.seed : null; G.net = null; G.inf = null; G.alarmFlash = false; G.appleId = 0; G.alarmT = 0; G.pVis = true;
   G.L = L; G.m = L.m; G.lvl = idx; G.lessons = 0; G.time = 0; RPS.reset(); G.spotted = 0; G.reveal = 0; G.slowT = 0; G.shake = 0; G.found = 0; G.petFound = false; G.cls = null; G.power = null; G.dark = false; G.P2 = null; G.T2 = null; G.cc = null; G.ccMe = null; G.doorSync = null;
   G.cues = []; G.parts = []; G.apples = []; G.searched = new Set(); G.intercomT = 24; G.kidCueT = 3; G.smallDoorTip = false; G.banner = null; G.heartT = 0;
@@ -10417,7 +10417,7 @@ const RPS = {
 //  - rien n'est dessiné sur les faces qu'on ne voit jamais (nord et ouest)
 // La logique du jeu (cases, collisions, regards, cachettes) ne change pas : seul l'affichage change.
 // Le décor fixe est préparé une seule fois ; à chaque image on ne fait que recopier des petites images.
-const ISO = { LV: 2, u: 2, C: Math.SQRT1_2, ZK: 0.82, HW: 24, TH: 4, built: null, cam: null, objs: [], doorCache: new Map(), tmp: [], ox: 0, oy: 0 };
+const ISO = { LV: 2, u: 2, C: Math.SQRT1_2, ZK: 0.82, HW: 24, TH: 4, built: null, cam: null, objs: [], doorCache: new Map(), tmp: [], ox: 0, oy: 0, pages: [], at: {}, scr: {} };
 const isoOn = () => !!(G.iso && !G.inf && !G.net && G.m);
 function isoP(x, y, z) { const u = ISO.u * ISO.C; return [(x - y) * u + ISO.ox, (x + y) * u * 0.5 - (z || 0) * ISO.u * ISO.ZK + ISO.oy]; }
 
@@ -10435,20 +10435,49 @@ function isoBox(c, Pl, x0, y0, z0, x1, y1, z1, st) {
   face(st.south, Pl(x0, y1, z1), Pl(x1, y1, z1), Pl(x0, y1, z0), Pl(x1, y1, z0));
   face(st.top, Pl(x0, y0, z1), Pl(x1, y0, z1), Pl(x0, y1, z1), Pl(x1, y1, z1));
 }
-// un objet du décor = une petite image prête à recopier, avec sa profondeur (key) pour l'ordre de dessin
+// Mémoire : sur iPhone, chaque canvas coûte cher, et au-delà d'une limite le navigateur refuse d'en créer
+// (c'est ce qui cassait le sprite du joueur). Donc : tous les objets du décor sont rangés dans quelques grandes
+// planches (atlas), et les dessins intermédiaires se font sur une poignée de brouillons réutilisés.
+function isoScratch(name, w, h) {
+  let s = ISO.scr[name];
+  if (!s) { const [cv, c] = mkCanvas(Math.max(64, w), Math.max(64, h)); s = ISO.scr[name] = { cv, c }; }
+  if (s.cv.width < w || s.cv.height < h) { s.cv.width = Math.max(s.cv.width, w); s.cv.height = Math.max(s.cv.height, h); s.c = s.cv.getContext('2d'); }
+  const c = s.c; c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, s.cv.width, s.cv.height); c.imageSmoothingEnabled = false;
+  return [s.cv, c];
+}
+function isoAlloc(w, h) {
+  const A = ISO.at, P = 2, S = 1024;
+  if (A.pg && A.x + w + P > S) { A.x = P; A.y += A.rowH + P; A.rowH = 0; }
+  if (!A.pg || A.y + h + P > S) { const [cv, c] = mkCanvas(S, S); c.imageSmoothingEnabled = false; ISO.pages.push(cv); A.pg = cv; A.c = c; A.x = P; A.y = P; A.rowH = 0; }
+  const r = { pg: A.pg, x: A.x, y: A.y, c: A.c }; A.x += w + P; A.rowH = Math.max(A.rowH, h); return r;
+}
+function isoFree() {
+  ISO.pages.forEach(cv => { cv.width = 0; cv.height = 0; }); ISO.pages = []; ISO.at = {};
+  Object.values(ISO.scr).forEach(s => { s.cv.width = 0; s.cv.height = 0; }); ISO.scr = {};
+  ISO.tmp.forEach(cv => { cv.width = 0; cv.height = 0; }); ISO.tmp = [];
+  if (ISO.floor) { ISO.floor.width = 0; ISO.floor.height = 0; } ISO.floor = null;
+  ISO.objs = []; ISO.doorCache.clear(); ISO.built = null;
+}
+// un objet du décor = un morceau de planche, avec sa profondeur (key) pour l'ordre de dessin
 function isoObj(x0, y0, z0, x1, y1, z1, draw, key, extra) {
   let mnx = 1e9, mny = 1e9, mxx = -1e9, mxy = -1e9;
   for (const x of [x0, x1]) for (const y of [y0, y1]) for (const z of [z0, z1]) { const [a, b] = isoP(x, y, z); mnx = Math.min(mnx, a); mny = Math.min(mny, b); mxx = Math.max(mxx, a); mxy = Math.max(mxy, b); }
   const sx = Math.floor(mnx) - 1, sy = Math.floor(mny) - 1, w = Math.ceil(mxx) - sx + 2, h = Math.ceil(mxy) - sy + 2;
-  const [cv, c] = mkCanvas(w, h); c.imageSmoothingEnabled = false;
+  const [sc, c] = isoScratch('obj', w, h);
   draw(c, (x, y, z) => { const [a, b] = isoP(x, y, z); return [a - sx, b - sy]; });
-  return Object.assign({ sx, sy, w, h, cv, key, ri: -1 }, extra || {});
+  const r = isoAlloc(w, h); r.c.drawImage(sc, 0, 0, w, h, r.x, r.y, w, h);
+  return Object.assign({ sx, sy, w, h, pg: r.pg, px: r.x, py: r.y, key, ri: -1 }, extra || {});
 }
-function isoDark(o) { const [cv, c] = mkCanvas(o.w, o.h); c.drawImage(o.cv, 0, 0); c.globalCompositeOperation = 'source-in'; c.fillStyle = 'rgb(14,8,34)'; c.fillRect(0, 0, o.w, o.h); o.dk = cv; }
-function isoArt(k, x, y) { const [cv, c] = mkCanvas(16, 16); try { drawFurniture(c, k, 0, 0, x, y, G.m, G.L); } catch (e) { } return cv; }
+function isoDark(o) {
+  const [sc, c] = isoScratch('dk', o.w, o.h); c.drawImage(o.pg, o.px, o.py, o.w, o.h, 0, 0, o.w, o.h);
+  c.globalCompositeOperation = 'source-in'; c.fillStyle = 'rgb(14,8,34)'; c.fillRect(0, 0, o.w, o.h); c.globalCompositeOperation = 'source-over';
+  const r = isoAlloc(o.w, o.h); r.c.drawImage(sc, 0, 0, o.w, o.h, r.x, r.y, o.w, o.h); o.dk = r;
+}
+function isoArt(k, x, y) { const [cv, c] = isoScratch('art', 16, 16); try { drawFurniture(c, k, 0, 0, x, y, G.m, G.L); } catch (e) { } return cv; }
 
 // ---------- préparation du niveau (une seule fois) ----------
 function isoBuild() {
+  isoFree();
   const m = G.m, L = G.L, HW = ISO.HW, T0 = 8 - ISO.TH / 2, T1 = 8 + ISO.TH / 2;
   ISO.ox = m.h * 16 * ISO.u * ISO.C + 8; ISO.oy = HW * ISO.u * ISO.ZK + 12;
   const FW = Math.ceil((m.w + m.h) * 16 * ISO.u * ISO.C) + 16, FH = Math.ceil((m.w + m.h) * 16 * ISO.u * ISO.C * 0.5 + ISO.oy + 16);
@@ -10471,14 +10500,14 @@ function isoBuild() {
   try { floorDetails(fc, m); m.fdecor.forEach(d => drawFloorDecor(fc, d)); } catch (e) { }
   const shadow = (x0, y0, x1, y1, a) => { fc.fillStyle = `rgba(10,6,20,${a})`; fc.fillRect(x0 - 1.5, y0 - 1, x1 - x0 + 3, y1 - y0 + 2.5); };
   // 2) les murs fins : une « croix » par case de mur, reliée à ses voisins
-  const faceTex = (x, y, art, feature) => {   // texture d'une face de mur (16 de large × HW de haut)
-    const S = WSTYLE[m.ws[y * m.w + x]] || WSTYLE[0], [cv, c] = mkCanvas(16, HW);
+  const faceTex = (slot, x, y, art, feature) => {   // texture d'une face de mur (16 de large × HW de haut), sur un brouillon
+    const S = WSTYLE[m.ws[y * m.w + x]] || WSTYLE[0], [cv, c] = isoScratch(slot, 16, HW);
     c.fillStyle = S.face; c.fillRect(0, 0, 16, HW); c.fillStyle = S.trim; c.fillRect(0, 0, 16, 1);
-    const src = art || (() => { const [t, tc] = mkCanvas(16, 16); drawWallTile(tc, 0, 0, m.ws[y * m.w + x], true, x, y); return t; })();
+    const src = art || (() => { const [t, tc] = isoScratch('wt', 16, 16); drawWallTile(tc, 0, 0, m.ws[y * m.w + x], true, x, y); return t; })();
     const r0 = feature ? 1 : 3; c.drawImage(src, 0, r0, 16, 16 - r0, 0, HW - (16 - r0), 16, 16 - r0);
     return cv;
   };
-  const crop = (x, y) => { const [t, tc] = mkCanvas(16, 16); tc.drawImage(G.mapCanvas, x * 16, y * 16, 16, 16, 0, 0, 16, 16); return t; };
+  const crop = (x, y) => { const [t, tc] = isoScratch('crop', 16, 16); tc.drawImage(G.mapCanvas, x * 16, y * 16, 16, 16, 0, 0, 16, 16); return t; };
   const isFeat = k => k === K.X_WINDOW || k === K.X_DOOR || k === K.X_ELEV || k === K.X_HOLE;
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
     if (wk(x, y) !== 1) continue;
@@ -10488,8 +10517,8 @@ function isoBuild() {
     // face sud (vue depuis le sud) et face est : on y met le décor du mur s'il est tourné de ce côté
     const sOpen = open(x, y + 1) || !inB(x, y + 1), eOpen = open(x + 1, y) || !inB(x + 1, y);
     const lockS = k === K.LOCKER && open(x, y + 1), lockE = k === K.LOCKER && !lockS && open(x + 1, y);
-    const texS = horiz ? faceTex(x, y, isFeat(k) || (open(x, y + 1) && k !== K.LOCKER) ? crop(x, y) : null, isFeat(k) && !vert) : null;
-    const texE = vert ? faceTex(x, y, isFeat(k) && !horiz ? crop(x, y) : null, isFeat(k)) : null;
+    const texS = horiz ? faceTex('texS', x, y, isFeat(k) || (open(x, y + 1) && k !== K.LOCKER) ? crop(x, y) : null, isFeat(k) && !vert) : null;
+    const texE = vert ? faceTex('texE', x, y, isFeat(k) && !horiz ? crop(x, y) : null, isFeat(k)) : null;
     const top = S.top, cap = shade(S.face, -0.35), capS = shade(S.face, -0.2);
     const lc = (L && L.lockerCol) || '#4f7fc0';
     // (chaque morceau déborde un peu sur son voisin : pas de fente entre deux morceaux de mur)
@@ -10526,7 +10555,8 @@ function isoBuild() {
   // le sol couché en losanges
   const [flc, flx] = mkCanvas(FW, FH); flx.imageSmoothingEnabled = false;
   flx.setTransform(ISO.u * ISO.C, ISO.u * ISO.C * 0.5, -ISO.u * ISO.C, ISO.u * ISO.C * 0.5, ISO.ox, ISO.oy); flx.drawImage(fcv, 0, 0);
-  ISO.floor = flc; ISO.objs = objs; ISO.built = m; ISO.doorCache.clear();
+  fcv.width = 0; fcv.height = 0;   // le sol vu de dessus ne sert plus : on rend la mémoire tout de suite
+  ISO.floor = flc; ISO.objs = objs; ISO.built = m;
 }
 
 // ---------- les meubles en volume ----------
@@ -10622,20 +10652,21 @@ function isoFurn(k, x, y, m, L, wk, shadow) {
   }
   if (!(KP[k] && KP[k].solid)) return null;
   // les autres : plantes, poubelles… debout comme les personnages (même échelle) ; sinon une boîte texturée
-  const [acv, ac] = mkCanvas(32, 44); try { drawFurniture(ac, k, 8, 24, x, y, m, L); } catch (e) { }
+  const [acv, ac] = isoScratch('fb', 32, 44); try { drawFurniture(ac, k, 8, 24, x, y, m, L); } catch (e) { }
   const d = ac.getImageData(8, 24, 16, 16).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 100) n++;
   if (n / 256 > 0.78 && !FRONT_KINDS[k]) {
     sh(0, 0, 16, 16, 0.18); const tall = TALL_KINDS.has(k), H = tall ? 22 : 8;
     return O(0, 0, 0, 16, 16, H, (c, Pl) => isoBox(c, Pl, 0, 0, 0, 16, 16, H, { top: [acv, 8, 24, 16, tall ? 6 : 10], south: tall ? [acv, 8, 24, 16, 16] : [acv, 8, 34, 16, 6], east: shade('#7a6a8a', -0.2) }));
   }
   sh(4, 10, 12, 15, 0.16);
-  const q = 0.92 * ISO.u, [px, py] = isoP(X + 8, Y + 13), [cv, c] = mkCanvas(Math.ceil(32 * q), Math.ceil(44 * q)); c.imageSmoothingEnabled = false; c.drawImage(acv, 0, 0, 32 * q, 44 * q);
-  return { sx: px - 16 * q, sy: py - 37 * q, w: cv.width, h: cv.height, cv, key: key + 3, ri: -1 };
+  const q = 0.92 * ISO.u, [px, py] = isoP(X + 8, Y + 13), w = Math.ceil(32 * q), hh = Math.ceil(44 * q), slot = isoAlloc(w, hh);
+  slot.c.drawImage(acv, 0, 0, 32, 44, slot.x, slot.y, 32 * q, 44 * q);
+  return { sx: px - 16 * q, sy: py - 37 * q, w, h: hh, pg: slot.pg, px: slot.x, py: slot.y, key: key + 3, ri: -1 };
 }
 
 // ---------- les portes : jusqu'en haut du mur, fermées, ouvertes ou verrouillées ----------
 function isoDoorArt(locked) {
-  const H = ISO.HW - 4, [cv, c] = mkCanvas(12, H), R = (a, b, w, h, col) => { c.fillStyle = col; c.fillRect(a, b, w, h); };
+  const H = ISO.HW - 4, [cv, c] = isoScratch('door', 12, H), R = (a, b, w, h, col) => { c.fillStyle = col; c.fillRect(a, b, w, h); };
   R(0, 0, 12, H, '#4a2a14'); R(1, 1, 10, H - 1, '#a8703a'); R(1, 1, 10, 1, '#c99260');
   R(2, 3, 8, 7, '#6b4220'); R(2, 12, 8, H - 15, '#6b4220'); R(3, 4, 6, 1, '#8b5a33'); R(3, 13, 6, 1, '#8b5a33');
   R(9, Math.round(H * 0.5), 1.5, 2, '#ffd23f');
@@ -10664,7 +10695,7 @@ function isoDoor(d) {
     const [ax, ay] = isoP(0, 0); o.ax = ax; o.ay = ay; ISO.doorCache.set(kk, o);
   }
   const [bx, by] = isoP(d.x * 16, d.y * 16);
-  return { sx: o.sx + bx - o.ax, sy: o.sy + by - o.ay, w: o.w, h: o.h, cv: o.cv, key: d.x * 16 + d.y * 16 + 16, ri: -1, wall: true };
+  return { sx: o.sx + bx - o.ax, sy: o.sy + by - o.ay, w: o.w, h: o.h, pg: o.pg, px: o.px, py: o.py, key: d.x * 16 + d.y * 16 + 16, ri: -1, wall: true };
 }
 
 // ---------- commandes : « haut » sur le joystick = « haut » à l'écran ----------
@@ -10722,7 +10753,7 @@ function renderIso(dt) {
   G.doors.forEach(d => { const o = isoDoor(d); if (vis(o)) list.push({ key: o.key, o }); });
   const scr = (x, y) => { const [a, b] = isoP(x, y); return [a * Z + offX, b * Z + offY]; };
   const act = (a, key, fn, sil) => { const [X, Y] = scr(a.x, a.y); if (X < -200 || X > W + 200 || Y < -300 || Y > H + 300) return; list.push({ key, a, fn, sil, X, Y }); };
-  const stand = (c, e, ox, oy) => { const a = e.a; c.setTransform(sp, 0, 0, sp, e.X - (ox || 0) - a.x * sp, e.Y - (oy || 0) - a.y * sp); const f0 = a.face; if (e.sil) a.face = isoFace(a); try { e.fn(c); } finally { a.face = f0; } c.setTransform(1, 0, 0, 1, 0, 0); };
+  const stand = (c, e, ox, oy, k) => { const a = e.a, q = k || 1; c.setTransform(sp * q, 0, 0, sp * q, (e.X - (ox || 0)) * q - a.x * sp * q, (e.Y - (oy || 0)) * q - a.y * sp * q); const f0 = a.face; if (e.sil) a.face = isoFace(a); try { e.fn(c); } finally { a.face = f0; } c.setTransform(1, 0, 0, 1, 0, 0); };
   G.items.forEach(it => act(it, it.x + it.y + 2, c => drawItemW(c, it)));
   (G.m.junk || []).forEach(j => act(j, (j.head ? j.head.x + j.head.y : j.x + j.y) + 1, c => drawJunk(c, j)));
   G.apples.forEach(ap => act(ap, ap.x + ap.y + 2, c => { const w = Math.sin(G.time * 4) * 0.12; c.translate(ap.x, ap.y - 6); c.rotate(w); c.drawImage(itemCanvas('apple'), -7, -7); }));
@@ -10761,11 +10792,12 @@ function renderIso(dt) {
   if (P.hidden && viewerA() === P) { const hs = P.hidden; act({ x: hs.x * 16 + 8, y: hs.y * 16 + 22 }, hs.x * 16 + hs.y * 16 + 40, c => drawEyes(c, hs)); }
   list.sort((a, b) => a.key - b.key);
   // on dessine ; on retient où sont les personnages pour leur silhouette derrière les murs
-  const drawO = (c, o, ox, oy) => {
+  const drawO = (c, o, ox, oy, k) => {
     let jx = 0; if (o.hide && o.hide.shake > 0) jx = Math.sin(G.time * 60) * (o.hide.shake > 0.1 ? 1.2 : 0.7) * ISO.u;
-    const X = (o.sx + jx) * Z + offX - (ox || 0), Y = o.sy * Z + offY - (oy || 0);
-    c.drawImage(o.cv, X, Y, o.w * Z, o.h * Z);
-    if (o.dk) { const r = m.vrooms && m.vrooms[o.ri]; if (r && r.a > 0.01) { c.globalAlpha = 0.93 * r.a; c.drawImage(o.dk, X, Y, o.w * Z, o.h * Z); c.globalAlpha = 1; } }
+    const q = k || 1, X = ((o.sx + jx) * Z + offX - (ox || 0)) * q, Y = (o.sy * Z + offY - (oy || 0)) * q;
+    c.drawImage(o.pg, o.px, o.py, o.w, o.h, X, Y, o.w * Z * q, o.h * Z * q);
+    if (k) return;
+    if (o.dk) { const r = m.vrooms && m.vrooms[o.ri]; if (r && r.a > 0.01) { c.globalAlpha = 0.93 * r.a; c.drawImage(o.dk.pg, o.dk.x, o.dk.y, o.w, o.h, X, Y, o.w * Z, o.h * Z); c.globalAlpha = 1; } }
   };
   list.forEach(e => { if (e.o) drawO(ctx, e.o); else stand(ctx, e); });
   // la partie cachée d'un personnage : une silhouette plus sombre que le mur
@@ -10774,13 +10806,15 @@ function renderIso(dt) {
     const bx0 = Math.floor(e.X - 18 * sp), by0 = Math.floor(e.Y - 54 * sp), bw = Math.ceil(36 * sp), bh = Math.ceil(62 * sp);
     const occ = []; for (let j = i + 1; j < list.length; j++) { const o = list[j].o; if (!o) continue; const X = o.sx * Z + offX, Y = o.sy * Z + offY; if (X < bx0 + bw && X + o.w * Z > bx0 && Y < by0 + bh && Y + o.h * Z > by0) occ.push(o); }
     if (!occ.length) return;
-    const tA = isoTmp(0, bw, bh), tB = isoTmp(1, bw, bh), cA = tA.getContext('2d'), cB = tB.getContext('2d');
-    cA.setTransform(1, 0, 0, 1, 0, 0); cA.globalCompositeOperation = 'source-over'; cA.clearRect(0, 0, bw, bh); cA.imageSmoothingEnabled = false;
-    stand(cA, e, bx0, by0);
-    cA.globalCompositeOperation = 'source-in'; cA.fillStyle = '#120a22'; cA.fillRect(0, 0, bw, bh);
-    cB.setTransform(1, 0, 0, 1, 0, 0); cB.clearRect(0, 0, bw, bh); cB.imageSmoothingEnabled = false; occ.forEach(o => drawO(cB, o, bx0, by0));
+    // (calculée en demi-résolution : une ombre n'a pas besoin de détails, et c'est 4 fois moins de travail)
+    const k = 0.5, hw = Math.ceil(bw * k), hh = Math.ceil(bh * k);
+    const tA = isoTmp(0, hw, hh), tB = isoTmp(1, hw, hh), cA = tA.getContext('2d'), cB = tB.getContext('2d');
+    cA.setTransform(1, 0, 0, 1, 0, 0); cA.globalCompositeOperation = 'source-over'; cA.clearRect(0, 0, hw, hh); cA.imageSmoothingEnabled = false;
+    stand(cA, e, bx0, by0, k);
+    cA.setTransform(1, 0, 0, 1, 0, 0); cA.globalCompositeOperation = 'source-in'; cA.fillStyle = '#120a22'; cA.fillRect(0, 0, hw, hh);
+    cB.setTransform(1, 0, 0, 1, 0, 0); cB.clearRect(0, 0, hw, hh); cB.imageSmoothingEnabled = false; occ.forEach(o => drawO(cB, o, bx0, by0, k));
     cA.globalCompositeOperation = 'destination-in'; cA.drawImage(tB, 0, 0); cA.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 0.6; ctx.drawImage(tA, 0, 0, bw, bh, bx0, by0, bw, bh); ctx.globalAlpha = 1;
+    ctx.globalAlpha = 0.6; ctx.drawImage(tA, 0, 0, hw, hh, bx0, by0, hw / k, hh / k); ctx.globalAlpha = 1;
   });
   // 4) particules, interface
   drawParts(ctx, { x0: ISO.cam[0] - 600, y0: ISO.cam[1] - 600, x1: ISO.cam[0] + 600, y1: ISO.cam[1] + 600, t: (c, x, y) => { const [X, Y] = scr(x, y); c.setTransform(sp, 0, 0, sp, X - x * sp, Y - y * sp); } });
@@ -12075,7 +12109,7 @@ const Input = {
 // ================= INTERFACE =================
 const $ = id => document.getElementById(id);
 // ---------- recharger le jeu (pratique quand il est épinglé comme une app sur iPad : pas de bouton du navigateur) ----------
-const GAME_BUILD = '17 nov. · 15h30';
+const GAME_BUILD = '17 nov. · 16h26';
 function refreshGame() {
   try { sessionStorage.setItem('nds_refresh', '1'); } catch (e) { }
   $('tVer').textContent = '⏳ Rechargement…'; try { AU.sfx('blip'); } catch (e) { }
