@@ -245,10 +245,11 @@ function drawEyes(c, s) {
   c.fillRect(px - 3 + look * 0.8, py, 1, 1.6); c.fillRect(px + 2 + look * 0.8, py, 1, 1.6);
   if (near) { c.fillStyle = '#7fd0ff'; c.fillRect(px + 5, py - 3 + ((G.time * 3) % 1) * 3, 1, 2); }
 }
-function drawParts(c) {
-  const x0 = V.camX - 20, y0 = V.camY - 20, x1 = V.camX + V.lw + 20, y1 = V.camY + V.lh + 20;
+function drawParts(c, iso) {
+  const x0 = iso ? iso.x0 : V.camX - 20, y0 = iso ? iso.y0 : V.camY - 20, x1 = iso ? iso.x1 : V.camX + V.lw + 20, y1 = iso ? iso.y1 : V.camY + V.lh + 20;
   for (const p of G.parts) {
     const x = p.x, y = p.y; if (x < x0 || x > x1 || y < y0 || y > y1) continue;   // hors de l'écran
+    if (iso) iso.t(c, x, y);   // vue iso : chaque particule à sa place
     const a = 1 - p.t / p.life; c.globalAlpha = Math.max(0, a); c.fillStyle = p.col;
     switch (p.type) {
       case 'puff': { const s = p.size * (1 + p.t / p.life * 1.8); c.beginPath(); c.arc(x, y, s * 0.7, 0, 7); c.fill(); break; }
@@ -397,6 +398,7 @@ function drawStairsSigns(c) {
   });
 }
 function renderGame(dt) {
+  if (isoOn()) return renderIso(dt);
   const { lx, lw, lh, ctx, S } = V, P = G.P, T = G.T;
   updateCamera(dt || 0.016);
   const ci = Math.floor(G.camX), cj = Math.floor(G.camY); V.camX = ci; V.camY = cj;
@@ -582,21 +584,21 @@ function drawPartnerHint(c, d) {
   const qn = Q.cfg ? Q.cfg.name : Q.prof ? Q.prof.name : '';
   const pg = I.ping;
   if (pg && pg.fl === I.cur && pg.t < 6 && pg.x >= 0) {
-    const [sx, sy] = toScreen(pg.x, pg.y - 10), [cx, cy, off] = clampEdge(sx, sy), al = clamp(1 - pg.t / 6, 0.3, 1), pul = 1 + Math.sin(G.time * 8) * 0.15;
+    const [sx, sy] = toScreen(pg.x, pg.y, 10), [cx, cy, off] = clampEdge(sx, sy), al = clamp(1 - pg.t / 6, 0.3, 1), pul = 1 + Math.sin(G.time * 8) * 0.15;
     c.globalAlpha = al;
     if (off) { const an = Math.atan2(sy - cy, sx - cx); drawArrow(c, cx, cy, an, '#3fc8ff', 7 * d); txt(c, '📍', cx - Math.cos(an) * 15 * d, cy - Math.sin(an) * 15 * d, Math.round(12 * d), '#fff'); }
     else { c.strokeStyle = '#3fc8ff'; c.lineWidth = 3 * d; c.beginPath(); c.arc(sx, sy, 16 * d * pul, 0, 7); c.stroke(); txt(c, '📍', sx, sy - 24 * d, Math.round(13 * d), '#fff'); }
     c.globalAlpha = 1;
   }
   if (Q.out || Q.x < -9000) return;
-  const [sx, sy] = toScreen(Q.x, Q.y - 14), [cx, cy, off] = clampEdge(sx, sy);
+  const [sx, sy] = toScreen(Q.x, Q.y, 14), [cx, cy, off] = clampEdge(sx, sy);
   if (!off) return;
   const an = Math.atan2(sy - cy, sx - cx);
   c.globalAlpha = 0.85; drawArrow(c, cx, cy, an, '#7ff0ff', 6 * d);
   txt(c, (Q.jail ? '🔒' : '🤝') + ' ' + (qn || ''), cx - Math.cos(an) * 26 * d, cy - Math.sin(an) * 16 * d, Math.round(8 * d), '#7ff0ff');
   c.globalAlpha = 1;
 }
-function toScreen(wx, wy) { return [wx * V.a + V.e, wy * V.a + V.f]; }
+function toScreen(wx, wy, h) { if (isoOn() && ISO.Z) return isoScreen(wx, wy, h); return [wx * V.a + V.e, (wy - (h || 0)) * V.a + V.f]; }
 function clampEdge(sx, sy) { const e = screenEdges(); const cx = clamp(sx, e.l, e.r), cy = clamp(sy, e.t, e.b); return [cx, cy, cx !== sx || cy !== sy]; }
 function drawArrow(c, x, y, ang, col, size) {
   c.save(); c.translate(x, y); c.rotate(ang); const p = 1 + Math.sin(G.time * 10) * 0.12; c.scale(p, p); c.fillStyle = col; c.strokeStyle = '#1a1028'; c.lineWidth = size / 4;
@@ -652,7 +654,7 @@ function drawOverlay() {
     c.globalAlpha = 1;
   }
   // icônes au-dessus du prof
-  const [tsx, tsy] = toScreen(T.x, T.y - 36 - (T.hz || 0));
+  const [tsx, tsy] = toScreen(T.x, T.y, 36 + (T.hz || 0));
   const seeT = G.tVis || G.reveal > 0 || G.mode === 'caught';
   if (seeT && T.markT > 0 && T.mark) {
     const s = popScale(T.markA || 0);
@@ -675,7 +677,7 @@ function drawOverlay() {
     for (let i = 0; i < 4; i++) { const a = G.time * 5 + i * Math.PI / 2, x = tsx + Math.cos(a) * 13 * d, y = tsy + 4 * d + Math.sin(a) * 4 * d; txt(c, i % 2 ? '💫' : '⭐', x, y, Math.round((Math.sin(a) > 0 ? 9 : 7) * d), '#ffd23f'); }
   }
   if (G.inf && G.mode === 'play' && G.time < 6 && !P.hidden && viewerA() === P) { // « toi » au début
-    const [qx, qy] = toScreen(P.x, P.y - 40), bob = Math.sin(G.time * 7) * 3 * d;
+    const [qx, qy] = toScreen(P.x, P.y, 40), bob = Math.sin(G.time * 7) * 3 * d;
     txt(c, '▼', qx, qy + bob, Math.round(12 * d), '#3fd06a'); txt(c, 'TOI', qx, qy - 13 * d + bob, Math.round(8 * d), '#ffffff');
   }
   // bulles des élèves (« C'est pas moi ! »)
@@ -683,7 +685,7 @@ function drawOverlay() {
     if (!k.bub || !k.vis) return;
     const b = k.bub, al = Math.min(1, (b.dur - b.t) * 4), sc = b.t < 0.16 ? easeOutBack(b.t / 0.16) : 1, F2 = Math.round(8 * d);
     c.font = F2 + 'px ' + FONT; const w = c.measureText(b.text).width + F2 * 1.4, h = F2 * 2;
-    let [bx, by] = toScreen(k.x, k.y - 36); by -= h / 2;
+    let [bx, by] = toScreen(k.x, k.y, 36); by -= h / 2;
     c.save(); c.translate(bx, by); c.scale(sc, sc); c.globalAlpha = al;
     c.fillStyle = '#ffffff'; c.strokeStyle = '#1a1028'; c.lineWidth = 2 * d; rrect(c, -w / 2, -h / 2, w, h, 6 * d); c.fill(); c.stroke();
     c.beginPath(); c.moveTo(-4 * d, h / 2 - 1); c.lineTo(0, h / 2 + 6 * d); c.lineTo(4 * d, h / 2 - 1); c.fill();
@@ -695,7 +697,7 @@ function drawOverlay() {
   if (G.inf && (G.inf.coop || G.inf.guard) && G.mode === 'play') drawPartnerHint(c, d);
   // signalement d'un prof (surveillant en multi)
   if (G.inf && G.inf.multi && G.inf.role === 'teacher' && G.inf.ping && G.inf.ping.fl === G.inf.cur && G.inf.ping.t < 10 && G.mode === 'play') {
-    const pg = G.inf.ping; let [sx, sy] = toScreen(pg.x, pg.y - 8); const [cx, cy, off] = clampEdge(sx, sy), pul = 1 + Math.sin(G.time * 8) * 0.15, al = clamp(1 - pg.t / 10, 0.25, 1);
+    const pg = G.inf.ping; let [sx, sy] = toScreen(pg.x, pg.y, 8); const [cx, cy, off] = clampEdge(sx, sy), pul = 1 + Math.sin(G.time * 8) * 0.15, al = clamp(1 - pg.t / 10, 0.25, 1);
     c.globalAlpha = al;
     if (off) { const an = Math.atan2(sy - cy, sx - cx); drawArrow(c, cx, cy, an, '#e43b44', 7 * d); txt(c, '❗', cx - Math.cos(an) * 15 * d, cy - Math.sin(an) * 15 * d, Math.round(12 * d), '#fff'); }
     else { c.strokeStyle = '#e43b44'; c.lineWidth = 3 * d; c.beginPath(); c.arc(sx, sy, 18 * d * pul, 0, 7); c.stroke(); txt(c, '❗', sx, sy - 26 * d, Math.round(12 * d), '#fff'); }
@@ -705,7 +707,7 @@ function drawOverlay() {
   if (viewerA() === P && G.tasks && G.mode === 'play' && !P.taskOpen) {
     G.tasks.forEach((t, i) => {
       if (t.done) return;
-      let [sx, sy] = toScreen(t.x * 16 + 8, t.y * 16 - 2); const [cx, cy, off] = clampEdge(sx, sy);
+      let [sx, sy] = toScreen(t.x * 16 + 8, t.y * 16 + 12, 14); const [cx, cy, off] = clampEdge(sx, sy);
       const bob = Math.sin(G.time * 4 + i) * 3 * d, pulse = 1 + Math.sin(G.time * 6 + i) * 0.08;
       if (off) {
         const an = Math.atan2(sy - cy, sx - cx), bx = cx - Math.cos(an) * 6 * d, by = cy - Math.sin(an) * 6 * d, r = 12 * d * pulse;
@@ -729,7 +731,7 @@ function drawOverlay() {
     if (!heard || dd < 20) {
       c.font = F + 'px ' + FONT;
       const e = screenEdges();
-      const [ax, ay] = toScreen(T.x, T.y - 40 - (T.hz || 0));
+      const [ax, ay] = toScreen(T.x, T.y, 40 + (T.hz || 0));
       const onScr = !heard && ax > e.l && ax < e.r && ay > e.t + 10 * d && ay < e.b;
       // hors écran : bulle plus étroite, pour qu'elle puisse vraiment coller au bord du côté du prof
       const maxW = onScr ? Math.min(V.W * 0.62, 230 * d) : Math.min((e.r - e.l) * 0.44, 170 * d);
@@ -759,13 +761,13 @@ function drawOverlay() {
   // repère du joueur
   const VA = viewerA();
   if (!VA.hidden && !VA.busy && G.mode === 'play') {
-    const [px, py] = toScreen(VA.x, VA.y - (VA.small > 0 ? 20 : VA === T ? 42 : 38) - (VA.hz || 0)), b = Math.abs(Math.sin(G.time * 4)) * 3 * d, s = 5 * d;
+    const [px, py] = toScreen(VA.x, VA.y, (VA.small > 0 ? 20 : VA === T ? 42 : 38) + (VA.hz || 0)), b = Math.abs(Math.sin(G.time * 4)) * 3 * d, s = 5 * d;
     c.fillStyle = '#ffd23f'; c.strokeStyle = '#1a1028'; c.lineWidth = 2 * d;
     c.beginPath(); c.moveTo(px - s, py - s - b); c.lineTo(px + s, py - s - b); c.lineTo(px, py - b); c.closePath(); c.stroke(); c.fill();
   }
   // barre de progression
   if (VA.busy && !VA.hidden) {
-    const [px, py] = toScreen(VA.x, VA.y - 32), w = 44 * d, h = 8 * d, p = clamp(VA.busy.t / VA.busy.dur, 0, 1);
+    const [px, py] = toScreen(VA.x, VA.y, 32), w = 44 * d, h = 8 * d, p = clamp(VA.busy.t / VA.busy.dur, 0, 1);
     c.fillStyle = '#1a1028'; rrect(c, px - w / 2 - 3 * d, py - 3 * d, w + 6 * d, h + 6 * d, 4 * d); c.fill();
     c.fillStyle = '#3a2a5a'; c.fillRect(px - w / 2, py, w, h);
     const g = c.createLinearGradient(px - w / 2, 0, px + w / 2, 0); g.addColorStop(0, '#63c74d'); g.addColorStop(1, '#b8f060'); c.fillStyle = g; c.fillRect(px - w / 2, py, w * p, h);
@@ -830,7 +832,7 @@ function drawPost() {
   // transition en iris
   if (FX.iris) {
     const ir = FX.iris, t = clamp(ir.t / ir.dur, 0, 1), e = t * t * (3 - 2 * t), maxR = Math.hypot(W, H);
-    const [ix, iy] = ir.wx != null ? toScreen(ir.wx, ir.wy) : toScreen(G.P.x, G.P.y - 10);
+    const [ix, iy] = ir.wx != null ? toScreen(ir.wx, ir.wy) : toScreen(G.P.x, G.P.y, 10);
     const r = ir.mode === 'in' ? e * maxR : (1 - e) * maxR;
     c.fillStyle = '#0b0616'; c.beginPath(); c.rect(0, 0, W, H); c.arc(ix, iy, Math.max(0, r), 0, Math.PI * 2, true); c.fill('evenodd');
     if (r > 4) { c.strokeStyle = '#ffd23f'; c.lineWidth = 4 * d; c.beginPath(); c.arc(ix, iy, r, 0, 7); c.stroke(); }

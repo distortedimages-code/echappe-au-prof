@@ -448,7 +448,7 @@ function genIndoor(R, S) {
   const lockerRun = (pts) => { if (S.noLockers) return; let run = 0; pts.forEach(([x, y, cx, cy]) => {
     const up = cy > y ? m.get(x, y - 1) : cy < y ? m.get(x, y + 1) : K.WALL;   // le haut du casier dépasse sur la case derrière le mur : elle doit être libre
     const okp = !decAt.has(y * W + x) && m.get(x, y) === K.WALL && m.get(cx, cy) === K.FLOOR && (cy === y || up === K.WALL || up === K.FLOOR) && ![[0, 0], ...D4, [1, 1], [-1, 1], [1, -1], [-1, -1]].some(([dx, dy]) => m.get(x + dx, y + dy) === K.DOOR || isExitK(m.get(x + dx, y + dy)));
-    if (!okp) { run = 0; return; }
+    if (!okp || (window.ISO_GEN && (cy < y || cx < x))) { run = 0; return; }
     if (run > 0) { m.set(x, y, K.LOCKER); run--; } else if (R.ch(0.16)) { run = R.i(1, 4); m.set(x, y, K.LOCKER); }
   }); };
   if (tpl === 'I') {

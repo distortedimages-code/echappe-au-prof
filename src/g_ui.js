@@ -7,7 +7,8 @@ const Input = {
     this.pid = null; this.pending = null; this.mag = 0; this.jx = this.jy = 0;
     if (this.joyEl) this.joyEl.classList.add('hidden');
   },
-  get() {
+  get() { const r = this.get0(); return isoOn() ? isoInput(r) : r; },
+  get0() {
     let x = 0, y = 0; const k = this.keys;
     if (k.ArrowLeft || k.KeyA || k.KeyQ) x -= 1; if (k.ArrowRight || k.KeyD) x += 1;
     if (k.ArrowUp || k.KeyW || k.KeyZ) y -= 1; if (k.ArrowDown || k.KeyS) y += 1;
@@ -183,7 +184,7 @@ const UI = {
     const tap = (id, f) => $(id).addEventListener('click', e => { AU.init(); AU.sfx('blip'); f(e); });
     tap('bPlay', () => { if (!this.chars.length) this.openCreator(-1, 'levels'); else this.openLevels(); });
     tap('bChars', () => this.openChars('title'));
-    tap('bSquish', () => SqAlbum.open('title')); tap('bQuiz', () => Quiz.open('hist')); tap('bQuizEn', () => Quiz.open('en')); tap('bGuard', () => Solo.levels()); tap('bRefresh', () => refreshGame()); tap('bSave', () => Save.open('title')); tap('bSqSave', () => Save.open('squish')); tap('bSqBack', () => this.openTitle());
+    tap('bSquish', () => SqAlbum.open('title')); tap('bQuiz', () => Quiz.open('hist')); tap('bQuizEn', () => Quiz.open('en')); tap('bGuard', () => Solo.levels()); tap('bRefresh', () => refreshGame()); tap('bSave', () => Save.open('title')); tap('bIso', () => this.launchIso()); tap('bSqSave', () => Save.open('squish')); tap('bSqBack', () => this.openTitle());
     tap('bMulti', () => Multi.open());
     tap('bInf', () => { AU.init(); if (!this.chars.length) this.openCreator(-1, 'inf'); else this.launchInf(); });
     tap('bPlan', () => this.openPlan());
@@ -220,7 +221,7 @@ const UI = {
   },
   waveTitle() { document.querySelectorAll('.logo span').forEach((sp, j) => { const t = sp.textContent; sp.innerHTML = [...t].map((ch, i) => `<i style="animation-delay:${(i * 0.08 + j * 0.3).toFixed(2)}s">${ch === ' ' ? '&nbsp;' : ch}</i>`).join(''); }); },
   syncTogs() { document.querySelectorAll('.tog').forEach(b => b.classList.toggle('off', !AU.set[b.dataset.k])); this.paintEasy($('bEasy')); this.paintEasy($('pEasy')); },
-  openTitle() { G.mode = 'menu'; this.show('sTitle'); AU.play('menu'); this.titleInfo(); },
+  openTitle() { this.isoMode = false; G.mode = 'menu'; this.show('sTitle'); AU.play('menu'); this.titleInfo(); },
   // les petits textes des tuiles du menu
   titleInfo() {
     { let fresh = false; try { fresh = sessionStorage.getItem('nds_refresh') === '1'; sessionStorage.removeItem('nds_refresh'); } catch (e) { } if (fresh) $('tVer').textContent = '✅ Rechargé · version du ' + GAME_BUILD; }
@@ -303,7 +304,7 @@ const UI = {
       b.innerHTML = `<canvas width="22" height="34"></canvas><div style="flex:1"><div class="ln">${L.bonus ? '🚌 SORTIE SCOLAIRE' : 'NIVEAU ' + (i + 1)}</div><div class="lt"></div><div class="lp"></div><div class="st">${lock ? '🔒' : '★'.repeat(st) + '<span style="opacity:.25">' + '★'.repeat(3 - st) + '</span>'}</div></div>`;
       b.querySelector('.lt').textContent = L.title; b.querySelector('.lp').textContent = pr.name + ', ' + pr.title;
       portrait(b.querySelector('canvas'), pr.cfg, pr.v, 1);
-      b.addEventListener('click', () => { AU.init(); if (lock) { AU.sfx('fail'); b.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], 200); return; } AU.sfx('blip'); this.launch(i); });
+      b.addEventListener('click', () => { AU.init(); if (lock) { AU.sfx('fail'); b.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], 200); return; } AU.sfx('blip'); this.isoMode = false; this.launch(i); });
       b.style.animationDelay = (i * 0.07) + 's'; list.appendChild(b);
     });
   },
@@ -357,10 +358,15 @@ const UI = {
     el.innerHTML = (calm ? `<div class="tl">⚠️${dots} · ${objs}</div>` : `<div class="hd">${head}</div><div class="tl">${objs}</div>`) + (Q ? `<div class="tl">🤝 ${esc(Q.cfg.name || 'Équipier')} : ${qs}</div>` : '');
     el.classList.toggle('all', I.keys);
   },
+  // essai de vue isométrique, sur un seul niveau
+  launchIso() { AU.init(); AU.sfx('blip'); this.isoMode = true; this.launch(ISO.LV); },
   launch(i) {
+    if (this.isoMode && i !== ISO.LV) this.isoMode = false;
+    window.ISO_NEXT = !!this.isoMode;
     startLevel(i, this.cfg(), null, { seed: newSeed() });
     const L = LEVELS[i], pr = PROFS[L.prof];
     $('inNum').textContent = (L.bonus ? '🚌 SORTIE SCOLAIRE' : 'NIVEAU ' + (i + 1)) + ' · ' + L.place.toUpperCase();
+    if (G.iso) $('inNum').textContent += ' · VUE ISO (ESSAI)';
     $('inTitle').textContent = L.title;
     $('inName').textContent = pr.name; $('inRole').textContent = pr.title.charAt(0).toUpperCase() + pr.title.slice(1);
     $('inQuote').textContent = '« ' + pr.lines.start + ' »';
