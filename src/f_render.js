@@ -84,7 +84,22 @@ function tinted(cv, col) {
 function drawSprite(c, cfg, v, a, o = {}) {
   if (G.m && G.m.pools && !o.noSwim && !(a.lift > 0) && a.x > -9000 && inWater(a)) { try { drawSwimmer(c, cfg, v, a, o); } catch (e) { } return; }
   try { drawSprite0(c, cfg, v, a, o); }
-  catch (e) { window.__sprErr = (window.__sprErr || 0) + 1; window.__lastErr = String(e && e.message || e).slice(0, 90); try { c.restore(); } catch (e2) { } c.fillStyle = '#1a1028'; c.fillRect(a.x - 5, a.y - 26, 10, 26); c.fillStyle = (cfg && cfg.topCol) || '#ff6f91'; c.fillRect(a.x - 4, a.y - 16, 8, 9); }
+  catch (e) {
+    window.__sprErr = (window.__sprErr || 0) + 1; window.__lastErr = String(e && e.message || e).slice(0, 90); try { c.restore(); } catch (e2) { }
+    try { const g = o.gait || gaitOf(a); window.__sprCtx = 'face ' + a.face + ' · ' + g + ' ' + frameOf(a, g) + ' · cache ' + CHAR_CACHE.size + ' · ratés ' + (window.__canvasFail || 0); } catch (e3) { }
+    // la mémoire des images est peut-être pleine (iPhone) : on vide le cache des sprites et on réessaie, une fois par seconde au plus
+    const now = performance.now();
+    if (!window.__sprRetryT || now - window.__sprRetryT > 1000) {
+      window.__sprRetryT = now;
+      try { freeSpriteCache(0); drawSprite0(c, cfg, v, a, o); window.__sprFixed = (window.__sprFixed || 0) + 1; return; } catch (e5) { try { c.restore(); } catch (e6) { } }
+    }
+    // plutôt qu'un rectangle : une autre image déjà prête du même personnage
+    try {
+      const pre = charKey(cfg, v) + '|', sc = o.scale || 1;
+      window.__sprBad = (window.__sprBad || 0) + 1;
+      for (const [k, cv] of CHAR_CACHE) if (k.startsWith(pre) && cv.width > 1) { c.drawImage(cv, a.x - 10 * sc, a.y - 32 * sc - (a.hz || 0), 20 * sc, 34 * sc); return; }
+    } catch (e4) { }
+    c.fillStyle = '#1a1028'; c.fillRect(a.x - 5, a.y - 26, 10, 26); c.fillStyle = (cfg && cfg.topCol) || '#ff6f91'; c.fillRect(a.x - 4, a.y - 16, 8, 9); }
 }
 function drawSprite0(c, cfg, v, a, o = {}) {
   const scale = o.scale || 1, alpha = o.alpha == null ? 1 : o.alpha;

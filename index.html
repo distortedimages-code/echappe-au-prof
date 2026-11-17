@@ -570,7 +570,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
         <button class="tile tSquish" id="bSquish"><canvas data-ill="squish" width="88" height="56"></canvas><span class="tl"><b>Squishies</b><small id="tSqN">Ta collection</small></span></button>
         <button class="tile tSave tIso" id="bIso"><span class="sv">🧊</span><span class="tl"><b>Isométrique</b><small>Essai : vue façon années 90</small></span></button>
         <button class="tile tSave" id="bSave"><span class="sv">💾</span><span class="tl"><b>Sauvegarde</b><small>Un code pour garder tes squishies</small></span></button>
-        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 17 nov. · 16h26</small></span></button>
+        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 17 nov. · 16h34</small></span></button>
       </div>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
@@ -10820,6 +10820,12 @@ function renderIso(dt) {
   drawParts(ctx, { x0: ISO.cam[0] - 600, y0: ISO.cam[1] - 600, x1: ISO.cam[0] + 600, y1: ISO.cam[1] + 600, t: (c, x, y) => { const [X, Y] = scr(x, y); c.setTransform(sp, 0, 0, sp, X - x * sp, Y - y * sp); } });
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   drawOverlay(); drawPost();
+  if (window.__sprBad) {   // essai : si un sprite n'a pas pu être dessiné, on affiche pourquoi (pour pouvoir corriger)
+    const d = V.dpr, t1 = '⚠ ' + (window.__lastErr || '?'), t2 = (window.__sprCtx || '') + ' · ×' + window.__sprErr + ' · réparé ' + (window.__sprFixed || 0) + ' · ' + GAME_BUILD;
+    ctx.font = (10 * d) + 'px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    const w = Math.max(ctx.measureText(t1).width, ctx.measureText(t2).width) + 12 * d;
+    ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fillRect(6 * d, H - 300 * d, w, 30 * d); ctx.fillStyle = '#ffd23f'; ctx.fillText(t1, 12 * d, H - 296 * d); ctx.fillStyle = '#ffffff'; ctx.fillText(t2, 12 * d, H - 283 * d);
+  }
 }
 function isoTmp(i, w, h) { let c = ISO.tmp[i]; if (!c) { c = document.createElement('canvas'); ISO.tmp[i] = c; } if (c.width < w) c.width = w; if (c.height < h) c.height = h; return c; }
 
@@ -10909,7 +10915,22 @@ function tinted(cv, col) {
 function drawSprite(c, cfg, v, a, o = {}) {
   if (G.m && G.m.pools && !o.noSwim && !(a.lift > 0) && a.x > -9000 && inWater(a)) { try { drawSwimmer(c, cfg, v, a, o); } catch (e) { } return; }
   try { drawSprite0(c, cfg, v, a, o); }
-  catch (e) { window.__sprErr = (window.__sprErr || 0) + 1; window.__lastErr = String(e && e.message || e).slice(0, 90); try { c.restore(); } catch (e2) { } c.fillStyle = '#1a1028'; c.fillRect(a.x - 5, a.y - 26, 10, 26); c.fillStyle = (cfg && cfg.topCol) || '#ff6f91'; c.fillRect(a.x - 4, a.y - 16, 8, 9); }
+  catch (e) {
+    window.__sprErr = (window.__sprErr || 0) + 1; window.__lastErr = String(e && e.message || e).slice(0, 90); try { c.restore(); } catch (e2) { }
+    try { const g = o.gait || gaitOf(a); window.__sprCtx = 'face ' + a.face + ' · ' + g + ' ' + frameOf(a, g) + ' · cache ' + CHAR_CACHE.size + ' · ratés ' + (window.__canvasFail || 0); } catch (e3) { }
+    // la mémoire des images est peut-être pleine (iPhone) : on vide le cache des sprites et on réessaie, une fois par seconde au plus
+    const now = performance.now();
+    if (!window.__sprRetryT || now - window.__sprRetryT > 1000) {
+      window.__sprRetryT = now;
+      try { freeSpriteCache(0); drawSprite0(c, cfg, v, a, o); window.__sprFixed = (window.__sprFixed || 0) + 1; return; } catch (e5) { try { c.restore(); } catch (e6) { } }
+    }
+    // plutôt qu'un rectangle : une autre image déjà prête du même personnage
+    try {
+      const pre = charKey(cfg, v) + '|', sc = o.scale || 1;
+      window.__sprBad = (window.__sprBad || 0) + 1;
+      for (const [k, cv] of CHAR_CACHE) if (k.startsWith(pre) && cv.width > 1) { c.drawImage(cv, a.x - 10 * sc, a.y - 32 * sc - (a.hz || 0), 20 * sc, 34 * sc); return; }
+    } catch (e4) { }
+    c.fillStyle = '#1a1028'; c.fillRect(a.x - 5, a.y - 26, 10, 26); c.fillStyle = (cfg && cfg.topCol) || '#ff6f91'; c.fillRect(a.x - 4, a.y - 16, 8, 9); }
 }
 function drawSprite0(c, cfg, v, a, o = {}) {
   const scale = o.scale || 1, alpha = o.alpha == null ? 1 : o.alpha;
@@ -12109,7 +12130,7 @@ const Input = {
 // ================= INTERFACE =================
 const $ = id => document.getElementById(id);
 // ---------- recharger le jeu (pratique quand il est épinglé comme une app sur iPad : pas de bouton du navigateur) ----------
-const GAME_BUILD = '17 nov. · 16h26';
+const GAME_BUILD = '17 nov. · 16h34';
 function refreshGame() {
   try { sessionStorage.setItem('nds_refresh', '1'); } catch (e) { }
   $('tVer').textContent = '⏳ Rechargement…'; try { AU.sfx('blip'); } catch (e) { }
@@ -12374,7 +12395,7 @@ const UI = {
     startLevel(i, this.cfg(), null, { seed: newSeed() });
     const L = LEVELS[i], pr = PROFS[L.prof];
     $('inNum').textContent = (L.bonus ? '🚌 SORTIE SCOLAIRE' : 'NIVEAU ' + (i + 1)) + ' · ' + L.place.toUpperCase();
-    if (G.iso) $('inNum').textContent += ' · VUE ISO (ESSAI)';
+    if (G.iso) $('inNum').textContent += ' · VUE ISO (ESSAI) · ' + GAME_BUILD;
     $('inTitle').textContent = L.title;
     $('inName').textContent = pr.name; $('inRole').textContent = pr.title.charAt(0).toUpperCase() + pr.title.slice(1);
     $('inQuote').textContent = '« ' + pr.lines.start + ' »';

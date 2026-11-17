@@ -366,7 +366,7 @@ const UI = {
     startLevel(i, this.cfg(), null, { seed: newSeed() });
     const L = LEVELS[i], pr = PROFS[L.prof];
     $('inNum').textContent = (L.bonus ? '🚌 SORTIE SCOLAIRE' : 'NIVEAU ' + (i + 1)) + ' · ' + L.place.toUpperCase();
-    if (G.iso) $('inNum').textContent += ' · VUE ISO (ESSAI)';
+    if (G.iso) $('inNum').textContent += ' · VUE ISO (ESSAI) · ' + GAME_BUILD;
     $('inTitle').textContent = L.title;
     $('inName').textContent = pr.name; $('inRole').textContent = pr.title.charAt(0).toUpperCase() + pr.title.slice(1);
     $('inQuote').textContent = '« ' + pr.lines.start + ' »';
