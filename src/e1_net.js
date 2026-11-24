@@ -360,7 +360,7 @@ function computeActionsT() {
     const tx = ptx + dx, ty = pty + dy, d = Math.hypot(tx * 16 + 8 - cx0, ty * 16 + 8 - cy0);
     if (d > 21) continue;
     const hs = L.hideAt.get(ty * m.w + tx);
-    if (hs) cand.push({ id: 'tcheck', spot: hs, icon: '🔍', label: 'Fouiller', sub: hs.n, prio: 1, d });
+    if (hs && hideSideOk(tx, ty, ptx, pty)) cand.push({ id: 'tcheck', spot: hs, icon: '🔍', label: 'Fouiller', sub: hs.n, prio: 1, d });
     if (m.get(tx, ty) === K.DOOR) { const dr = doorAt(tx, ty); if (dr.locked) cand.push(T.hasKeys ? { id: 'tunlock', door: dr, icon: '🔓', label: 'Ouvrir la porte', sub: 'avec tes clés', prio: 0, d } : { id: 'nokey', icon: '🔒', label: 'Fermé à clé !', sub: 'va chercher les clés', prio: 2, d }); }
   }
   if (G.inf) infActsT(cand);

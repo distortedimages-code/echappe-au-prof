@@ -521,6 +521,8 @@ function updateTeacher(dt) {
       if (!T.path) { if (!goToSpot(T, spot)) { T.searchI++; break; } }
       const r = followPath(T, pr.patrol * 1.35 * 16 * slow, dt);
       if (r === 'done') {
+        // arrivé du mauvais côté d'un mur (casier encastré) : il ne peut pas l'ouvrir, il passe au suivant
+        { const [a, b] = tileOf(T); if (!hideSideOk(spot.x, spot.y, a, b)) { T.searchI++; T.path = null; break; } }
         T.state = 'check'; T.st = 1.0; T.path = null; spot.shake = 1; hop(T, 50);
         for (let i = 0; i < 7; i++) part(spot.x * 16 + 8, spot.y * 16 + 4, 'junk', { vx: rand(-45, 45), vy: rand(-80, -30), g: 200, life: 0.9, col: pick(['#ffffff', '#ff6f91', '#fec43a', '#9fd7ff', '#63c74d', '#f2f2f2']), size: 2 });
         T.ang = Math.atan2(spot.y * 16 + 8 - T.y, spot.x * 16 + 8 - T.x); T.face = faceFromAng(T.ang);
@@ -876,6 +878,12 @@ function unhide() {
   if (G.T.knows === s) G.T.knows = null;
 }
 // ---------- Actions contextuelles ----------
+// casier encastré dans un mur : on ne l'atteint que depuis son côté ouvert (le couloir).
+// (fx, fy) = case de celui qui tend la main ; vrai si rien ne l'en empêche
+function hideSideOk(tx, ty, fx, fy) {
+  const m = G.m, fr = m.front && m.get(tx, ty) === K.LOCKER ? m.front.get(ty * m.w + tx) : null;
+  return !fr || ((!fr[0] || Math.sign(fx - tx) === fr[0]) && (!fr[1] || Math.sign(fy - ty) === fr[1]));
+}
 function computeActions() {
   if (G.net && G.net.role === 'teacher') return computeActionsT();
   const P = G.P, acts = [], m = G.m, L = G.L;
@@ -890,7 +898,7 @@ function computeActions() {
     if (d > 21 && !(d < 30 && G.inf && G.inf.coop && (G.L.exitAt.get(ty * m.w + tx) || {}).gate)) continue;
     const key = ty * m.w + tx, k = m.get(tx, ty);
     // un casier encastré ne s'ouvre que de son côté (couloir) : depuis l'autre côté du mur, rien
-    { const fr = k === K.LOCKER && m.front ? m.front.get(key) : null; if (fr && ((fr[0] && Math.sign(ptx - tx) !== fr[0]) || (fr[1] && Math.sign(pty - ty) !== fr[1]))) continue; }
+    if (!hideSideOk(tx, ty, ptx, pty)) continue;
     const ex = L.exitAt.get(key);
     const locked = tasksLeft() > 0, lockSub = 'Finis tes tâches (' + G.tasksDone + '/' + G.tasks.length + ')';
     const tk = G.tasks.find(t => !t.done && t.x === tx && t.y === ty);

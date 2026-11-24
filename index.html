@@ -570,7 +570,7 @@ input.code{font-size:28px;text-align:center;letter-spacing:10px;max-width:240px;
         <button class="tile tSquish" id="bSquish"><canvas data-ill="squish" width="88" height="56"></canvas><span class="tl"><b>Squishies</b><small id="tSqN">Ta collection</small></span></button>
         <button class="tile tSave tIso" id="bIso"><span class="sv">🧊</span><span class="tl"><b>Isométrique</b><small>Essai : vue façon années 90</small></span></button>
         <button class="tile tSave" id="bSave"><span class="sv">💾</span><span class="tl"><b>Sauvegarde</b><small>Un code pour garder tes squishies</small></span></button>
-        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 17 nov. · 17h49</small></span></button>
+        <button class="tile wide tRefresh" id="bRefresh"><span class="sv">🔄</span><span class="tl"><b>Mettre à jour le jeu</b><small id="tVer">Version du 24 nov. · 2h15</small></span></button>
       </div>
       <div class="toggles"><button class="tog" data-k="music" aria-label="Musique">🎵</button><button class="tog" data-k="sfx" aria-label="Bruitages">🔊</button><button class="tog" data-k="voice" aria-label="Voix des profs">🗣️</button><button class="tog" data-k="crt" aria-label="Effet télé rétro">📺</button></div>
       <button class="procTog easyTog" id="bEasy"></button>
@@ -4219,7 +4219,7 @@ function computeActionsT() {
     const tx = ptx + dx, ty = pty + dy, d = Math.hypot(tx * 16 + 8 - cx0, ty * 16 + 8 - cy0);
     if (d > 21) continue;
     const hs = L.hideAt.get(ty * m.w + tx);
-    if (hs) cand.push({ id: 'tcheck', spot: hs, icon: '🔍', label: 'Fouiller', sub: hs.n, prio: 1, d });
+    if (hs && hideSideOk(tx, ty, ptx, pty)) cand.push({ id: 'tcheck', spot: hs, icon: '🔍', label: 'Fouiller', sub: hs.n, prio: 1, d });
     if (m.get(tx, ty) === K.DOOR) { const dr = doorAt(tx, ty); if (dr.locked) cand.push(T.hasKeys ? { id: 'tunlock', door: dr, icon: '🔓', label: 'Ouvrir la porte', sub: 'avec tes clés', prio: 0, d } : { id: 'nokey', icon: '🔒', label: 'Fermé à clé !', sub: 'va chercher les clés', prio: 2, d }); }
   }
   if (G.inf) infActsT(cand);
@@ -8570,6 +8570,8 @@ function updateTeacher(dt) {
       if (!T.path) { if (!goToSpot(T, spot)) { T.searchI++; break; } }
       const r = followPath(T, pr.patrol * 1.35 * 16 * slow, dt);
       if (r === 'done') {
+        // arrivé du mauvais côté d'un mur (casier encastré) : il ne peut pas l'ouvrir, il passe au suivant
+        { const [a, b] = tileOf(T); if (!hideSideOk(spot.x, spot.y, a, b)) { T.searchI++; T.path = null; break; } }
         T.state = 'check'; T.st = 1.0; T.path = null; spot.shake = 1; hop(T, 50);
         for (let i = 0; i < 7; i++) part(spot.x * 16 + 8, spot.y * 16 + 4, 'junk', { vx: rand(-45, 45), vy: rand(-80, -30), g: 200, life: 0.9, col: pick(['#ffffff', '#ff6f91', '#fec43a', '#9fd7ff', '#63c74d', '#f2f2f2']), size: 2 });
         T.ang = Math.atan2(spot.y * 16 + 8 - T.y, spot.x * 16 + 8 - T.x); T.face = faceFromAng(T.ang);
@@ -8925,6 +8927,12 @@ function unhide() {
   if (G.T.knows === s) G.T.knows = null;
 }
 // ---------- Actions contextuelles ----------
+// casier encastré dans un mur : on ne l'atteint que depuis son côté ouvert (le couloir).
+// (fx, fy) = case de celui qui tend la main ; vrai si rien ne l'en empêche
+function hideSideOk(tx, ty, fx, fy) {
+  const m = G.m, fr = m.front && m.get(tx, ty) === K.LOCKER ? m.front.get(ty * m.w + tx) : null;
+  return !fr || ((!fr[0] || Math.sign(fx - tx) === fr[0]) && (!fr[1] || Math.sign(fy - ty) === fr[1]));
+}
 function computeActions() {
   if (G.net && G.net.role === 'teacher') return computeActionsT();
   const P = G.P, acts = [], m = G.m, L = G.L;
@@ -8939,7 +8947,7 @@ function computeActions() {
     if (d > 21 && !(d < 30 && G.inf && G.inf.coop && (G.L.exitAt.get(ty * m.w + tx) || {}).gate)) continue;
     const key = ty * m.w + tx, k = m.get(tx, ty);
     // un casier encastré ne s'ouvre que de son côté (couloir) : depuis l'autre côté du mur, rien
-    { const fr = k === K.LOCKER && m.front ? m.front.get(key) : null; if (fr && ((fr[0] && Math.sign(ptx - tx) !== fr[0]) || (fr[1] && Math.sign(pty - ty) !== fr[1]))) continue; }
+    if (!hideSideOk(tx, ty, ptx, pty)) continue;
     const ex = L.exitAt.get(key);
     const locked = tasksLeft() > 0, lockSub = 'Finis tes tâches (' + G.tasksDone + '/' + G.tasks.length + ')';
     const tk = G.tasks.find(t => !t.done && t.x === tx && t.y === ty);
@@ -11150,16 +11158,23 @@ function conePath(c, A) {
   c.closePath();
 }
 function drawCone(c, A) {
-  const T = A || G.T, pr = T.prof, ex = T.x, ey = T.y - 12, R = pr.range * 16;
+  const T = A || G.T, pr = T.prof, ex = T.x, ey = T.y - 12, R = pr.range * 16 * 0.92;
   conePath(c, T);
-  // le cône rougit à mesure qu'il te remarque : jaune pâle → orange → rouge (rouge vif en poursuite)
+  // le cône rougit à mesure qu'il te remarque : jaune vif → orange → rouge (rouge vif en poursuite)
+  // couleurs franches et bord bien marqué : on le voit aussi sur les sols clairs
   const v = T.state === 'chase' || T.rush ? 1 : clamp(detVal(T), 0, 1), q = v < 0.5 ? v * 2 : (v - 0.5) * 2;
-  const col = v < 0.5 ? [255, Math.round(lerp(236, 160, q)), Math.round(lerp(140, 50, q))].join(',') : [255, Math.round(lerp(160, 50, q)), Math.round(lerp(50, 70, q))].join(',');
-  const al = 0.32 + 0.2 * v;
+  const col = v < 0.5 ? [255, Math.round(lerp(214, 140, q)), Math.round(lerp(40, 20, q))].join(',') : [255, Math.round(lerp(140, 40, q)), Math.round(lerp(20, 60, q))].join(',');
+  const al = 0.42 + 0.2 * v;
   const g = c.createRadialGradient(ex, ey, 4, ex, ey, R);
-  g.addColorStop(0, `rgba(${col},${al.toFixed(2)})`); g.addColorStop(0.7, `rgba(${col},${(al * 0.45).toFixed(2)})`); g.addColorStop(1, `rgba(${col},0)`);
+  g.addColorStop(0, `rgba(${col},${al.toFixed(2)})`); g.addColorStop(0.6, `rgba(${col},${(al * 0.72).toFixed(2)})`); g.addColorStop(1, `rgba(${col},${(al * 0.32).toFixed(2)})`);
   c.fillStyle = g; c.fill();
-  c.strokeStyle = `rgba(${col},${(0.3 + 0.3 * v).toFixed(2)})`; c.lineWidth = 0.6; c.setLineDash([2, 2]); c.lineDashOffset = -G.time * 8; c.stroke(); c.setLineDash([]);
+  c.save(); c.lineJoin = 'round';
+  c.strokeStyle = 'rgba(30,12,40,0.5)'; c.lineWidth = 2.2; c.stroke();   // trait sombre dessous : contraste sur sol clair
+  c.strokeStyle = `rgba(${col},${(0.8 + 0.2 * v).toFixed(2)})`; c.lineWidth = 1.1; c.setLineDash([3, 2]); c.lineDashOffset = -G.time * 10; c.stroke(); c.setLineDash([]);
+  // une vague part du prof et file vers le bout du cône : on voit tout de suite où il regarde
+  c.clip(); const ph = (G.time * 0.75 + (T.ph || 0)) % 1;
+  c.strokeStyle = `rgba(255,255,255,${(0.42 * (1 - ph)).toFixed(2)})`; c.lineWidth = 2; c.beginPath(); c.arc(ex, ey, 6 + ph * (R - 6), 0, 7); c.stroke();
+  c.restore();
 }
 function drawItemW(c, it) {
   const bob = Math.sin(G.time * 3 + it.ph) * 1.6, x = it.x, y = it.y;
@@ -12222,7 +12237,7 @@ const Input = {
 // ================= INTERFACE =================
 const $ = id => document.getElementById(id);
 // ---------- recharger le jeu (pratique quand il est épinglé comme une app sur iPad : pas de bouton du navigateur) ----------
-const GAME_BUILD = '17 nov. · 17h49';
+const GAME_BUILD = '24 nov. · 2h15';
 function refreshGame() {
   try { sessionStorage.setItem('nds_refresh', '1'); } catch (e) { }
   $('tVer').textContent = '⏳ Rechargement…'; try { AU.sfx('blip'); } catch (e) { }

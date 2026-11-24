@@ -240,16 +240,23 @@ function conePath(c, A) {
   c.closePath();
 }
 function drawCone(c, A) {
-  const T = A || G.T, pr = T.prof, ex = T.x, ey = T.y - 12, R = pr.range * 16;
+  const T = A || G.T, pr = T.prof, ex = T.x, ey = T.y - 12, R = pr.range * 16 * 0.92;
   conePath(c, T);
-  // le cône rougit à mesure qu'il te remarque : jaune pâle → orange → rouge (rouge vif en poursuite)
+  // le cône rougit à mesure qu'il te remarque : jaune vif → orange → rouge (rouge vif en poursuite)
+  // couleurs franches et bord bien marqué : on le voit aussi sur les sols clairs
   const v = T.state === 'chase' || T.rush ? 1 : clamp(detVal(T), 0, 1), q = v < 0.5 ? v * 2 : (v - 0.5) * 2;
-  const col = v < 0.5 ? [255, Math.round(lerp(236, 160, q)), Math.round(lerp(140, 50, q))].join(',') : [255, Math.round(lerp(160, 50, q)), Math.round(lerp(50, 70, q))].join(',');
-  const al = 0.32 + 0.2 * v;
+  const col = v < 0.5 ? [255, Math.round(lerp(214, 140, q)), Math.round(lerp(40, 20, q))].join(',') : [255, Math.round(lerp(140, 40, q)), Math.round(lerp(20, 60, q))].join(',');
+  const al = 0.42 + 0.2 * v;
   const g = c.createRadialGradient(ex, ey, 4, ex, ey, R);
-  g.addColorStop(0, `rgba(${col},${al.toFixed(2)})`); g.addColorStop(0.7, `rgba(${col},${(al * 0.45).toFixed(2)})`); g.addColorStop(1, `rgba(${col},0)`);
+  g.addColorStop(0, `rgba(${col},${al.toFixed(2)})`); g.addColorStop(0.6, `rgba(${col},${(al * 0.72).toFixed(2)})`); g.addColorStop(1, `rgba(${col},${(al * 0.32).toFixed(2)})`);
   c.fillStyle = g; c.fill();
-  c.strokeStyle = `rgba(${col},${(0.3 + 0.3 * v).toFixed(2)})`; c.lineWidth = 0.6; c.setLineDash([2, 2]); c.lineDashOffset = -G.time * 8; c.stroke(); c.setLineDash([]);
+  c.save(); c.lineJoin = 'round';
+  c.strokeStyle = 'rgba(30,12,40,0.5)'; c.lineWidth = 2.2; c.stroke();   // trait sombre dessous : contraste sur sol clair
+  c.strokeStyle = `rgba(${col},${(0.8 + 0.2 * v).toFixed(2)})`; c.lineWidth = 1.1; c.setLineDash([3, 2]); c.lineDashOffset = -G.time * 10; c.stroke(); c.setLineDash([]);
+  // une vague part du prof et file vers le bout du cône : on voit tout de suite où il regarde
+  c.clip(); const ph = (G.time * 0.75 + (T.ph || 0)) % 1;
+  c.strokeStyle = `rgba(255,255,255,${(0.42 * (1 - ph)).toFixed(2)})`; c.lineWidth = 2; c.beginPath(); c.arc(ex, ey, 6 + ph * (R - 6), 0, 7); c.stroke();
+  c.restore();
 }
 function drawItemW(c, it) {
   const bob = Math.sin(G.time * 3 + it.ph) * 1.6, x = it.x, y = it.y;
